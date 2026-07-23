@@ -15,7 +15,7 @@ export default async function AppLayout({
   return (
     <div className="flex min-h-full flex-1 flex-col">
       <header className="sticky top-0 z-10 border-b border-blue-100 bg-white/80 backdrop-blur dark:border-blue-950/60 dark:bg-[#0e1626]/80">
-        <div className="mx-auto flex w-full max-w-5xl flex-wrap items-center justify-between gap-3 px-4 py-3">
+        <div className="mx-auto flex w-full max-w-7xl flex-wrap items-center justify-between gap-3 px-4 py-3">
           <Link href="/dashboard" className="shrink-0">
             <BrandLogo />
           </Link>
@@ -52,10 +52,10 @@ export default async function AppLayout({
           </nav>
         </div>
       </header>
-      <main className="mx-auto w-full max-w-5xl flex-1 px-4 py-8">
+      <main className="mx-auto w-full max-w-7xl flex-1 px-4 py-8">
         {children}
       </main>
-      <footer className="mx-auto w-full max-w-5xl px-4 py-6 text-xs text-zinc-400">
+      <footer className="mx-auto w-full max-w-7xl px-4 py-6 text-xs text-zinc-400">
         Lapis Automotive Group · Sales Tracker
       </footer>
     </div>

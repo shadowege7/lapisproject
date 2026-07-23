@@ -70,7 +70,7 @@ export default async function DashboardPage() {
         </p>
         <h1 className="text-xl font-semibold tracking-tight">Dealerships</h1>
       </div>
-      <div className="grid gap-4 sm:grid-cols-2">
+      <div className="grid gap-4 grid-cols-[repeat(auto-fill,minmax(min(100%,19rem),1fr))]">
         {dealerships.map((dealership) => {
           const role = effectiveRole(
             user,
