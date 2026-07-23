@@ -1,6 +1,9 @@
 @import "tailwindcss";
 
 :root {
+  /* Tells the browser to render native controls (select dropdowns, the date
+     picker, scrollbars) in the matching theme so their text stays legible. */
+  color-scheme: light;
   --background: #eef2f9;
   --foreground: #0f172a;
   --surface: #ffffff;
@@ -20,12 +23,20 @@
 
 @media (prefers-color-scheme: dark) {
   :root {
+    color-scheme: dark;
     --background: #060b16;
     --foreground: #e6edf6;
     --surface: #0e1626;
     --brand: #3b82f6;
     --brand-strong: #60a5fa;
   }
+}
+
+/* Fluid base font: ~16px on phones, ramping up to ~19px on large screens.
+   Tailwind's rem-based sizes scale with this, so all text (and spacing) grows
+   proportionally on bigger displays. The rem term keeps browser zoom working. */
+html {
+  font-size: clamp(1rem, 0.94rem + 0.3vw, 1.2rem);
 }
 
 body {
