@@ -146,7 +146,7 @@ function ActivityFieldset({
   confirmedAppointments: number;
 }) {
   const inputClass =
-    "rounded-md border border-zinc-300 bg-transparent px-3 py-2 text-sm outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-500/30 dark:border-zinc-700";
+    "mt-auto rounded-md border border-zinc-300 bg-transparent px-3 py-2 text-sm outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-500/30 dark:border-zinc-700";
   const fields: [string, string, number][] = [
     ["Manager calls", "manager_calls", managerCalls],
     ["Sales calls", "sales_calls", salesCalls],
@@ -197,7 +197,7 @@ function VehicleFieldset({
   backValue: number;
 }) {
   const inputClass =
-    "rounded-md border border-zinc-300 bg-transparent px-3 py-2 text-sm outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-500/30 dark:border-zinc-700";
+    "mt-auto rounded-md border border-zinc-300 bg-transparent px-3 py-2 text-sm outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-500/30 dark:border-zinc-700";
 
   return (
     <fieldset className="rounded-xl border border-zinc-200 bg-white/60 p-4 dark:border-zinc-800 dark:bg-white/[0.02]">
