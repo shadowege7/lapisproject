@@ -8,6 +8,8 @@ admins** see and edit every dealership and manage user access.
 
 Stack: Next.js (App Router) + Supabase (Postgres, Auth, Row-Level Security).
 
+**Live app:** https://lapisproject.vercel.app (auto-deploys from `main` via Vercel).
+
 ## 1. Configure environment variables
 
 Copy the example file and fill in your Supabase project's anon key and
@@ -57,6 +59,24 @@ npm run dev
 ```
 
 Open [http://localhost:3000](http://localhost:3000).
+
+## 5. Deployment (Vercel)
+
+The app is hosted on Vercel and redeploys automatically on every push to
+`main`. To reproduce the setup:
+
+1. Import `shadowege7/lapisproject` at [vercel.com/new](https://vercel.com/new)
+   (Next.js is auto-detected — no `vercel.json` needed).
+2. Add the three environment variables from `.env.local`:
+   `NEXT_PUBLIC_SUPABASE_URL`, `NEXT_PUBLIC_SUPABASE_ANON_KEY`, and
+   `SUPABASE_SERVICE_ROLE_KEY` (server-only; keep it secret).
+3. In **Supabase → Authentication → URL Configuration**, set the **Site URL**
+   to the production domain and add `<domain>/**` to the redirect allowlist so
+   invite emails link back to the deployed app.
+
+GitHub Pages is **not** an option: this app relies on server-rendered pages,
+Server Actions, and the `proxy.ts` middleware, none of which run on static
+hosting.
 
 ## How access control works
 
