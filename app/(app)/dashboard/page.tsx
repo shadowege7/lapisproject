@@ -132,7 +132,7 @@ export default async function DashboardPage() {
                   />
                 </div>
 
-                <div className="mt-2 grid grid-cols-2 gap-2 sm:grid-cols-4">
+                <div className="mt-2 grid grid-cols-2 gap-2">
                   <ActivityStat
                     label="Manager calls"
                     value={todayEntry?.manager_calls ?? 0}
@@ -229,7 +229,7 @@ function ActivityStat({ label, value }: { label: string; value: number }) {
   return (
     <div className="rounded-lg border border-zinc-100 bg-zinc-50/60 px-3 py-2 dark:border-zinc-800 dark:bg-white/[0.02]">
       <div className="text-lg font-semibold">{value}</div>
-      <div className="text-xs text-zinc-500">{label}</div>
+      <div className="break-words text-xs text-zinc-500">{label}</div>
     </div>
   );
 }
