@@ -83,6 +83,25 @@ export async function removeMembership(formData: FormData) {
   revalidatePath("/admin");
 }
 
+export async function deleteUser(formData: FormData) {
+  const supabase = await requireSuperAdmin();
+  const userId = String(formData.get("user_id") ?? "");
+  if (!userId) return;
+
+  // Never let an admin delete their own account (would lock them out).
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  if (user?.id === userId) return;
+
+  const admin = createAdminClient();
+  const { error } = await admin.auth.admin.deleteUser(userId);
+  if (error) throw error;
+
+  // profiles + dealership_members cascade; daily_entries.created_by is set null.
+  revalidatePath("/admin");
+}
+
 export async function setSuperAdmin(formData: FormData) {
   const supabase = await requireSuperAdmin();
   const userId = String(formData.get("user_id") ?? "");

@@ -4,10 +4,12 @@ import { createAdminClient } from "@/lib/supabase/admin";
 import { getCurrentUser } from "@/lib/auth";
 import {
   createDealership,
+  deleteUser,
   inviteAndAssign,
   removeMembership,
   setSuperAdmin,
 } from "./actions";
+import { ConfirmButton } from "./confirm-button";
 
 export default async function AdminPage() {
   const user = await getCurrentUser();
@@ -185,17 +187,32 @@ export default async function AdminPage() {
       </section>
 
       <section className="flex flex-col gap-3">
-        <h2 className="font-medium">Super admins</h2>
+        <h2 className="font-medium">Users</h2>
         <p className="text-xs text-zinc-500">
           Super admins can view and edit every dealership and manage all
-          users.
+          users. Removing a user deletes their account and dealership access;
+          any sales entries they logged are kept.
         </p>
         <ul className="flex flex-col gap-2 text-sm">
           {(authUsers?.users ?? []).map((u) => {
             const profile = profileById.get(u.id);
+            const isSelf = u.id === user.id;
             return (
-              <li key={u.id} className="flex items-center gap-3">
-                <span className="flex-1">{u.email}</span>
+              <li
+                key={u.id}
+                className="flex flex-wrap items-center gap-x-4 gap-y-1"
+              >
+                <span className="flex-1">
+                  {u.email}
+                  {profile?.is_super_admin ? (
+                    <span className="ml-2 rounded-full bg-blue-50 px-2 py-0.5 text-xs font-medium text-blue-700 dark:bg-blue-950/60 dark:text-blue-300">
+                      super admin
+                    </span>
+                  ) : null}
+                  {isSelf ? (
+                    <span className="ml-2 text-xs text-zinc-400">(you)</span>
+                  ) : null}
+                </span>
                 <form action={setSuperAdmin}>
                   <input type="hidden" name="user_id" value={u.id} />
                   <input
@@ -212,6 +229,17 @@ export default async function AdminPage() {
                       : "Make super admin"}
                   </button>
                 </form>
+                {isSelf ? null : (
+                  <form action={deleteUser}>
+                    <input type="hidden" name="user_id" value={u.id} />
+                    <ConfirmButton
+                      message={`Permanently delete ${u.email}? This removes their account and all dealership access. This cannot be undone.`}
+                      className="text-sm text-red-600 hover:underline dark:text-red-400"
+                    >
+                      Remove user
+                    </ConfirmButton>
+                  </form>
+                )}
               </li>
             );
           })}
