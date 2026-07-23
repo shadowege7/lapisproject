@@ -5,11 +5,11 @@ import { getCurrentUser } from "@/lib/auth";
 import {
   createDealership,
   deleteUser,
-  inviteAndAssign,
   removeMembership,
   setSuperAdmin,
 } from "./actions";
 import { ConfirmButton } from "./confirm-button";
+import { InviteForm } from "./invite-form";
 
 export default async function AdminPage() {
   const user = await getCurrentUser();
@@ -127,63 +127,7 @@ export default async function AdminPage() {
           </table>
         </div>
 
-        <form
-          action={inviteAndAssign}
-          className="flex flex-wrap items-end gap-2"
-        >
-          <label className="flex flex-col gap-1 text-sm">
-            Email
-            <input
-              type="email"
-              name="email"
-              required
-              className="rounded-md border border-zinc-300 bg-transparent px-3 py-2 text-sm dark:border-zinc-700"
-            />
-          </label>
-          <label className="flex flex-col gap-1 text-sm">
-            Full name (optional)
-            <input
-              type="text"
-              name="full_name"
-              className="rounded-md border border-zinc-300 bg-transparent px-3 py-2 text-sm dark:border-zinc-700"
-            />
-          </label>
-          <label className="flex flex-col gap-1 text-sm">
-            Dealership
-            <select
-              name="dealership_id"
-              required
-              className="rounded-md border border-zinc-300 bg-transparent px-3 py-2 text-sm dark:border-zinc-700"
-            >
-              {(dealerships ?? []).map((d) => (
-                <option key={d.id} value={d.id}>
-                  {d.name}
-                </option>
-              ))}
-            </select>
-          </label>
-          <label className="flex flex-col gap-1 text-sm">
-            Role
-            <select
-              name="role"
-              defaultValue="viewer"
-              className="rounded-md border border-zinc-300 bg-transparent px-3 py-2 text-sm dark:border-zinc-700"
-            >
-              <option value="editor">Editor</option>
-              <option value="viewer">Viewer</option>
-            </select>
-          </label>
-          <button
-            type="submit"
-            className="rounded-md bg-blue-600 px-3 py-2 text-sm font-semibold text-white shadow-sm transition-colors hover:bg-blue-700"
-          >
-            Invite &amp; assign
-          </button>
-        </form>
-        <p className="text-xs text-zinc-500">
-          If the email doesn&apos;t already have an account, this sends an
-          invite email so they can set a password.
-        </p>
+        <InviteForm dealerships={dealerships ?? []} />
       </section>
 
       <section className="flex flex-col gap-3">

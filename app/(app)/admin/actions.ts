@@ -1,10 +1,24 @@
 "use server";
 
+import { randomBytes } from "crypto";
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import type { DealershipRole } from "@/lib/database.types";
+import type { InviteResult } from "./invite-types";
+
+// Readable temp password, e.g. "X7kM-pQ2r-Tw9y" (no ambiguous chars).
+function generateTempPassword() {
+  const alphabet = "ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz23456789";
+  const bytes = randomBytes(12);
+  let out = "";
+  for (let i = 0; i < 12; i++) {
+    out += alphabet[bytes[i] % alphabet.length];
+    if (i % 4 === 3 && i < 11) out += "-";
+  }
+  return out;
+}
 
 async function requireSuperAdmin() {
   const supabase = await createClient();
@@ -33,7 +47,10 @@ export async function createDealership(formData: FormData) {
   revalidatePath("/admin");
 }
 
-export async function inviteAndAssign(formData: FormData) {
+export async function inviteAndAssign(
+  _prevState: InviteResult,
+  formData: FormData,
+): Promise<InviteResult> {
   await requireSuperAdmin();
 
   const email = String(formData.get("email") ?? "")
@@ -43,35 +60,65 @@ export async function inviteAndAssign(formData: FormData) {
   const dealershipId = String(formData.get("dealership_id") ?? "");
   const role = String(formData.get("role") ?? "viewer") as DealershipRole;
 
-  if (!email || !dealershipId) return;
+  if (!email || !dealershipId) {
+    return { status: "error", message: "Email and dealership are required." };
+  }
 
   const admin = createAdminClient();
 
-  const { data: existingList } = await admin.auth.admin.listUsers();
-  let userId = existingList?.users.find(
-    (u) => u.email?.toLowerCase() === email,
-  )?.id;
-
-  if (!userId) {
-    const { data: invited, error: inviteError } =
-      await admin.auth.admin.inviteUserByEmail(email, {
-        data: fullName ? { full_name: fullName } : undefined,
-      });
-    if (inviteError) throw inviteError;
-    userId = invited.user?.id;
+  const { data: existingList, error: listError } =
+    await admin.auth.admin.listUsers();
+  if (listError) {
+    return { status: "error", message: listError.message };
   }
 
-  if (!userId) return;
+  const existing = existingList?.users.find(
+    (u) => u.email?.toLowerCase() === email,
+  );
+  let userId = existing?.id;
+  let tempPassword: string | null = null;
+
+  if (!userId) {
+    // No email delivery: create the account directly with a temporary
+    // password (email pre-confirmed so they can sign in immediately).
+    tempPassword = generateTempPassword();
+    const { data: created, error: createError } =
+      await admin.auth.admin.createUser({
+        email,
+        password: tempPassword,
+        email_confirm: true,
+        user_metadata: fullName ? { full_name: fullName } : undefined,
+      });
+    if (createError) {
+      return { status: "error", message: createError.message };
+    }
+    userId = created.user?.id;
+  }
+
+  if (!userId) {
+    return { status: "error", message: "Could not create the user." };
+  }
 
   const supabase = await createClient();
-  await supabase
+  const { error: memberError } = await supabase
     .from("dealership_members")
     .upsert(
       { dealership_id: dealershipId, user_id: userId, role },
       { onConflict: "dealership_id,user_id" },
     );
+  if (memberError) {
+    return { status: "error", message: memberError.message };
+  }
 
   revalidatePath("/admin");
+
+  if (tempPassword) {
+    return { status: "created", email, tempPassword };
+  }
+  return {
+    status: "assigned",
+    message: `${email} already had an account — assigned to the dealership.`,
+  };
 }
 
 export async function removeMembership(formData: FormData) {
