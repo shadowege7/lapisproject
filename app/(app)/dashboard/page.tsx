@@ -152,7 +152,7 @@ export default async function DashboardPage() {
                 </div>
               </div>
 
-              <div className="grid grid-cols-3 gap-2 border-t border-zinc-100 pt-3 text-center dark:border-zinc-800">
+              <div className="grid grid-cols-3 divide-x divide-zinc-200 border-t border-zinc-100 pt-3 text-center dark:divide-zinc-800 dark:border-zinc-800">
                 <GrossStat
                   label="Today"
                   value={todayGross}
@@ -207,10 +207,12 @@ function GrossStat({
   sub?: string;
 }) {
   return (
-    <div>
-      <div className="text-xs text-zinc-500">{label}</div>
+    <div className="px-2">
+      <div className="text-[11px] font-medium uppercase tracking-wide text-zinc-500">
+        {label}
+      </div>
       <div
-        className={`text-sm font-semibold ${
+        className={`mt-1 text-sm font-semibold ${
           accent ? "text-blue-700 dark:text-blue-400" : ""
         }`}
       >
