@@ -190,7 +190,9 @@ function GrossStat({
         {formatCurrency(value)}
       </div>
       {sub ? (
-        <div className="mt-0.5 text-[11px] text-zinc-500">{sub}</div>
+        <div className="mt-1 text-sm font-semibold text-blue-700 dark:text-blue-400">
+          {sub}
+        </div>
       ) : null}
     </div>
   );
