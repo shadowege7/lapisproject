@@ -114,6 +114,9 @@ export default async function DashboardPage() {
                 <VehicleStat
                   label="New"
                   units={summary?.total_new_units ?? 0}
+                  projectedUnits={Math.round(
+                    projectMonthEnd(summary?.total_new_units ?? 0),
+                  )}
                   front={summary?.total_new_front_end_gross ?? 0}
                   back={summary?.total_new_back_end_gross ?? 0}
                   gross={newGross}
@@ -121,6 +124,9 @@ export default async function DashboardPage() {
                 <VehicleStat
                   label="Used"
                   units={summary?.total_used_units ?? 0}
+                  projectedUnits={Math.round(
+                    projectMonthEnd(summary?.total_used_units ?? 0),
+                  )}
                   front={summary?.total_used_front_end_gross ?? 0}
                   back={summary?.total_used_back_end_gross ?? 0}
                   gross={usedGross}
@@ -187,12 +193,14 @@ function GrossStat({
 function VehicleStat({
   label,
   units,
+  projectedUnits,
   front,
   back,
   gross,
 }: {
   label: string;
   units: number;
+  projectedUnits: number;
   front: number;
   back: number;
   gross: number;
@@ -204,6 +212,12 @@ function VehicleStat({
           {label}
         </span>
         <span className="text-sm font-semibold">{units} units</span>
+      </div>
+      <div className="mt-0.5 flex items-center justify-between text-xs">
+        <span className="text-zinc-400">Projected</span>
+        <span className="font-medium text-blue-700 dark:text-blue-400">
+          {projectedUnits} units
+        </span>
       </div>
       <dl className="mt-2 space-y-1 text-xs">
         <div className="flex justify-between">
