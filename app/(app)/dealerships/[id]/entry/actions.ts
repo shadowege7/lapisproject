@@ -13,6 +13,12 @@ export async function saveEntry(formData: FormData) {
   const newBackEndGross = Number(formData.get("new_back_end_gross") ?? 0);
   const usedFrontEndGross = Number(formData.get("used_front_end_gross") ?? 0);
   const usedBackEndGross = Number(formData.get("used_back_end_gross") ?? 0);
+  const managerCalls = Number(formData.get("manager_calls") ?? 0);
+  const salesCalls = Number(formData.get("sales_calls") ?? 0);
+  const appointments = Number(formData.get("appointments") ?? 0);
+  const confirmedAppointments = Number(
+    formData.get("confirmed_appointments") ?? 0,
+  );
 
   const supabase = await createClient();
   const {
@@ -30,6 +36,10 @@ export async function saveEntry(formData: FormData) {
       new_back_end_gross: newBackEndGross,
       used_front_end_gross: usedFrontEndGross,
       used_back_end_gross: usedBackEndGross,
+      manager_calls: managerCalls,
+      sales_calls: salesCalls,
+      appointments: appointments,
+      confirmed_appointments: confirmedAppointments,
       created_by: user.id,
     },
     { onConflict: "dealership_id,entry_date" },

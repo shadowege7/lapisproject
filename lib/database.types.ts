@@ -94,6 +94,10 @@ export interface Database {
           new_back_end_gross: number;
           used_front_end_gross: number;
           used_back_end_gross: number;
+          manager_calls: number;
+          sales_calls: number;
+          appointments: number;
+          confirmed_appointments: number;
           created_by: string | null;
           updated_at: string;
         };
@@ -107,6 +111,10 @@ export interface Database {
           new_back_end_gross: number;
           used_front_end_gross: number;
           used_back_end_gross: number;
+          manager_calls?: number;
+          sales_calls?: number;
+          appointments?: number;
+          confirmed_appointments?: number;
           created_by?: string | null;
           updated_at?: string;
         };
@@ -120,6 +128,10 @@ export interface Database {
           new_back_end_gross?: number;
           used_front_end_gross?: number;
           used_back_end_gross?: number;
+          manager_calls?: number;
+          sales_calls?: number;
+          appointments?: number;
+          confirmed_appointments?: number;
           created_by?: string | null;
           updated_at?: string;
         };

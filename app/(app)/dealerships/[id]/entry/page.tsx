@@ -116,6 +116,13 @@ export default async function EntryPage({
           backValue={existing?.used_back_end_gross ?? 0}
         />
 
+        <ActivityFieldset
+          managerCalls={existing?.manager_calls ?? 0}
+          salesCalls={existing?.sales_calls ?? 0}
+          appointments={existing?.appointments ?? 0}
+          confirmedAppointments={existing?.confirmed_appointments ?? 0}
+        />
+
         <button
           type="submit"
           className="mt-1 w-fit rounded-md bg-blue-600 px-4 py-2 text-sm font-semibold text-white shadow-sm transition-colors hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500/50"
@@ -124,6 +131,51 @@ export default async function EntryPage({
         </button>
       </form>
     </div>
+  );
+}
+
+function ActivityFieldset({
+  managerCalls,
+  salesCalls,
+  appointments,
+  confirmedAppointments,
+}: {
+  managerCalls: number;
+  salesCalls: number;
+  appointments: number;
+  confirmedAppointments: number;
+}) {
+  const inputClass =
+    "rounded-md border border-zinc-300 bg-transparent px-3 py-2 text-sm outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-500/30 dark:border-zinc-700";
+  const fields: [string, string, number][] = [
+    ["Manager calls", "manager_calls", managerCalls],
+    ["Sales calls", "sales_calls", salesCalls],
+    ["Appointments", "appointments", appointments],
+    ["Confirmed appointments", "confirmed_appointments", confirmedAppointments],
+  ];
+  return (
+    <fieldset className="rounded-xl border border-zinc-200 bg-white/60 p-4 dark:border-zinc-800 dark:bg-white/[0.02]">
+      <legend className="flex items-center gap-2 px-1 text-sm font-semibold">
+        <span className="h-2 w-2 rounded-full bg-blue-500" />
+        Activity
+      </legend>
+      <div className="mt-2 grid grid-cols-2 gap-4 sm:grid-cols-4">
+        {fields.map(([label, name, value]) => (
+          <label key={name} className="flex flex-col gap-1 text-sm font-medium">
+            {label}
+            <input
+              type="number"
+              name={name}
+              min={0}
+              step={1}
+              defaultValue={value}
+              required
+              className={inputClass}
+            />
+          </label>
+        ))}
+      </div>
+    </fieldset>
   );
 }
 

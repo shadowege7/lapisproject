@@ -131,6 +131,25 @@ export default async function DashboardPage() {
                     gross={todayUsedGross}
                   />
                 </div>
+
+                <div className="mt-2 grid grid-cols-2 gap-2 sm:grid-cols-4">
+                  <ActivityStat
+                    label="Manager calls"
+                    value={todayEntry?.manager_calls ?? 0}
+                  />
+                  <ActivityStat
+                    label="Sales calls"
+                    value={todayEntry?.sales_calls ?? 0}
+                  />
+                  <ActivityStat
+                    label="Appointments"
+                    value={todayEntry?.appointments ?? 0}
+                  />
+                  <ActivityStat
+                    label="Confirmed appts"
+                    value={todayEntry?.confirmed_appointments ?? 0}
+                  />
+                </div>
               </div>
 
               <div className="grid grid-cols-3 gap-2 border-t border-zinc-100 pt-3 text-center dark:border-zinc-800">
@@ -202,6 +221,15 @@ function GrossStat({
           {sub}
         </div>
       ) : null}
+    </div>
+  );
+}
+
+function ActivityStat({ label, value }: { label: string; value: number }) {
+  return (
+    <div className="rounded-lg border border-zinc-100 bg-zinc-50/60 px-3 py-2 dark:border-zinc-800 dark:bg-white/[0.02]">
+      <div className="text-lg font-semibold">{value}</div>
+      <div className="text-xs text-zinc-500">{label}</div>
     </div>
   );
 }
