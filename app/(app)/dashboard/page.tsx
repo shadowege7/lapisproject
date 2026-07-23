@@ -66,7 +66,7 @@ export default async function DashboardPage() {
     <div className="flex flex-col gap-5">
       <div>
         <p className="text-xs font-medium uppercase tracking-wide text-blue-600 dark:text-blue-400">
-          Month to date
+          Daily snapshot
         </p>
         <h1 className="text-xl font-semibold tracking-tight">Dealerships</h1>
       </div>
@@ -80,20 +80,15 @@ export default async function DashboardPage() {
 
           if (!role) return null;
 
-          const newGross =
-            (summary?.total_new_front_end_gross ?? 0) +
-            (summary?.total_new_back_end_gross ?? 0);
-          const usedGross =
-            (summary?.total_used_front_end_gross ?? 0) +
-            (summary?.total_used_back_end_gross ?? 0);
-
           const todayEntry = todayByDealership.get(dealership.id);
-          const todayGross = todayEntry
-            ? todayEntry.new_front_end_gross +
-              todayEntry.new_back_end_gross +
-              todayEntry.used_front_end_gross +
-              todayEntry.used_back_end_gross
-            : 0;
+          const todayNewGross =
+            (todayEntry?.new_front_end_gross ?? 0) +
+            (todayEntry?.new_back_end_gross ?? 0);
+          const todayUsedGross =
+            (todayEntry?.used_front_end_gross ?? 0) +
+            (todayEntry?.used_back_end_gross ?? 0);
+          const todayGross = todayNewGross + todayUsedGross;
+
           const mtdGross = summary?.total_gross ?? 0;
           const projNewUnits = Math.round(
             projectMonthEnd(summary?.total_new_units ?? 0),
@@ -116,21 +111,26 @@ export default async function DashboardPage() {
                 </span>
               </div>
 
-              <div className="grid grid-cols-2 gap-px overflow-hidden rounded-lg border border-zinc-100 bg-zinc-100 dark:border-zinc-800 dark:bg-zinc-800">
-                <VehicleStat
-                  label="New"
-                  units={summary?.total_new_units ?? 0}
-                  front={summary?.total_new_front_end_gross ?? 0}
-                  back={summary?.total_new_back_end_gross ?? 0}
-                  gross={newGross}
-                />
-                <VehicleStat
-                  label="Used"
-                  units={summary?.total_used_units ?? 0}
-                  front={summary?.total_used_front_end_gross ?? 0}
-                  back={summary?.total_used_back_end_gross ?? 0}
-                  gross={usedGross}
-                />
+              <div>
+                <p className="mb-1.5 text-xs font-medium uppercase tracking-wide text-zinc-500">
+                  Today
+                </p>
+                <div className="grid grid-cols-2 gap-px overflow-hidden rounded-lg border border-zinc-100 bg-zinc-100 dark:border-zinc-800 dark:bg-zinc-800">
+                  <VehicleStat
+                    label="New"
+                    units={todayEntry?.new_units ?? 0}
+                    front={todayEntry?.new_front_end_gross ?? 0}
+                    back={todayEntry?.new_back_end_gross ?? 0}
+                    gross={todayNewGross}
+                  />
+                  <VehicleStat
+                    label="Used"
+                    units={todayEntry?.used_units ?? 0}
+                    front={todayEntry?.used_front_end_gross ?? 0}
+                    back={todayEntry?.used_back_end_gross ?? 0}
+                    gross={todayUsedGross}
+                  />
+                </div>
               </div>
 
               <div className="grid grid-cols-3 gap-2 border-t border-zinc-100 pt-3 text-center dark:border-zinc-800">
