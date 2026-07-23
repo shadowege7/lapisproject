@@ -134,8 +134,16 @@ export default async function DashboardPage() {
               </div>
 
               <div className="grid grid-cols-3 gap-2 border-t border-zinc-100 pt-3 text-center dark:border-zinc-800">
-                <GrossStat label="Today" value={todayGross} />
-                <GrossStat label="This month" value={mtdGross} />
+                <GrossStat
+                  label="Today"
+                  value={todayGross}
+                  sub={`${todayEntry?.new_units ?? 0} new · ${todayEntry?.used_units ?? 0} used`}
+                />
+                <GrossStat
+                  label="This month"
+                  value={mtdGross}
+                  sub={`${summary?.total_new_units ?? 0} new · ${summary?.total_used_units ?? 0} used`}
+                />
                 <GrossStat
                   label="Projected"
                   value={projectMonthEnd(mtdGross)}
