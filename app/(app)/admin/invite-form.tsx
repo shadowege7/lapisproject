@@ -74,8 +74,8 @@ export function InviteForm({
       ) : null}
 
       <p className="text-xs text-zinc-500">
-        No email is sent. A new user is created with a temporary password shown
-        once below — share it securely; they can change it after signing in.
+        No email is sent. The user is created with a starter password, shown
+        once below — share it securely.
       </p>
     </div>
   );
@@ -108,8 +108,8 @@ function CredentialCard({
         Account created — copy these now
       </p>
       <p className="mt-1 text-xs text-blue-800/80 dark:text-blue-300/80">
-        This password is shown only once. Give it to {email} so they can sign
-        in and change it.
+        Shown only once. Share it securely with {email} — it&apos;s their login
+        password.
       </p>
       <dl className="mt-3 grid grid-cols-[auto_1fr] gap-x-4 gap-y-1 text-sm">
         <dt className="text-zinc-500">Email</dt>
