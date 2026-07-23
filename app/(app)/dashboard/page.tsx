@@ -212,14 +212,14 @@ function GrossStat({
         {label}
       </div>
       <div
-        className={`mt-1 text-sm font-semibold ${
-          accent ? "text-blue-700 dark:text-blue-400" : ""
+        className={`mt-1 font-semibold text-zinc-900 dark:text-zinc-50 ${
+          accent ? "text-base" : "text-sm"
         }`}
       >
         {formatCurrency(value)}
       </div>
       {sub ? (
-        <div className="mt-1 text-sm font-semibold text-blue-700 dark:text-blue-400">
+        <div className="mt-1 text-sm font-semibold text-zinc-600 dark:text-zinc-300">
           {sub}
         </div>
       ) : null}
