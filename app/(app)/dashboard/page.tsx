@@ -1,7 +1,8 @@
 import Link from "next/link";
 import { createClient } from "@/lib/supabase/server";
 import { getCurrentUser, effectiveRole } from "@/lib/auth";
-import { formatCurrency, monthStartISODate } from "@/lib/format";
+import { formatCurrency, monthStartISODate, todayISODate } from "@/lib/format";
+import { projectMonthEnd } from "@/lib/projection";
 
 export default async function DashboardPage() {
   const user = await getCurrentUser();
@@ -9,24 +10,35 @@ export default async function DashboardPage() {
 
   const supabase = await createClient();
 
-  const [{ data: dealerships }, { data: memberships }, { data: monthly }] =
-    await Promise.all([
-      supabase.from("dealerships").select("id, name").order("name"),
-      supabase
-        .from("dealership_members")
-        .select("dealership_id, role")
-        .eq("user_id", user.id),
-      supabase
-        .from("monthly_summary")
-        .select("*")
-        .eq("month", monthStartISODate()),
-    ]);
+  const [
+    { data: dealerships },
+    { data: memberships },
+    { data: monthly },
+    { data: todayEntries },
+  ] = await Promise.all([
+    supabase.from("dealerships").select("id, name").order("name"),
+    supabase
+      .from("dealership_members")
+      .select("dealership_id, role")
+      .eq("user_id", user.id),
+    supabase
+      .from("monthly_summary")
+      .select("*")
+      .eq("month", monthStartISODate()),
+    supabase
+      .from("daily_entries")
+      .select("*")
+      .eq("entry_date", todayISODate()),
+  ]);
 
   const roleByDealership = new Map(
     memberships?.map((m) => [m.dealership_id, m.role]),
   );
   const monthlyByDealership = new Map(
     monthly?.map((m) => [m.dealership_id, m]),
+  );
+  const todayByDealership = new Map(
+    todayEntries?.map((e) => [e.dealership_id, e]),
   );
 
   if (!dealerships || dealerships.length === 0) {
@@ -75,6 +87,15 @@ export default async function DashboardPage() {
             (summary?.total_used_front_end_gross ?? 0) +
             (summary?.total_used_back_end_gross ?? 0);
 
+          const todayEntry = todayByDealership.get(dealership.id);
+          const todayGross = todayEntry
+            ? todayEntry.new_front_end_gross +
+              todayEntry.new_back_end_gross +
+              todayEntry.used_front_end_gross +
+              todayEntry.used_back_end_gross
+            : 0;
+          const mtdGross = summary?.total_gross ?? 0;
+
           return (
             <div
               key={dealership.id}
@@ -106,11 +127,14 @@ export default async function DashboardPage() {
                 />
               </div>
 
-              <div className="flex items-baseline justify-between border-t border-zinc-100 pt-3 dark:border-zinc-800">
-                <span className="text-sm text-zinc-500">Total gross</span>
-                <span className="text-lg font-semibold text-blue-700 dark:text-blue-400">
-                  {formatCurrency(summary?.total_gross)}
-                </span>
+              <div className="grid grid-cols-3 gap-2 border-t border-zinc-100 pt-3 text-center dark:border-zinc-800">
+                <GrossStat label="Today" value={todayGross} />
+                <GrossStat label="This month" value={mtdGross} />
+                <GrossStat
+                  label="Projected"
+                  value={projectMonthEnd(mtdGross)}
+                  accent
+                />
               </div>
 
               <div className="flex gap-4 text-sm">
@@ -132,6 +156,29 @@ export default async function DashboardPage() {
             </div>
           );
         })}
+      </div>
+    </div>
+  );
+}
+
+function GrossStat({
+  label,
+  value,
+  accent = false,
+}: {
+  label: string;
+  value: number;
+  accent?: boolean;
+}) {
+  return (
+    <div>
+      <div className="text-xs text-zinc-500">{label}</div>
+      <div
+        className={`text-sm font-semibold ${
+          accent ? "text-blue-700 dark:text-blue-400" : ""
+        }`}
+      >
+        {formatCurrency(value)}
       </div>
     </div>
   );

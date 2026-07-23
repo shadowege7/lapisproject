@@ -2,7 +2,14 @@ import Link from "next/link";
 import { notFound, redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { getCurrentUser, effectiveRole } from "@/lib/auth";
-import { formatCurrency, formatMonth, formatYear } from "@/lib/format";
+import {
+  formatCurrency,
+  formatMonth,
+  formatYear,
+  monthStartISODate,
+  todayISODate,
+} from "@/lib/format";
+import { projectMonthEnd } from "@/lib/projection";
 
 interface SummaryRow {
   label: string;
@@ -93,6 +100,51 @@ export default async function ReportsPage({
     days_logged: r.days_logged,
   }));
 
+  const today = todayISODate();
+  const todayEntry = (dailyEntries ?? []).find((e) => e.entry_date === today);
+  const thisMonth = (monthly ?? []).find(
+    (m) => m.month === monthStartISODate(),
+  );
+
+  // metric = [label, today value, month-to-date value, isCurrency]
+  const metrics: [string, number, number, boolean][] = [
+    [
+      "New units",
+      todayEntry?.new_units ?? 0,
+      thisMonth?.total_new_units ?? 0,
+      false,
+    ],
+    [
+      "Used units",
+      todayEntry?.used_units ?? 0,
+      thisMonth?.total_used_units ?? 0,
+      false,
+    ],
+    [
+      "Front gross",
+      (todayEntry?.new_front_end_gross ?? 0) +
+        (todayEntry?.used_front_end_gross ?? 0),
+      thisMonth?.total_front_end_gross ?? 0,
+      true,
+    ],
+    [
+      "Back gross",
+      (todayEntry?.new_back_end_gross ?? 0) +
+        (todayEntry?.used_back_end_gross ?? 0),
+      thisMonth?.total_back_end_gross ?? 0,
+      true,
+    ],
+    [
+      "Total gross",
+      (todayEntry?.new_front_end_gross ?? 0) +
+        (todayEntry?.new_back_end_gross ?? 0) +
+        (todayEntry?.used_front_end_gross ?? 0) +
+        (todayEntry?.used_back_end_gross ?? 0),
+      thisMonth?.total_gross ?? 0,
+      true,
+    ],
+  ];
+
   return (
     <div className="flex flex-col gap-8">
       <div className="flex flex-wrap items-center justify-between gap-3">
@@ -113,6 +165,52 @@ export default async function ReportsPage({
           </Link>
         ) : null}
       </div>
+
+      <section>
+        <h2 className="mb-3 text-sm font-semibold">
+          This month
+          <span className="ml-2 font-normal text-zinc-400">
+            {formatMonth(monthStartISODate())}
+          </span>
+        </h2>
+        <Card>
+          <table className="w-full text-sm">
+            <thead>
+              <tr className="border-b border-zinc-200 text-left text-xs uppercase tracking-wide text-zinc-500 dark:border-zinc-800">
+                <th className="py-2.5 pr-4 font-medium">Metric</th>
+                <th className="py-2.5 pr-4 font-medium">Today</th>
+                <th className="py-2.5 pr-4 font-medium">Month to date</th>
+                <th className="py-2.5 pr-4 font-medium text-blue-700 dark:text-blue-400">
+                  Projected month-end
+                </th>
+              </tr>
+            </thead>
+            <tbody>
+              {metrics.map(([label, todayVal, mtdVal, isCurrency]) => (
+                <tr
+                  key={label}
+                  className="border-b border-zinc-100 last:border-0 dark:border-zinc-900"
+                >
+                  <td className="py-2.5 pr-4 font-medium">{label}</td>
+                  <td className="py-2.5 pr-4">
+                    {formatMetric(todayVal, isCurrency)}
+                  </td>
+                  <td className="py-2.5 pr-4">
+                    {formatMetric(mtdVal, isCurrency)}
+                  </td>
+                  <td className="py-2.5 pr-4 font-semibold text-blue-700 dark:text-blue-400">
+                    {formatMetric(projectMonthEnd(mtdVal), isCurrency)}
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </Card>
+        <p className="mt-2 text-xs text-zinc-400">
+          Projected month-end assumes the current daily pace holds for the rest
+          of the month.
+        </p>
+      </section>
 
       <SummarySection title="Annual" rows={annualRows} />
       <SummarySection title="Monthly" rows={monthlyRows} />
@@ -138,6 +236,9 @@ export default async function ReportsPage({
                 <th className="py-2.5 pr-4 font-medium text-blue-700 dark:text-blue-400">
                   Total gross
                 </th>
+                {role === "editor" ? (
+                  <th className="py-2.5 pr-4 font-medium" />
+                ) : null}
               </tr>
             </thead>
             <tbody>
@@ -170,12 +271,25 @@ export default async function ReportsPage({
                     <td className="py-2.5 pr-4 font-semibold text-blue-700 dark:text-blue-400">
                       {formatCurrency(total)}
                     </td>
+                    {role === "editor" ? (
+                      <td className="py-2.5 pr-4">
+                        <Link
+                          href={`/dealerships/${dealershipId}/entry?date=${e.entry_date}`}
+                          className="text-blue-600 hover:underline dark:text-blue-400"
+                        >
+                          Edit
+                        </Link>
+                      </td>
+                    ) : null}
                   </tr>
                 );
               })}
               {(dailyEntries ?? []).length === 0 ? (
                 <tr>
-                  <td colSpan={8} className="py-4 text-zinc-500">
+                  <td
+                    colSpan={role === "editor" ? 9 : 8}
+                    className="py-4 text-zinc-500"
+                  >
                     No entries yet.
                   </td>
                 </tr>
@@ -251,6 +365,12 @@ function SummarySection({
       )}
     </section>
   );
+}
+
+function formatMetric(value: number, isCurrency: boolean): string {
+  return isCurrency
+    ? formatCurrency(value)
+    : Math.round(value).toLocaleString("en-US");
 }
 
 function Card({ children }: { children: React.ReactNode }) {

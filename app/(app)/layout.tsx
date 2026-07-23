@@ -2,7 +2,7 @@ import Link from "next/link";
 import { redirect } from "next/navigation";
 import { getCurrentUser } from "@/lib/auth";
 import { logout } from "@/app/login/actions";
-import { BrandLockup } from "@/app/brand";
+import { BrandLogo } from "@/app/brand-logo";
 
 export default async function AppLayout({
   children,
@@ -17,7 +17,7 @@ export default async function AppLayout({
       <header className="sticky top-0 z-10 border-b border-blue-100 bg-white/80 backdrop-blur dark:border-blue-950/60 dark:bg-[#0e1626]/80">
         <div className="mx-auto flex w-full max-w-5xl flex-wrap items-center justify-between gap-3 px-4 py-3">
           <Link href="/dashboard" className="shrink-0">
-            <BrandLockup />
+            <BrandLogo />
           </Link>
           <nav className="flex items-center gap-4 text-sm">
             <Link
@@ -34,6 +34,12 @@ export default async function AppLayout({
                 Admin
               </Link>
             ) : null}
+            <Link
+              href="/account"
+              className="font-medium text-zinc-600 hover:text-blue-700 dark:text-zinc-300 dark:hover:text-blue-400"
+            >
+              Account
+            </Link>
             <span className="hidden text-zinc-400 sm:inline">{user.email}</span>
             <form action={logout}>
               <button

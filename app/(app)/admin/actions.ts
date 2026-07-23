@@ -6,7 +6,7 @@ import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import type { DealershipRole } from "@/lib/database.types";
-import type { InviteResult } from "./invite-types";
+import type { InviteResult, ResetResult } from "./invite-types";
 
 // Readable temp password, e.g. "X7kM-pQ2r-Tw9y" (no ambiguous chars).
 function generateTempPassword() {
@@ -128,6 +128,56 @@ export async function removeMembership(formData: FormData) {
 
   await supabase.from("dealership_members").delete().eq("id", membershipId);
   revalidatePath("/admin");
+}
+
+/** Assign a user to a store, or change their role there (upsert). */
+export async function setMembership(formData: FormData) {
+  const supabase = await requireSuperAdmin();
+  const userId = String(formData.get("user_id") ?? "");
+  const dealershipId = String(formData.get("dealership_id") ?? "");
+  const role = String(formData.get("role") ?? "viewer") as DealershipRole;
+  if (!userId || !dealershipId) return;
+  if (role !== "editor" && role !== "viewer") return;
+
+  await supabase.from("dealership_members").upsert(
+    { dealership_id: dealershipId, user_id: userId, role },
+    { onConflict: "dealership_id,user_id" },
+  );
+  revalidatePath("/admin");
+}
+
+/** Remove one store assignment by user + store (used by the per-user UI). */
+export async function unassignStore(formData: FormData) {
+  const supabase = await requireSuperAdmin();
+  const userId = String(formData.get("user_id") ?? "");
+  const dealershipId = String(formData.get("dealership_id") ?? "");
+  if (!userId || !dealershipId) return;
+
+  await supabase
+    .from("dealership_members")
+    .delete()
+    .eq("user_id", userId)
+    .eq("dealership_id", dealershipId);
+  revalidatePath("/admin");
+}
+
+/** Reset a user's password to a fresh temporary one (shown once to the admin). */
+export async function resetUserPassword(
+  _prevState: ResetResult,
+  formData: FormData,
+): Promise<ResetResult> {
+  await requireSuperAdmin();
+  const userId = String(formData.get("user_id") ?? "");
+  if (!userId) return { status: "error", message: "Missing user." };
+
+  const admin = createAdminClient();
+  const tempPassword = generateTempPassword();
+  const { error } = await admin.auth.admin.updateUserById(userId, {
+    password: tempPassword,
+  });
+  if (error) return { status: "error", message: error.message };
+
+  return { status: "reset", tempPassword };
 }
 
 export async function deleteUser(formData: FormData) {

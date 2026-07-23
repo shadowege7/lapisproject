@@ -1,5 +1,5 @@
 import { login } from "./actions";
-import { BrandMark, COMPANY_NAME } from "@/app/brand";
+import { BrandLogo } from "@/app/brand-logo";
 
 export default async function LoginPage({
   searchParams,
@@ -12,13 +12,8 @@ export default async function LoginPage({
     <div className="flex flex-1 items-center justify-center px-4 py-12">
       <div className="w-full max-w-sm">
         <div className="mb-6 flex flex-col items-center gap-3 text-center">
-          <BrandMark className="h-12 w-12 text-xl" />
-          <div>
-            <h1 className="text-xl font-semibold tracking-tight">
-              {COMPANY_NAME}
-            </h1>
-            <p className="text-sm text-zinc-500">Sales Tracker</p>
-          </div>
+          <BrandLogo className="h-12" />
+          <p className="text-sm text-zinc-500">Sales Tracker</p>
         </div>
 
         <div className="rounded-2xl border border-blue-100 bg-white p-8 shadow-lg shadow-blue-900/5 dark:border-blue-950/60 dark:bg-[#0e1626]">

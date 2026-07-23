@@ -1,3 +1,4 @@
+import Link from "next/link";
 import { notFound, redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { getCurrentUser, effectiveRole } from "@/lib/auth";
@@ -51,12 +52,22 @@ export default async function EntryPage({
   return (
     <div className="flex max-w-xl flex-col gap-6">
       <div>
-        <p className="text-xs font-medium uppercase tracking-wide text-blue-600 dark:text-blue-400">
-          Daily entry
-        </p>
-        <h1 className="text-xl font-semibold tracking-tight">
+        <Link
+          href={`/dealerships/${dealershipId}/reports`}
+          className="text-xs font-medium text-blue-600 hover:underline dark:text-blue-400"
+        >
+          ← Back to reports
+        </Link>
+        <h1 className="mt-1 text-xl font-semibold tracking-tight">
           {dealership.name}
         </h1>
+        <p className="text-sm text-zinc-500">
+          {existing
+            ? entryDate === todayISODate()
+              ? "Editing today's entry"
+              : `Editing entry for ${entryDate}`
+            : "New daily entry"}
+        </p>
       </div>
 
       {saved ? (
