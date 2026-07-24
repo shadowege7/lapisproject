@@ -107,41 +107,69 @@ export default async function ReportsPage({
     (m) => m.month === monthStartISODate(),
   );
 
-  // metric = [label, today value, month-to-date value, isCurrency]
-  const metrics: [string, number, number, boolean][] = [
+  // metric = [label, today value, month-to-date value, isCurrency, emphasize]
+  const tE = todayEntry;
+  const tm = thisMonth;
+  const metrics: [string, number, number, boolean, boolean][] = [
+    ["New units", tE?.new_units ?? 0, tm?.total_new_units ?? 0, false, false],
     [
-      "New units",
-      todayEntry?.new_units ?? 0,
-      thisMonth?.total_new_units ?? 0,
+      "New front",
+      tE?.new_front_end_gross ?? 0,
+      tm?.total_new_front_end_gross ?? 0,
+      true,
       false,
     ],
     [
-      "Used units",
-      todayEntry?.used_units ?? 0,
-      thisMonth?.total_used_units ?? 0,
+      "New back",
+      tE?.new_back_end_gross ?? 0,
+      tm?.total_new_back_end_gross ?? 0,
+      true,
       false,
     ],
     [
-      "Front gross",
-      (todayEntry?.new_front_end_gross ?? 0) +
-        (todayEntry?.used_front_end_gross ?? 0),
-      thisMonth?.total_front_end_gross ?? 0,
+      "New gross",
+      (tE?.new_front_end_gross ?? 0) + (tE?.new_back_end_gross ?? 0),
+      (tm?.total_new_front_end_gross ?? 0) + (tm?.total_new_back_end_gross ?? 0),
+      true,
       true,
     ],
     [
-      "Back gross",
-      (todayEntry?.new_back_end_gross ?? 0) +
-        (todayEntry?.used_back_end_gross ?? 0),
-      thisMonth?.total_back_end_gross ?? 0,
+      "Used units",
+      tE?.used_units ?? 0,
+      tm?.total_used_units ?? 0,
+      false,
+      false,
+    ],
+    [
+      "Used front",
+      tE?.used_front_end_gross ?? 0,
+      tm?.total_used_front_end_gross ?? 0,
+      true,
+      false,
+    ],
+    [
+      "Used back",
+      tE?.used_back_end_gross ?? 0,
+      tm?.total_used_back_end_gross ?? 0,
+      true,
+      false,
+    ],
+    [
+      "Used gross",
+      (tE?.used_front_end_gross ?? 0) + (tE?.used_back_end_gross ?? 0),
+      (tm?.total_used_front_end_gross ?? 0) +
+        (tm?.total_used_back_end_gross ?? 0),
+      true,
       true,
     ],
     [
       "Total gross",
-      (todayEntry?.new_front_end_gross ?? 0) +
-        (todayEntry?.new_back_end_gross ?? 0) +
-        (todayEntry?.used_front_end_gross ?? 0) +
-        (todayEntry?.used_back_end_gross ?? 0),
-      thisMonth?.total_gross ?? 0,
+      (tE?.new_front_end_gross ?? 0) +
+        (tE?.new_back_end_gross ?? 0) +
+        (tE?.used_front_end_gross ?? 0) +
+        (tE?.used_back_end_gross ?? 0),
+      tm?.total_gross ?? 0,
+      true,
       true,
     ],
   ];
@@ -187,16 +215,22 @@ export default async function ReportsPage({
               </tr>
             </thead>
             <tbody>
-              {metrics.map(([label, todayVal, mtdVal, isCurrency]) => (
+              {metrics.map(([label, todayVal, mtdVal, isCurrency, emphasize]) => (
                 <tr
                   key={label}
                   className="border-b border-zinc-100 last:border-0 dark:border-zinc-900"
                 >
-                  <td className="py-2.5 pr-4 font-medium">{label}</td>
-                  <td className="py-2.5 pr-4">
+                  <td
+                    className={`py-2.5 pr-4 font-medium ${
+                      emphasize ? "" : "text-zinc-500"
+                    }`}
+                  >
+                    {label}
+                  </td>
+                  <td className={`py-2.5 pr-4 ${emphasize ? "font-medium" : ""}`}>
                     {formatMetric(todayVal, isCurrency)}
                   </td>
-                  <td className="py-2.5 pr-4">
+                  <td className={`py-2.5 pr-4 ${emphasize ? "font-medium" : ""}`}>
                     {formatMetric(mtdVal, isCurrency)}
                   </td>
                   <td className="py-2.5 pr-4 font-semibold text-blue-700 dark:text-blue-400">
@@ -214,7 +248,7 @@ export default async function ReportsPage({
       </section>
 
       <SummarySection title="Annual" rows={annualRows} />
-      <SummarySection title="Monthly" rows={monthlyRows} />
+      <SummarySection title="Monthly" rows={monthlyRows} compact />
 
       <section>
         <h2 className="mb-3 text-sm font-semibold">
@@ -335,9 +369,11 @@ export default async function ReportsPage({
 function SummarySection({
   title,
   rows,
+  compact = false,
 }: {
   title: string;
   rows: SummaryRow[];
+  compact?: boolean;
 }) {
   return (
     <section>
@@ -351,13 +387,21 @@ function SummarySection({
               <tr className="border-b border-zinc-200 text-left text-xs uppercase tracking-wide text-zinc-500 dark:border-zinc-800">
                 <th className="py-2.5 pr-4 font-medium">Period</th>
                 <th className="py-2.5 pr-4 font-medium">New units</th>
-                <th className="py-2.5 pr-4 font-medium">New front</th>
-                <th className="py-2.5 pr-4 font-medium">New back</th>
-                <th className="py-2.5 pr-4 font-medium">New gross</th>
+                {compact ? null : (
+                  <>
+                    <th className="py-2.5 pr-4 font-medium">New front</th>
+                    <th className="py-2.5 pr-4 font-medium">New back</th>
+                    <th className="py-2.5 pr-4 font-medium">New gross</th>
+                  </>
+                )}
                 <th className="py-2.5 pr-4 font-medium">Used units</th>
-                <th className="py-2.5 pr-4 font-medium">Used front</th>
-                <th className="py-2.5 pr-4 font-medium">Used back</th>
-                <th className="py-2.5 pr-4 font-medium">Used gross</th>
+                {compact ? null : (
+                  <>
+                    <th className="py-2.5 pr-4 font-medium">Used front</th>
+                    <th className="py-2.5 pr-4 font-medium">Used back</th>
+                    <th className="py-2.5 pr-4 font-medium">Used gross</th>
+                  </>
+                )}
                 <th className="py-2.5 pr-4 font-medium text-blue-700 dark:text-blue-400">
                   Total gross
                 </th>
@@ -372,30 +416,39 @@ function SummarySection({
                 >
                   <td className="py-2.5 pr-4 font-medium">{r.label}</td>
                   <td className="py-2.5 pr-4">{r.total_new_units}</td>
-                  <td className="py-2.5 pr-4">
-                    {formatCurrency(r.total_new_front_end_gross)}
-                  </td>
-                  <td className="py-2.5 pr-4">
-                    {formatCurrency(r.total_new_back_end_gross)}
-                  </td>
-                  <td className="py-2.5 pr-4 font-medium">
-                    {formatCurrency(
-                      r.total_new_front_end_gross + r.total_new_back_end_gross,
-                    )}
-                  </td>
+                  {compact ? null : (
+                    <>
+                      <td className="py-2.5 pr-4">
+                        {formatCurrency(r.total_new_front_end_gross)}
+                      </td>
+                      <td className="py-2.5 pr-4">
+                        {formatCurrency(r.total_new_back_end_gross)}
+                      </td>
+                      <td className="py-2.5 pr-4 font-medium">
+                        {formatCurrency(
+                          r.total_new_front_end_gross +
+                            r.total_new_back_end_gross,
+                        )}
+                      </td>
+                    </>
+                  )}
                   <td className="py-2.5 pr-4">{r.total_used_units}</td>
-                  <td className="py-2.5 pr-4">
-                    {formatCurrency(r.total_used_front_end_gross)}
-                  </td>
-                  <td className="py-2.5 pr-4">
-                    {formatCurrency(r.total_used_back_end_gross)}
-                  </td>
-                  <td className="py-2.5 pr-4 font-medium">
-                    {formatCurrency(
-                      r.total_used_front_end_gross +
-                        r.total_used_back_end_gross,
-                    )}
-                  </td>
+                  {compact ? null : (
+                    <>
+                      <td className="py-2.5 pr-4">
+                        {formatCurrency(r.total_used_front_end_gross)}
+                      </td>
+                      <td className="py-2.5 pr-4">
+                        {formatCurrency(r.total_used_back_end_gross)}
+                      </td>
+                      <td className="py-2.5 pr-4 font-medium">
+                        {formatCurrency(
+                          r.total_used_front_end_gross +
+                            r.total_used_back_end_gross,
+                        )}
+                      </td>
+                    </>
+                  )}
                   <td className="py-2.5 pr-4 font-semibold text-blue-700 dark:text-blue-400">
                     {formatCurrency(r.total_gross)}
                   </td>
