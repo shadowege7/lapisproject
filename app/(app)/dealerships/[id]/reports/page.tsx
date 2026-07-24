@@ -1,3 +1,4 @@
+import { Fragment } from "react";
 import Link from "next/link";
 import { notFound, redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
@@ -248,40 +249,62 @@ export default async function ReportsPage({
                   e.new_back_end_gross +
                   e.used_front_end_gross +
                   e.used_back_end_gross;
+                const cols = role === "editor" ? 9 : 8;
                 return (
-                  <tr
-                    key={e.id}
-                    className="border-b border-zinc-100 last:border-0 hover:bg-blue-50/40 dark:border-zinc-900 dark:hover:bg-blue-950/20"
-                  >
-                    <td className="py-2.5 pr-4 font-medium">{e.entry_date}</td>
-                    <td className="py-2.5 pr-4">{e.new_units}</td>
-                    <td className="py-2.5 pr-4">
-                      {formatCurrency(e.new_front_end_gross)}
-                    </td>
-                    <td className="py-2.5 pr-4">
-                      {formatCurrency(e.new_back_end_gross)}
-                    </td>
-                    <td className="py-2.5 pr-4">{e.used_units}</td>
-                    <td className="py-2.5 pr-4">
-                      {formatCurrency(e.used_front_end_gross)}
-                    </td>
-                    <td className="py-2.5 pr-4">
-                      {formatCurrency(e.used_back_end_gross)}
-                    </td>
-                    <td className="py-2.5 pr-4 font-semibold text-blue-700 dark:text-blue-400">
-                      {formatCurrency(total)}
-                    </td>
-                    {role === "editor" ? (
-                      <td className="py-2.5 pr-4">
-                        <Link
-                          href={`/dealerships/${dealershipId}/entry?date=${e.entry_date}`}
-                          className="text-blue-600 hover:underline dark:text-blue-400"
-                        >
-                          Edit
-                        </Link>
+                  <Fragment key={e.id}>
+                    <tr
+                      className={`hover:bg-blue-50/40 dark:hover:bg-blue-950/20 ${
+                        e.notes
+                          ? ""
+                          : "border-b border-zinc-100 last:border-0 dark:border-zinc-900"
+                      }`}
+                    >
+                      <td className="py-2.5 pr-4 font-medium">
+                        {e.entry_date}
                       </td>
+                      <td className="py-2.5 pr-4">{e.new_units}</td>
+                      <td className="py-2.5 pr-4">
+                        {formatCurrency(e.new_front_end_gross)}
+                      </td>
+                      <td className="py-2.5 pr-4">
+                        {formatCurrency(e.new_back_end_gross)}
+                      </td>
+                      <td className="py-2.5 pr-4">{e.used_units}</td>
+                      <td className="py-2.5 pr-4">
+                        {formatCurrency(e.used_front_end_gross)}
+                      </td>
+                      <td className="py-2.5 pr-4">
+                        {formatCurrency(e.used_back_end_gross)}
+                      </td>
+                      <td className="py-2.5 pr-4 font-semibold text-blue-700 dark:text-blue-400">
+                        {formatCurrency(total)}
+                      </td>
+                      {role === "editor" ? (
+                        <td className="py-2.5 pr-4">
+                          <Link
+                            href={`/dealerships/${dealershipId}/entry?date=${e.entry_date}`}
+                            className="text-blue-600 hover:underline dark:text-blue-400"
+                          >
+                            Edit
+                          </Link>
+                        </td>
+                      ) : null}
+                    </tr>
+                    {e.notes ? (
+                      <tr className="border-b border-zinc-100 last:border-0 dark:border-zinc-900">
+                        <td colSpan={cols} className="pb-2.5 pr-4">
+                          <div className="rounded-md bg-amber-50 px-3 py-1.5 text-xs text-amber-900 dark:bg-amber-950/30 dark:text-amber-100">
+                            <span className="mr-1.5 font-semibold uppercase tracking-wide text-amber-700 dark:text-amber-400">
+                              Notes
+                            </span>
+                            <span className="whitespace-pre-wrap break-words">
+                              {e.notes}
+                            </span>
+                          </div>
+                        </td>
+                      </tr>
                     ) : null}
-                  </tr>
+                  </Fragment>
                 );
               })}
               {(dailyEntries ?? []).length === 0 ? (
