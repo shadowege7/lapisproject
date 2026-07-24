@@ -53,5 +53,5 @@ export async function saveEntry(formData: FormData) {
 
   revalidatePath(`/dealerships/${dealershipId}/reports`);
   revalidatePath("/dashboard");
-  redirect(`/dealerships/${dealershipId}/entry?date=${entryDate}&saved=1`);
+  redirect("/dashboard");
 }
