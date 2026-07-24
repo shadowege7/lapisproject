@@ -1,6 +1,6 @@
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
-import { createAdminClient } from "@/lib/supabase/admin";
+import { listAllUsers } from "@/lib/supabase/admin";
 import { getCurrentUser } from "@/lib/auth";
 import type { DealershipRole } from "@/lib/database.types";
 import { createDealership } from "./actions";
@@ -13,16 +13,18 @@ export default async function AdminPage() {
   if (!user.isSuperAdmin) redirect("/dashboard");
 
   const supabase = await createClient();
-  const admin = createAdminClient();
 
-  const [{ data: dealerships }, { data: members }, { data: authUsers }] =
+  const [{ data: dealerships }, { data: members }, usersResult] =
     await Promise.all([
       supabase.from("dealerships").select("id, name").order("name"),
       supabase
         .from("dealership_members")
         .select("id, dealership_id, user_id, role"),
-      admin.auth.admin.listUsers(),
+      listAllUsers(),
     ]);
+
+  const authUsers = usersResult.users;
+  const authUsersError = usersResult.error;
 
   const { data: profiles } = await supabase
     .from("profiles")
@@ -100,19 +102,26 @@ export default async function AdminPage() {
           edit or only view each one. Removing a user deletes their account;
           any sales entries they logged are kept.
         </p>
-        <div className="flex flex-col gap-3">
-          {(authUsers?.users ?? []).map((u) => (
-            <UserCard
-              key={u.id}
-              userId={u.id}
-              email={u.email ?? "(no email)"}
-              isSelf={u.id === user.id}
-              isSuperAdmin={superAdminById.get(u.id) ?? false}
-              memberships={membershipsByUser.get(u.id) ?? []}
-              dealerships={dealershipList}
-            />
-          ))}
-        </div>
+        {authUsersError ? (
+          <p className="rounded-md bg-red-50 px-3 py-2 text-sm text-red-700 dark:bg-red-950 dark:text-red-300">
+            Couldn&apos;t load the user list ({authUsersError.message}). Reload
+            the page to try again.
+          </p>
+        ) : (
+          <div className="flex flex-col gap-3">
+            {authUsers.map((u) => (
+              <UserCard
+                key={u.id}
+                userId={u.id}
+                email={u.email ?? "(no email)"}
+                isSelf={u.id === user.id}
+                isSuperAdmin={superAdminById.get(u.id) ?? false}
+                memberships={membershipsByUser.get(u.id) ?? []}
+                dealerships={dealershipList}
+              />
+            ))}
+          </div>
+        )}
       </section>
     </div>
   );

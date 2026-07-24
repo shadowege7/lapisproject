@@ -4,7 +4,7 @@ import { randomBytes } from "crypto";
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
-import { createAdminClient } from "@/lib/supabase/admin";
+import { createAdminClient, listAllUsers } from "@/lib/supabase/admin";
 import type { DealershipRole } from "@/lib/database.types";
 import type { InviteResult, ResetResult } from "./invite-types";
 
@@ -66,15 +66,12 @@ export async function inviteAndAssign(
 
   const admin = createAdminClient();
 
-  const { data: existingList, error: listError } =
-    await admin.auth.admin.listUsers();
+  const { users, error: listError } = await listAllUsers();
   if (listError) {
     return { status: "error", message: listError.message };
   }
 
-  const existing = existingList?.users.find(
-    (u) => u.email?.toLowerCase() === email,
-  );
+  const existing = users.find((u) => u.email?.toLowerCase() === email);
   let userId = existing?.id;
   let tempPassword: string | null = null;
 
