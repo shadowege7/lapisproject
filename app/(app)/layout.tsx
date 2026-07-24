@@ -3,6 +3,7 @@ import { redirect } from "next/navigation";
 import { getCurrentUser } from "@/lib/auth";
 import { logout } from "@/app/login/actions";
 import { BrandLogo } from "@/app/brand-logo";
+import { ThemeToggle } from "@/app/theme-toggle";
 
 export default async function AppLayout({
   children,
@@ -49,6 +50,7 @@ export default async function AppLayout({
                 Sign out
               </button>
             </form>
+            <ThemeToggle />
           </nav>
         </div>
       </header>

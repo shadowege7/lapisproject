@@ -1,5 +1,6 @@
 import { login } from "./actions";
 import { BrandLogo } from "@/app/brand-logo";
+import { ThemeToggle } from "@/app/theme-toggle";
 
 export default async function LoginPage({
   searchParams,
@@ -9,7 +10,10 @@ export default async function LoginPage({
   const { error, next } = await searchParams;
 
   return (
-    <div className="flex flex-1 items-center justify-center px-4 py-12">
+    <div className="relative flex flex-1 items-center justify-center px-4 py-12">
+      <div className="absolute right-4 top-4">
+        <ThemeToggle />
+      </div>
       <div className="w-full max-w-sm">
         <div className="mb-6 flex flex-col items-center gap-3 text-center">
           <BrandLogo className="h-12" />
