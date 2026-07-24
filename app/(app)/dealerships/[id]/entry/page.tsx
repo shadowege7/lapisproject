@@ -123,6 +123,17 @@ export default async function EntryPage({
           confirmedAppointments={existing?.confirmed_appointments ?? 0}
         />
 
+        <label className="flex flex-col gap-1 text-sm font-medium">
+          Notes for the day
+          <textarea
+            name="notes"
+            rows={3}
+            defaultValue={existing?.notes ?? ""}
+            placeholder="Anything worth flagging about today…"
+            className="rounded-md border border-zinc-300 bg-transparent px-3 py-2 text-sm font-normal outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-500/30 dark:border-zinc-700"
+          />
+        </label>
+
         <button
           type="submit"
           className="mt-1 w-fit rounded-md bg-blue-600 px-4 py-2 text-sm font-semibold text-white shadow-sm transition-colors hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500/50"

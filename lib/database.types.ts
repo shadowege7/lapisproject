@@ -98,6 +98,7 @@ export interface Database {
           sales_calls: number;
           appointments: number;
           confirmed_appointments: number;
+          notes: string | null;
           created_by: string | null;
           updated_at: string;
         };
@@ -115,6 +116,7 @@ export interface Database {
           sales_calls?: number;
           appointments?: number;
           confirmed_appointments?: number;
+          notes?: string | null;
           created_by?: string | null;
           updated_at?: string;
         };
@@ -132,6 +134,7 @@ export interface Database {
           sales_calls?: number;
           appointments?: number;
           confirmed_appointments?: number;
+          notes?: string | null;
           created_by?: string | null;
           updated_at?: string;
         };

@@ -19,6 +19,7 @@ export async function saveEntry(formData: FormData) {
   const confirmedAppointments = Number(
     formData.get("confirmed_appointments") ?? 0,
   );
+  const notes = String(formData.get("notes") ?? "").trim();
 
   const supabase = await createClient();
   const {
@@ -40,6 +41,7 @@ export async function saveEntry(formData: FormData) {
       sales_calls: salesCalls,
       appointments: appointments,
       confirmed_appointments: confirmedAppointments,
+      notes: notes.length ? notes : null,
       created_by: user.id,
     },
     { onConflict: "dealership_id,entry_date" },

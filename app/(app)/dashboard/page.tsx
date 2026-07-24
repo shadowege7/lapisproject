@@ -152,6 +152,17 @@ export default async function DashboardPage() {
                 </div>
               </div>
 
+              {todayEntry?.notes ? (
+                <div className="rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 dark:border-amber-900/50 dark:bg-amber-950/30">
+                  <span className="mb-0.5 block text-[11px] font-medium uppercase tracking-wide text-amber-700 dark:text-amber-400">
+                    Notes
+                  </span>
+                  <p className="whitespace-pre-wrap break-words text-sm text-amber-900 dark:text-amber-100">
+                    {todayEntry.notes}
+                  </p>
+                </div>
+              ) : null}
+
               <div className="grid grid-cols-3 divide-x divide-zinc-200 border-t border-zinc-100 pt-3 text-center dark:divide-zinc-800 dark:border-zinc-800">
                 <GrossStat
                   label="Today"
