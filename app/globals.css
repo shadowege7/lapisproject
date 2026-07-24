@@ -1,14 +1,17 @@
 @import "tailwindcss";
 
+/* Force dark mode everywhere: make the `dark:` utility variant always apply
+   (the <html> element carries the `dark` class), regardless of the OS setting. */
+@custom-variant dark (&:where(.dark, .dark *));
+
 :root {
-  /* Tells the browser to render native controls (select dropdowns, the date
-     picker, scrollbars) in the matching theme so their text stays legible. */
-  color-scheme: light;
-  --background: #eef2f9;
-  --foreground: #0f172a;
-  --surface: #ffffff;
-  --brand: #1d4ed8;
-  --brand-strong: #1e3a8a;
+  /* Native controls (select dropdowns, date picker, scrollbars) render dark. */
+  color-scheme: dark;
+  --background: #060b16;
+  --foreground: #e6edf6;
+  --surface: #0e1626;
+  --brand: #3b82f6;
+  --brand-strong: #60a5fa;
 }
 
 @theme inline {
@@ -19,17 +22,6 @@
   --color-brand-strong: var(--brand-strong);
   --font-sans: var(--font-geist-sans);
   --font-mono: var(--font-geist-mono);
-}
-
-@media (prefers-color-scheme: dark) {
-  :root {
-    color-scheme: dark;
-    --background: #060b16;
-    --foreground: #e6edf6;
-    --surface: #0e1626;
-    --brand: #3b82f6;
-    --brand-strong: #60a5fa;
-  }
 }
 
 /* Fluid base font: ~16px on phones, ramping up to ~19px on large screens.
