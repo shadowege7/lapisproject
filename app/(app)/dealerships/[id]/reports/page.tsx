@@ -231,9 +231,11 @@ export default async function ReportsPage({
                 <th className="py-2.5 pr-4 font-medium">New units</th>
                 <th className="py-2.5 pr-4 font-medium">New front</th>
                 <th className="py-2.5 pr-4 font-medium">New back</th>
+                <th className="py-2.5 pr-4 font-medium">New gross</th>
                 <th className="py-2.5 pr-4 font-medium">Used units</th>
                 <th className="py-2.5 pr-4 font-medium">Used front</th>
                 <th className="py-2.5 pr-4 font-medium">Used back</th>
+                <th className="py-2.5 pr-4 font-medium">Used gross</th>
                 <th className="py-2.5 pr-4 font-medium text-blue-700 dark:text-blue-400">
                   Total gross
                 </th>
@@ -244,12 +246,11 @@ export default async function ReportsPage({
             </thead>
             <tbody>
               {(dailyEntries ?? []).map((e) => {
-                const total =
-                  e.new_front_end_gross +
-                  e.new_back_end_gross +
-                  e.used_front_end_gross +
-                  e.used_back_end_gross;
-                const cols = role === "editor" ? 9 : 8;
+                const newGross = e.new_front_end_gross + e.new_back_end_gross;
+                const usedGross =
+                  e.used_front_end_gross + e.used_back_end_gross;
+                const total = newGross + usedGross;
+                const cols = role === "editor" ? 11 : 10;
                 return (
                   <Fragment key={e.id}>
                     <tr
@@ -269,12 +270,18 @@ export default async function ReportsPage({
                       <td className="py-2.5 pr-4">
                         {formatCurrency(e.new_back_end_gross)}
                       </td>
+                      <td className="py-2.5 pr-4 font-medium">
+                        {formatCurrency(newGross)}
+                      </td>
                       <td className="py-2.5 pr-4">{e.used_units}</td>
                       <td className="py-2.5 pr-4">
                         {formatCurrency(e.used_front_end_gross)}
                       </td>
                       <td className="py-2.5 pr-4">
                         {formatCurrency(e.used_back_end_gross)}
+                      </td>
+                      <td className="py-2.5 pr-4 font-medium">
+                        {formatCurrency(usedGross)}
                       </td>
                       <td className="py-2.5 pr-4 font-semibold text-blue-700 dark:text-blue-400">
                         {formatCurrency(total)}
@@ -310,7 +317,7 @@ export default async function ReportsPage({
               {(dailyEntries ?? []).length === 0 ? (
                 <tr>
                   <td
-                    colSpan={role === "editor" ? 9 : 8}
+                    colSpan={role === "editor" ? 11 : 10}
                     className="py-4 text-zinc-500"
                   >
                     No entries yet.
@@ -346,9 +353,11 @@ function SummarySection({
                 <th className="py-2.5 pr-4 font-medium">New units</th>
                 <th className="py-2.5 pr-4 font-medium">New front</th>
                 <th className="py-2.5 pr-4 font-medium">New back</th>
+                <th className="py-2.5 pr-4 font-medium">New gross</th>
                 <th className="py-2.5 pr-4 font-medium">Used units</th>
                 <th className="py-2.5 pr-4 font-medium">Used front</th>
                 <th className="py-2.5 pr-4 font-medium">Used back</th>
+                <th className="py-2.5 pr-4 font-medium">Used gross</th>
                 <th className="py-2.5 pr-4 font-medium text-blue-700 dark:text-blue-400">
                   Total gross
                 </th>
@@ -369,12 +378,23 @@ function SummarySection({
                   <td className="py-2.5 pr-4">
                     {formatCurrency(r.total_new_back_end_gross)}
                   </td>
+                  <td className="py-2.5 pr-4 font-medium">
+                    {formatCurrency(
+                      r.total_new_front_end_gross + r.total_new_back_end_gross,
+                    )}
+                  </td>
                   <td className="py-2.5 pr-4">{r.total_used_units}</td>
                   <td className="py-2.5 pr-4">
                     {formatCurrency(r.total_used_front_end_gross)}
                   </td>
                   <td className="py-2.5 pr-4">
                     {formatCurrency(r.total_used_back_end_gross)}
+                  </td>
+                  <td className="py-2.5 pr-4 font-medium">
+                    {formatCurrency(
+                      r.total_used_front_end_gross +
+                        r.total_used_back_end_gross,
+                    )}
                   </td>
                   <td className="py-2.5 pr-4 font-semibold text-blue-700 dark:text-blue-400">
                     {formatCurrency(r.total_gross)}
