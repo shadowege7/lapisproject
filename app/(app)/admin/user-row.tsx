@@ -7,6 +7,7 @@ import {
   setMembership,
   setNotifications,
   setSuperAdmin,
+  setUserPosition,
   unassignStore,
 } from "./actions";
 import { ConfirmButton } from "./confirm-button";
@@ -32,6 +33,8 @@ export function UserRow({
   isSelf,
   isSuperAdmin,
   notificationsEnabled,
+  positionId,
+  positions,
   memberships,
   dealerships,
 }: {
@@ -41,6 +44,8 @@ export function UserRow({
   isSelf: boolean;
   isSuperAdmin: boolean;
   notificationsEnabled: boolean;
+  positionId: string | null;
+  positions: { id: string; name: string }[];
   memberships: StoreMembership[];
   dealerships: { id: string; name: string }[];
 }) {
@@ -52,6 +57,7 @@ export function UserRow({
   const nameById = new Map(dealerships.map((d) => [d.id, d.name]));
   const assignedIds = new Set(memberships.map((m) => m.dealershipId));
   const available = dealerships.filter((d) => !assignedIds.has(d.id));
+  const positionName = positions.find((p) => p.id === positionId)?.name ?? null;
 
   return (
     <details className="group rounded-lg border border-zinc-200 bg-white dark:border-zinc-800 dark:bg-[#0e1626]">
@@ -63,7 +69,12 @@ export function UserRow({
               {email}
             </span>
           </span>
-          <span className="mt-0.5 flex items-center gap-1.5">
+          <span className="mt-0.5 flex flex-wrap items-center gap-1.5">
+            {positionName ? (
+              <span className="rounded-full bg-zinc-100 px-2 py-0.5 text-xs font-medium text-zinc-600 dark:bg-zinc-800 dark:text-zinc-300">
+                {positionName}
+              </span>
+            ) : null}
             {isSuperAdmin ? (
               <span className="rounded-full bg-blue-50 px-2 py-0.5 text-xs font-medium text-blue-700 dark:bg-blue-950/60 dark:text-blue-300">
                 super admin
@@ -149,6 +160,15 @@ export function UserRow({
               </ConfirmButton>
             </form>
           )}
+        </div>
+
+        <div className="flex items-center gap-2 text-sm">
+          <span className="text-zinc-500">Position</span>
+          <PositionSelect
+            userId={userId}
+            positionId={positionId}
+            positions={positions}
+          />
         </div>
 
         {resetState.status === "reset" ? (
@@ -265,6 +285,37 @@ function RoleSelect({
       >
         <option value="editor">Editor</option>
         <option value="viewer">Viewer</option>
+      </select>
+    </form>
+  );
+}
+
+function PositionSelect({
+  userId,
+  positionId,
+  positions,
+}: {
+  userId: string;
+  positionId: string | null;
+  positions: { id: string; name: string }[];
+}) {
+  const formRef = useRef<HTMLFormElement>(null);
+  return (
+    <form ref={formRef} action={setUserPosition} className="inline-flex">
+      <input type="hidden" name="user_id" value={userId} />
+      <select
+        name="position_id"
+        defaultValue={positionId ?? ""}
+        onChange={() => formRef.current?.requestSubmit()}
+        className={selectClass}
+        aria-label="Position"
+      >
+        <option value="">— None —</option>
+        {positions.map((p) => (
+          <option key={p.id} value={p.id}>
+            {p.name}
+          </option>
+        ))}
       </select>
     </form>
   );

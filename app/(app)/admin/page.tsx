@@ -3,9 +3,11 @@ import { createClient } from "@/lib/supabase/server";
 import { listAllUsers } from "@/lib/supabase/admin";
 import { getCurrentUser } from "@/lib/auth";
 import type { DealershipRole } from "@/lib/database.types";
-import { createDealership } from "./actions";
+import { createDealership, createPosition, deletePosition } from "./actions";
 import { InviteForm } from "./invite-form";
 import { UsersPanel, type AdminUser } from "./users-panel";
+import { StoreRow } from "./store-row";
+import { ConfirmButton } from "./confirm-button";
 
 export default async function AdminPage() {
   const user = await getCurrentUser();
@@ -14,21 +16,30 @@ export default async function AdminPage() {
 
   const supabase = await createClient();
 
-  const [{ data: dealerships }, { data: members }, usersResult] =
-    await Promise.all([
-      supabase.from("dealerships").select("id, name").order("name"),
-      supabase
-        .from("dealership_members")
-        .select("id, dealership_id, user_id, role"),
-      listAllUsers(),
-    ]);
+  const [
+    { data: dealerships },
+    { data: members },
+    { data: positions },
+    usersResult,
+  ] = await Promise.all([
+    supabase.from("dealerships").select("id, name").order("name"),
+    supabase
+      .from("dealership_members")
+      .select("id, dealership_id, user_id, role"),
+    supabase
+      .from("positions")
+      .select("id, name, sort_order")
+      .order("sort_order")
+      .order("name"),
+    listAllUsers(),
+  ]);
 
   const authUsers = usersResult.users;
   const authUsersError = usersResult.error;
 
   const { data: profiles } = await supabase
     .from("profiles")
-    .select("id, is_super_admin, full_name, notifications_enabled");
+    .select("id, is_super_admin, full_name, notifications_enabled, position_id");
 
   const superAdminById = new Map(
     profiles?.map((p) => [p.id, p.is_super_admin]),
@@ -37,9 +48,22 @@ export default async function AdminPage() {
   const notifyById = new Map(
     profiles?.map((p) => [p.id, p.notifications_enabled]),
   );
+  const positionIdByUser = new Map(
+    profiles?.map((p) => [p.id, p.position_id]),
+  );
   const emailById = new Map(authUsers.map((u) => [u.id, u.email ?? ""]));
   const dealershipById = new Map(dealerships?.map((d) => [d.id, d.name]));
   const dealershipList = dealerships ?? [];
+  const positionsList = (positions ?? []).map((p) => ({
+    id: p.id,
+    name: p.name,
+  }));
+
+  const allUsersLite = authUsers.map((u) => ({
+    id: u.id,
+    email: u.email ?? "(no email)",
+    fullName: fullNameById.get(u.id) ?? null,
+  }));
 
   // memberships grouped per user (for the user rows)
   const membershipsByUser = new Map<
@@ -49,7 +73,12 @@ export default async function AdminPage() {
   // members grouped per store (for the store access view)
   const membersByStore = new Map<
     string,
-    { userId: string; role: DealershipRole; email: string; fullName: string | null }[]
+    {
+      userId: string;
+      role: DealershipRole;
+      email: string;
+      fullName: string | null;
+    }[]
   >();
   for (const m of members ?? []) {
     const forUser = membershipsByUser.get(m.user_id) ?? [];
@@ -83,11 +112,9 @@ export default async function AdminPage() {
     isSelf: u.id === user.id,
     isSuperAdmin: superAdminById.get(u.id) ?? false,
     notificationsEnabled: notifyById.get(u.id) ?? false,
+    positionId: positionIdByUser.get(u.id) ?? null,
     memberships: membershipsByUser.get(u.id) ?? [],
   }));
-
-  const summaryClass =
-    "flex cursor-pointer list-none items-center justify-between gap-3 px-4 py-3 [&::-webkit-details-marker]:hidden";
 
   return (
     <div className="flex flex-col gap-10">
@@ -101,66 +128,19 @@ export default async function AdminPage() {
       <section className="flex flex-col gap-3">
         <h2 className="font-medium">Dealerships</h2>
         <p className="text-xs text-zinc-500">
-          Open a store to see who has access. Super admins have full access to
-          every store.
+          Open a store to see and edit who has access. Super admins have full
+          access to every store.
         </p>
         <div className="flex flex-col gap-2">
-          {dealershipList.map((d) => {
-            const storeMembers = membersByStore.get(d.id) ?? [];
-            return (
-              <details
-                key={d.id}
-                className="group rounded-xl border border-zinc-200 bg-white dark:border-zinc-800 dark:bg-[#0e1626]"
-              >
-                <summary className={summaryClass}>
-                  <span className="font-medium">{d.name}</span>
-                  <span className="flex items-center gap-2 text-xs text-zinc-500">
-                    {storeMembers.length} with access
-                    <svg
-                      viewBox="0 0 24 24"
-                      fill="none"
-                      stroke="currentColor"
-                      strokeWidth={2}
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                      className="h-4 w-4 text-zinc-400 transition-transform group-open:rotate-90"
-                      aria-hidden
-                    >
-                      <path d="M9 6l6 6-6 6" />
-                    </svg>
-                  </span>
-                </summary>
-                <div className="border-t border-zinc-100 p-4 dark:border-zinc-800">
-                  {storeMembers.length === 0 ? (
-                    <p className="text-sm text-zinc-500">
-                      No users assigned to this store.
-                    </p>
-                  ) : (
-                    <ul className="flex flex-col gap-1.5 text-sm">
-                      {storeMembers.map((m) => (
-                        <li
-                          key={m.userId}
-                          className="flex items-center justify-between gap-3"
-                        >
-                          <span className="min-w-0 truncate">
-                            {m.fullName ? (
-                              <span className="font-medium">
-                                {m.fullName}{" "}
-                              </span>
-                            ) : null}
-                            <span className="text-zinc-500">{m.email}</span>
-                          </span>
-                          <span className="rounded-full bg-zinc-100 px-2 py-0.5 text-xs text-zinc-600 dark:bg-zinc-800 dark:text-zinc-300">
-                            {m.role}
-                          </span>
-                        </li>
-                      ))}
-                    </ul>
-                  )}
-                </div>
-              </details>
-            );
-          })}
+          {dealershipList.map((d) => (
+            <StoreRow
+              key={d.id}
+              dealershipId={d.id}
+              name={d.name}
+              members={membersByStore.get(d.id) ?? []}
+              allUsers={allUsersLite}
+            />
+          ))}
           {dealershipList.length === 0 ? (
             <p className="text-sm text-zinc-500">No dealerships yet.</p>
           ) : null}
@@ -183,15 +163,59 @@ export default async function AdminPage() {
       </section>
 
       <section className="flex flex-col gap-3">
+        <h2 className="font-medium">Positions</h2>
+        <p className="text-xs text-zinc-500">
+          Job titles you can assign to users.
+        </p>
+        <ul className="flex flex-wrap gap-2">
+          {positionsList.map((p) => (
+            <li
+              key={p.id}
+              className="flex items-center gap-2 rounded-full border border-zinc-200 px-3 py-1 text-sm dark:border-zinc-700"
+            >
+              {p.name}
+              <form action={deletePosition} className="flex">
+                <input type="hidden" name="position_id" value={p.id} />
+                <ConfirmButton
+                  message={`Remove the “${p.name}” position? Anyone assigned to it will have no position.`}
+                  className="text-zinc-400 hover:text-red-600 dark:hover:text-red-400"
+                >
+                  ✕
+                </ConfirmButton>
+              </form>
+            </li>
+          ))}
+          {positionsList.length === 0 ? (
+            <li className="text-sm text-zinc-500">No positions yet.</li>
+          ) : null}
+        </ul>
+        <form action={createPosition} className="flex gap-2">
+          <input
+            type="text"
+            name="name"
+            placeholder="New position"
+            required
+            className="rounded-md border border-zinc-300 bg-transparent px-3 py-2 text-sm dark:border-zinc-700"
+          />
+          <button
+            type="submit"
+            className="rounded-md bg-blue-600 px-3 py-2 text-sm font-semibold text-white shadow-sm transition-colors hover:bg-blue-700"
+          >
+            Add
+          </button>
+        </form>
+      </section>
+
+      <section className="flex flex-col gap-3">
         <h2 className="font-medium">Add a user</h2>
-        <InviteForm dealerships={dealershipList} />
+        <InviteForm dealerships={dealershipList} positions={positionsList} />
       </section>
 
       <section className="flex flex-col gap-3">
         <h2 className="font-medium">Users &amp; access</h2>
         <p className="text-xs text-zinc-500">
-          Search, or open a domain group and then a user, to manage their
-          per-store editor/viewer access, reset their password, or remove them.
+          Search, or open a domain group and then a user, to set their position,
+          per-store editor/viewer access, notifications, or password.
         </p>
         {authUsersError ? (
           <p className="rounded-md bg-red-50 px-3 py-2 text-sm text-red-700 dark:bg-red-950 dark:text-red-300">
@@ -199,7 +223,11 @@ export default async function AdminPage() {
             the page to try again.
           </p>
         ) : (
-          <UsersPanel users={usersData} dealerships={dealershipList} />
+          <UsersPanel
+            users={usersData}
+            dealerships={dealershipList}
+            positions={positionsList}
+          />
         )}
       </section>
     </div>

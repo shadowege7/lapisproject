@@ -13,6 +13,7 @@ export interface Database {
           full_name: string | null;
           is_super_admin: boolean;
           notifications_enabled: boolean;
+          position_id: string | null;
           created_at: string;
         };
         Insert: {
@@ -20,6 +21,7 @@ export interface Database {
           full_name?: string | null;
           is_super_admin?: boolean;
           notifications_enabled?: boolean;
+          position_id?: string | null;
           created_at?: string;
         };
         Update: {
@@ -27,6 +29,28 @@ export interface Database {
           full_name?: string | null;
           is_super_admin?: boolean;
           notifications_enabled?: boolean;
+          position_id?: string | null;
+          created_at?: string;
+        };
+        Relationships: [];
+      };
+      positions: {
+        Row: {
+          id: string;
+          name: string;
+          sort_order: number;
+          created_at: string;
+        };
+        Insert: {
+          id?: string;
+          name: string;
+          sort_order?: number;
+          created_at?: string;
+        };
+        Update: {
+          id?: string;
+          name?: string;
+          sort_order?: number;
           created_at?: string;
         };
         Relationships: [];

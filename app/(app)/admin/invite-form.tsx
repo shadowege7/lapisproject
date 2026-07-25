@@ -9,8 +9,10 @@ const inputClass =
 
 export function InviteForm({
   dealerships,
+  positions,
 }: {
   dealerships: { id: string; name: string }[];
+  positions: { id: string; name: string }[];
 }) {
   const [state, formAction, pending] = useActionState(
     inviteAndAssign,
@@ -43,6 +45,17 @@ export function InviteForm({
           <select name="role" defaultValue="viewer" className={inputClass}>
             <option value="editor">Editor</option>
             <option value="viewer">Viewer</option>
+          </select>
+        </label>
+        <label className="flex flex-col gap-1 text-sm font-medium">
+          Position
+          <select name="position_id" defaultValue="" className={inputClass}>
+            <option value="">— None —</option>
+            {positions.map((p) => (
+              <option key={p.id} value={p.id}>
+                {p.name}
+              </option>
+            ))}
           </select>
         </label>
         <button

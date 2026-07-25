@@ -59,6 +59,7 @@ export async function inviteAndAssign(
   const fullName = String(formData.get("full_name") ?? "").trim();
   const dealershipId = String(formData.get("dealership_id") ?? "");
   const role = String(formData.get("role") ?? "viewer") as DealershipRole;
+  const positionId = String(formData.get("position_id") ?? "");
 
   if (!email || !dealershipId) {
     return { status: "error", message: "Email and dealership are required." };
@@ -105,6 +106,13 @@ export async function inviteAndAssign(
     );
   if (memberError) {
     return { status: "error", message: memberError.message };
+  }
+
+  if (positionId) {
+    await supabase
+      .from("profiles")
+      .update({ position_id: positionId })
+      .eq("id", userId);
   }
 
   revalidatePath("/admin");
@@ -218,6 +226,45 @@ export async function setNotifications(formData: FormData) {
   await supabase
     .from("profiles")
     .update({ notifications_enabled: enabled })
+    .eq("id", userId);
+  revalidatePath("/admin");
+}
+
+export async function createPosition(formData: FormData) {
+  const supabase = await requireSuperAdmin();
+  const name = String(formData.get("name") ?? "").trim();
+  if (!name) return;
+
+  const { data: maxRow } = await supabase
+    .from("positions")
+    .select("sort_order")
+    .order("sort_order", { ascending: false })
+    .limit(1)
+    .maybeSingle();
+  const nextSort = (maxRow?.sort_order ?? 0) + 1;
+
+  await supabase.from("positions").insert({ name, sort_order: nextSort });
+  revalidatePath("/admin");
+}
+
+export async function deletePosition(formData: FormData) {
+  const supabase = await requireSuperAdmin();
+  const positionId = String(formData.get("position_id") ?? "");
+  if (!positionId) return;
+
+  await supabase.from("positions").delete().eq("id", positionId);
+  revalidatePath("/admin");
+}
+
+export async function setUserPosition(formData: FormData) {
+  const supabase = await requireSuperAdmin();
+  const userId = String(formData.get("user_id") ?? "");
+  const positionId = String(formData.get("position_id") ?? "");
+  if (!userId) return;
+
+  await supabase
+    .from("profiles")
+    .update({ position_id: positionId || null })
     .eq("id", userId);
   revalidatePath("/admin");
 }

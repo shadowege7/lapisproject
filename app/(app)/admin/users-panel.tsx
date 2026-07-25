@@ -11,6 +11,7 @@ export interface AdminUser {
   isSelf: boolean;
   isSuperAdmin: boolean;
   notificationsEnabled: boolean;
+  positionId: string | null;
   memberships: { dealershipId: string; role: DealershipRole }[];
 }
 
@@ -22,9 +23,11 @@ function domainOf(email: string): string {
 export function UsersPanel({
   users,
   dealerships,
+  positions,
 }: {
   users: AdminUser[];
   dealerships: { id: string; name: string }[];
+  positions: { id: string; name: string }[];
 }) {
   const [q, setQ] = useState("");
   const query = q.trim().toLowerCase();
@@ -102,6 +105,8 @@ export function UsersPanel({
                   isSelf={u.isSelf}
                   isSuperAdmin={u.isSuperAdmin}
                   notificationsEnabled={u.notificationsEnabled}
+                  positionId={u.positionId}
+                  positions={positions}
                   memberships={u.memberships}
                   dealerships={dealerships}
                 />
