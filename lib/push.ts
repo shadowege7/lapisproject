@@ -15,6 +15,54 @@ function configure(): boolean {
 }
 
 /**
+ * Send a push straight to one user's own devices (used for the "send test"
+ * button). Returns how many were sent and an optional error message.
+ */
+export async function notifyUser(
+  userId: string,
+  title: string,
+  body: string,
+): Promise<{ sent: number; error?: string }> {
+  if (!configure()) {
+    return {
+      sent: 0,
+      error: "Push notifications aren't configured on the server.",
+    };
+  }
+  const admin = createAdminClient();
+  const { data: subs } = await admin
+    .from("push_subscriptions")
+    .select("id, endpoint, p256dh, auth")
+    .eq("user_id", userId);
+  if (!subs || subs.length === 0) {
+    return {
+      sent: 0,
+      error: "No device is subscribed — enable notifications on this device first.",
+    };
+  }
+
+  const payload = JSON.stringify({ title, body, url: "/dashboard", tag: "test" });
+  let sent = 0;
+  await Promise.allSettled(
+    subs.map(async (s) => {
+      try {
+        await webpush.sendNotification(
+          { endpoint: s.endpoint, keys: { p256dh: s.p256dh, auth: s.auth } },
+          payload,
+        );
+        sent += 1;
+      } catch (err: unknown) {
+        const code = (err as { statusCode?: number })?.statusCode;
+        if (code === 404 || code === 410) {
+          await admin.from("push_subscriptions").delete().eq("id", s.id);
+        }
+      }
+    }),
+  );
+  return { sent };
+}
+
+/**
  * Send a push notification about a store's daily entry to every user who
  * (a) has notifications enabled by an admin, and (b) has access to that store
  * (a member of it, or a super admin), excluding the person who saved it.

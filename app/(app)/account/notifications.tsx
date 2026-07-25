@@ -1,7 +1,11 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { savePushSubscription, deletePushSubscription } from "./push-actions";
+import {
+  savePushSubscription,
+  deletePushSubscription,
+  sendTestNotification,
+} from "./push-actions";
 
 const VAPID_PUBLIC_KEY = process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY;
 
@@ -76,6 +80,23 @@ export function NotificationsToggle() {
     }
   }
 
+  async function test() {
+    setBusy(true);
+    setMsg(null);
+    try {
+      const res = await sendTestNotification();
+      setMsg(
+        res.ok
+          ? "Test notification sent — check your device."
+          : (res.error ?? "Couldn't send a test notification."),
+      );
+    } catch {
+      setMsg("Couldn't send a test notification.");
+    } finally {
+      setBusy(false);
+    }
+  }
+
   async function disable() {
     setBusy(true);
     setMsg(null);
@@ -107,18 +128,30 @@ export function NotificationsToggle() {
 
   return (
     <div className="flex flex-col gap-2">
-      <button
-        type="button"
-        onClick={enabled ? disable : enable}
-        disabled={busy}
-        className="w-fit rounded-md bg-blue-600 px-4 py-2 text-sm font-semibold text-white shadow-sm transition-colors hover:bg-blue-700 disabled:opacity-60"
-      >
-        {busy
-          ? "Working…"
-          : enabled
-            ? "Disable on this device"
-            : "Enable on this device"}
-      </button>
+      <div className="flex flex-wrap gap-2">
+        <button
+          type="button"
+          onClick={enabled ? disable : enable}
+          disabled={busy}
+          className="w-fit rounded-md bg-blue-600 px-4 py-2 text-sm font-semibold text-white shadow-sm transition-colors hover:bg-blue-700 disabled:opacity-60"
+        >
+          {busy
+            ? "Working…"
+            : enabled
+              ? "Disable on this device"
+              : "Enable on this device"}
+        </button>
+        {enabled ? (
+          <button
+            type="button"
+            onClick={test}
+            disabled={busy}
+            className="w-fit rounded-md border border-blue-300 px-4 py-2 text-sm font-medium text-blue-700 hover:bg-blue-50 disabled:opacity-60 dark:border-blue-800 dark:text-blue-300 dark:hover:bg-blue-950/40"
+          >
+            Send test notification
+          </button>
+        ) : null}
+      </div>
       {msg ? <p className="text-sm text-zinc-500">{msg}</p> : null}
       <p className="text-xs text-zinc-400">
         You&apos;ll only receive notifications if an admin has turned them on for

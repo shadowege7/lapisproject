@@ -2,6 +2,29 @@
 
 import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
+import { notifyUser } from "@/lib/push";
+
+export async function sendTestNotification(): Promise<{
+  ok: boolean;
+  error?: string;
+}> {
+  const supabase = await createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  if (!user) return { ok: false, error: "Not signed in." };
+
+  const res = await notifyUser(
+    user.id,
+    "Lapis Sales Tracker",
+    "Test notification — notifications are working on this device.",
+  );
+  if (res.error) return { ok: false, error: res.error };
+  if (res.sent === 0) {
+    return { ok: false, error: "No devices received it." };
+  }
+  return { ok: true };
+}
 
 export async function savePushSubscription(sub: {
   endpoint: string;

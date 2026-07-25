@@ -29,7 +29,11 @@ Security), deployed on Vercel.
   detail and notes.
 - **Admin** — create stores, onboard users, assign per‑store editor/viewer
   access, reset passwords, and grant/revoke super admin.
-- **Account** — every user can change their own password.
+- **Account** — every user can change their own password, and opt each device
+  into push notifications.
+- **Push notifications** — when a day's numbers are entered, users an admin has
+  enabled are notified, but only for stores they can access. Web Push to the
+  installed app (iOS requires the Home Screen install).
 - **Installable** — a web app manifest + icons let the site be added to a
   phone home screen.
 
@@ -57,6 +61,16 @@ Fill in the keys from the Supabase dashboard (**Project Settings → API Keys**)
 - `SUPABASE_SERVICE_ROLE_KEY` — the **secret** key (`sb_secret_…`). Server‑only
   (used for admin actions like creating/deleting users); never expose it to the
   browser or commit it.
+
+For push notifications, also set the VAPID keys (generate a pair with
+`node -e "console.log(require('web-push').generateVAPIDKeys())"`):
+
+- `NEXT_PUBLIC_VAPID_PUBLIC_KEY` — public key, exposed to the browser.
+- `VAPID_PRIVATE_KEY` — server‑only secret.
+- `VAPID_SUBJECT` — a contact `mailto:` (e.g. `mailto:admin@lapisauto.com`).
+
+Notifications are optional: if the VAPID vars are absent, saving still works and
+sending is a safe no‑op.
 
 ### 2. Database migrations
 
@@ -103,9 +117,11 @@ Hosted on Vercel; every push to `main` redeploys. To reproduce:
 
 1. Import `shadowege7/lapisproject` at [vercel.com/new](https://vercel.com/new)
    (Next.js is auto‑detected — no `vercel.json` needed).
-2. Add the three environment variables from `.env.local`
+2. Add the environment variables from `.env.local` — the three Supabase keys
    (`NEXT_PUBLIC_SUPABASE_URL`, `NEXT_PUBLIC_SUPABASE_ANON_KEY`,
-   `SUPABASE_SERVICE_ROLE_KEY`).
+   `SUPABASE_SERVICE_ROLE_KEY`) plus, for push notifications, the three VAPID
+   vars (`NEXT_PUBLIC_VAPID_PUBLIC_KEY`, `VAPID_PRIVATE_KEY`, `VAPID_SUBJECT`).
+   Changing env vars requires a redeploy to take effect.
 3. Optional: set the **Site URL** under **Supabase → Authentication → URL
    Configuration** to the production domain (matters only if email‑based auth
    flows are added later; the current temp‑password onboarding sends no email).
