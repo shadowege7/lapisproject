@@ -5,12 +5,7 @@ import { getCurrentUser } from "@/lib/auth";
 import type { DealershipRole } from "@/lib/database.types";
 import { createDealership } from "./actions";
 import { InviteForm } from "./invite-form";
-import { UserRow } from "./user-row";
-
-function domainOf(email: string): string {
-  const at = email.lastIndexOf("@");
-  return at >= 0 ? email.slice(at + 1).toLowerCase() : "(no domain)";
-}
+import { UsersPanel, type AdminUser } from "./users-panel";
 
 export default async function AdminPage() {
   const user = await getCurrentUser();
@@ -81,22 +76,15 @@ export default async function AdminPage() {
     arr.sort((a, b) => a.email.localeCompare(b.email));
   }
 
-  // users grouped by email domain
-  const groups = new Map<string, typeof authUsers>();
-  for (const u of authUsers) {
-    const d = domainOf(u.email ?? "");
-    const arr = groups.get(d) ?? [];
-    arr.push(u);
-    groups.set(d, arr);
-  }
-  const sortedGroups = [...groups.entries()]
-    .map(([domain, list]) => ({
-      domain,
-      list: [...list].sort((a, b) =>
-        (a.email ?? "").localeCompare(b.email ?? ""),
-      ),
-    }))
-    .sort((a, b) => a.domain.localeCompare(b.domain));
+  const usersData: AdminUser[] = authUsers.map((u) => ({
+    id: u.id,
+    email: u.email ?? "(no email)",
+    fullName: fullNameById.get(u.id) ?? null,
+    isSelf: u.id === user.id,
+    isSuperAdmin: superAdminById.get(u.id) ?? false,
+    notificationsEnabled: notifyById.get(u.id) ?? false,
+    memberships: membershipsByUser.get(u.id) ?? [],
+  }));
 
   const summaryClass =
     "flex cursor-pointer list-none items-center justify-between gap-3 px-4 py-3 [&::-webkit-details-marker]:hidden";
@@ -202,9 +190,8 @@ export default async function AdminPage() {
       <section className="flex flex-col gap-3">
         <h2 className="font-medium">Users &amp; access</h2>
         <p className="text-xs text-zinc-500">
-          Users are grouped by email domain. Open a group, then open a user to
-          manage their per-store editor/viewer access, reset their password, or
-          remove them.
+          Search, or open a domain group and then a user, to manage their
+          per-store editor/viewer access, reset their password, or remove them.
         </p>
         {authUsersError ? (
           <p className="rounded-md bg-red-50 px-3 py-2 text-sm text-red-700 dark:bg-red-950 dark:text-red-300">
@@ -212,48 +199,7 @@ export default async function AdminPage() {
             the page to try again.
           </p>
         ) : (
-          <div className="flex flex-col gap-3">
-            {sortedGroups.map(({ domain, list }) => (
-              <details
-                key={domain}
-                className="group rounded-xl border border-zinc-200 bg-white dark:border-zinc-800 dark:bg-[#0e1626]"
-              >
-                <summary className={summaryClass}>
-                  <span className="font-medium">{domain}</span>
-                  <span className="flex items-center gap-2 text-xs text-zinc-500">
-                    {list.length} user{list.length === 1 ? "" : "s"}
-                    <svg
-                      viewBox="0 0 24 24"
-                      fill="none"
-                      stroke="currentColor"
-                      strokeWidth={2}
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                      className="h-4 w-4 text-zinc-400 transition-transform group-open:rotate-90"
-                      aria-hidden
-                    >
-                      <path d="M9 6l6 6-6 6" />
-                    </svg>
-                  </span>
-                </summary>
-                <div className="flex flex-col gap-2 border-t border-zinc-100 p-3 dark:border-zinc-800">
-                  {list.map((u) => (
-                    <UserRow
-                      key={u.id}
-                      userId={u.id}
-                      email={u.email ?? "(no email)"}
-                      fullName={fullNameById.get(u.id) ?? null}
-                      isSelf={u.id === user.id}
-                      isSuperAdmin={superAdminById.get(u.id) ?? false}
-                      notificationsEnabled={notifyById.get(u.id) ?? false}
-                      memberships={membershipsByUser.get(u.id) ?? []}
-                      dealerships={dealershipList}
-                    />
-                  ))}
-                </div>
-              </details>
-            ))}
-          </div>
+          <UsersPanel users={usersData} dealerships={dealershipList} />
         )}
       </section>
     </div>
