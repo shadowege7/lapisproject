@@ -86,7 +86,7 @@ export async function notifyStoreEntry(opts: {
 
     const { data: notifProfiles } = await admin
       .from("profiles")
-      .select("id, is_super_admin")
+      .select("id, is_super_admin, main_dealership_id")
       .eq("notifications_enabled", true);
     if (!notifProfiles || notifProfiles.length === 0) return;
 
@@ -100,7 +100,12 @@ export async function notifyStoreEntry(opts: {
       .filter(
         (p) =>
           p.id !== opts.excludeUserId &&
-          (p.is_super_admin || memberIds.has(p.id)),
+          // has access to this store
+          (p.is_super_admin || memberIds.has(p.id)) &&
+          // scope: a main store means only that store; no main store means
+          // every store they can access.
+          (p.main_dealership_id == null ||
+            p.main_dealership_id === opts.dealershipId),
       )
       .map((p) => p.id);
     if (targetIds.length === 0) return;

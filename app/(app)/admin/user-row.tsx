@@ -192,13 +192,20 @@ export function UserRow({
           </p>
 
           {hasAllStores ? (
-            <div className="mb-2 flex flex-wrap items-center gap-2 text-sm">
-              <span className="text-zinc-500">Main store</span>
-              <MainStoreSelect
-                userId={userId}
-                mainDealershipId={mainDealershipId}
-                dealerships={dealerships}
-              />
+            <div className="mb-2 flex flex-col gap-1">
+              <div className="flex flex-wrap items-center gap-2 text-sm">
+                <span className="text-zinc-500">Main store</span>
+                <MainStoreSelect
+                  userId={userId}
+                  mainDealershipId={mainDealershipId}
+                  dealerships={dealerships}
+                />
+              </div>
+              <p className="text-xs text-zinc-400">
+                Pinned first on their dashboard, and scopes notifications: set a
+                main store to notify only for it, or leave “None” to notify for
+                all stores.
+              </p>
             </div>
           ) : null}
 

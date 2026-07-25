@@ -155,8 +155,9 @@ export function NotificationsToggle() {
       {msg ? <p className="text-sm text-zinc-500">{msg}</p> : null}
       <p className="text-xs text-zinc-400">
         You&apos;ll only receive notifications if an admin has turned them on for
-        your account, and only for stores you can access. Enable this on each
-        device where you want alerts.
+        your account. If you have a main store, you&apos;re notified only for it;
+        otherwise you&apos;re notified for every store you can access. Enable this
+        on each device where you want alerts.
       </p>
     </div>
   );
