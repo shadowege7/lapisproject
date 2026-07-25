@@ -12,6 +12,7 @@ export interface AdminUser {
   isSuperAdmin: boolean;
   notificationsEnabled: boolean;
   positionId: string | null;
+  mainDealershipId: string | null;
   memberships: { dealershipId: string; role: DealershipRole }[];
 }
 
@@ -107,6 +108,7 @@ export function UsersPanel({
                   notificationsEnabled={u.notificationsEnabled}
                   positionId={u.positionId}
                   positions={positions}
+                  mainDealershipId={u.mainDealershipId}
                   memberships={u.memberships}
                   dealerships={dealerships}
                 />

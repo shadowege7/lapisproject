@@ -14,6 +14,7 @@ export interface Database {
           is_super_admin: boolean;
           notifications_enabled: boolean;
           position_id: string | null;
+          main_dealership_id: string | null;
           created_at: string;
         };
         Insert: {
@@ -22,6 +23,7 @@ export interface Database {
           is_super_admin?: boolean;
           notifications_enabled?: boolean;
           position_id?: string | null;
+          main_dealership_id?: string | null;
           created_at?: string;
         };
         Update: {
@@ -30,6 +32,7 @@ export interface Database {
           is_super_admin?: boolean;
           notifications_enabled?: boolean;
           position_id?: string | null;
+          main_dealership_id?: string | null;
           created_at?: string;
         };
         Relationships: [];

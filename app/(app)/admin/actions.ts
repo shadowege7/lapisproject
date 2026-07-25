@@ -268,3 +268,17 @@ export async function setUserPosition(formData: FormData) {
     .eq("id", userId);
   revalidatePath("/admin");
 }
+
+export async function setMainStore(formData: FormData) {
+  const supabase = await requireSuperAdmin();
+  const userId = String(formData.get("user_id") ?? "");
+  const dealershipId = String(formData.get("dealership_id") ?? "");
+  if (!userId) return;
+
+  await supabase
+    .from("profiles")
+    .update({ main_dealership_id: dealershipId || null })
+    .eq("id", userId);
+  revalidatePath("/admin");
+  revalidatePath("/dashboard");
+}

@@ -15,6 +15,7 @@ export default async function DashboardPage() {
     { data: memberships },
     { data: monthly },
     { data: todayEntries },
+    { data: profile },
   ] = await Promise.all([
     supabase.from("dealerships").select("id, name").order("name"),
     supabase
@@ -29,7 +30,14 @@ export default async function DashboardPage() {
       .from("daily_entries")
       .select("*")
       .eq("entry_date", todayISODate()),
+    supabase
+      .from("profiles")
+      .select("main_dealership_id")
+      .eq("id", user.id)
+      .single(),
   ]);
+
+  const mainDealershipId = profile?.main_dealership_id ?? null;
 
   const roleByDealership = new Map(
     memberships?.map((m) => [m.dealership_id, m.role]),
@@ -62,6 +70,13 @@ export default async function DashboardPage() {
     );
   }
 
+  const orderedDealerships = mainDealershipId
+    ? [
+        ...dealerships.filter((d) => d.id === mainDealershipId),
+        ...dealerships.filter((d) => d.id !== mainDealershipId),
+      ]
+    : dealerships;
+
   return (
     <div className="flex flex-col gap-5">
       <div>
@@ -71,7 +86,7 @@ export default async function DashboardPage() {
         <h1 className="text-xl font-semibold tracking-tight">Dealerships</h1>
       </div>
       <div className="grid gap-4 grid-cols-[repeat(auto-fill,minmax(min(100%,19rem),1fr))]">
-        {dealerships.map((dealership) => {
+        {orderedDealerships.map((dealership) => {
           const role = effectiveRole(
             user,
             roleByDealership.get(dealership.id),
@@ -102,9 +117,14 @@ export default async function DashboardPage() {
               key={dealership.id}
               className="flex flex-col gap-4 rounded-xl border border-zinc-200 bg-white p-5 shadow-sm transition-shadow hover:border-blue-200 hover:shadow-md dark:border-zinc-800 dark:bg-[#0e1626] dark:hover:border-blue-900"
             >
-              <div className="flex items-center justify-between">
-                <h2 className="font-semibold tracking-tight">
+              <div className="flex items-center justify-between gap-2">
+                <h2 className="flex items-center gap-2 font-semibold tracking-tight">
                   {dealership.name}
+                  {dealership.id === mainDealershipId ? (
+                    <span className="rounded-full bg-blue-600 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-white">
+                      Main
+                    </span>
+                  ) : null}
                 </h2>
                 <span className="rounded-full bg-blue-50 px-2.5 py-0.5 text-xs font-medium text-blue-700 dark:bg-blue-950/60 dark:text-blue-300">
                   {role}

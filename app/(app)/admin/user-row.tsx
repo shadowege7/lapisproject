@@ -4,6 +4,7 @@ import { useActionState, useRef, useState } from "react";
 import {
   deleteUser,
   resetUserPassword,
+  setMainStore,
   setMembership,
   setNotifications,
   setSuperAdmin,
@@ -35,6 +36,7 @@ export function UserRow({
   notificationsEnabled,
   positionId,
   positions,
+  mainDealershipId,
   memberships,
   dealerships,
 }: {
@@ -46,6 +48,7 @@ export function UserRow({
   notificationsEnabled: boolean;
   positionId: string | null;
   positions: { id: string; name: string }[];
+  mainDealershipId: string | null;
   memberships: StoreMembership[];
   dealerships: { id: string; name: string }[];
 }) {
@@ -58,6 +61,9 @@ export function UserRow({
   const assignedIds = new Set(memberships.map((m) => m.dealershipId));
   const available = dealerships.filter((d) => !assignedIds.has(d.id));
   const positionName = positions.find((p) => p.id === positionId)?.name ?? null;
+  const hasAllStores =
+    isSuperAdmin ||
+    (dealerships.length > 0 && memberships.length === dealerships.length);
 
   return (
     <details className="group rounded-lg border border-zinc-200 bg-white dark:border-zinc-800 dark:bg-[#0e1626]">
@@ -184,6 +190,17 @@ export function UserRow({
           <p className="mb-2 text-xs font-medium uppercase tracking-wide text-zinc-500">
             Store access
           </p>
+
+          {hasAllStores ? (
+            <div className="mb-2 flex flex-wrap items-center gap-2 text-sm">
+              <span className="text-zinc-500">Main store</span>
+              <MainStoreSelect
+                userId={userId}
+                mainDealershipId={mainDealershipId}
+                dealerships={dealerships}
+              />
+            </div>
+          ) : null}
 
           {isSuperAdmin ? (
             <p className="mb-2 text-xs text-zinc-500">
@@ -314,6 +331,37 @@ function PositionSelect({
         {positions.map((p) => (
           <option key={p.id} value={p.id}>
             {p.name}
+          </option>
+        ))}
+      </select>
+    </form>
+  );
+}
+
+function MainStoreSelect({
+  userId,
+  mainDealershipId,
+  dealerships,
+}: {
+  userId: string;
+  mainDealershipId: string | null;
+  dealerships: { id: string; name: string }[];
+}) {
+  const formRef = useRef<HTMLFormElement>(null);
+  return (
+    <form ref={formRef} action={setMainStore} className="inline-flex">
+      <input type="hidden" name="user_id" value={userId} />
+      <select
+        name="dealership_id"
+        defaultValue={mainDealershipId ?? ""}
+        onChange={() => formRef.current?.requestSubmit()}
+        className={selectClass}
+        aria-label="Main store"
+      >
+        <option value="">— None —</option>
+        {dealerships.map((d) => (
+          <option key={d.id} value={d.id}>
+            {d.name}
           </option>
         ))}
       </select>
