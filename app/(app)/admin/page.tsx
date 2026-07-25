@@ -33,12 +33,15 @@ export default async function AdminPage() {
 
   const { data: profiles } = await supabase
     .from("profiles")
-    .select("id, is_super_admin, full_name");
+    .select("id, is_super_admin, full_name, notifications_enabled");
 
   const superAdminById = new Map(
     profiles?.map((p) => [p.id, p.is_super_admin]),
   );
   const fullNameById = new Map(profiles?.map((p) => [p.id, p.full_name]));
+  const notifyById = new Map(
+    profiles?.map((p) => [p.id, p.notifications_enabled]),
+  );
   const emailById = new Map(authUsers.map((u) => [u.id, u.email ?? ""]));
   const dealershipById = new Map(dealerships?.map((d) => [d.id, d.name]));
   const dealershipList = dealerships ?? [];
@@ -242,6 +245,7 @@ export default async function AdminPage() {
                       fullName={fullNameById.get(u.id) ?? null}
                       isSelf={u.id === user.id}
                       isSuperAdmin={superAdminById.get(u.id) ?? false}
+                      notificationsEnabled={notifyById.get(u.id) ?? false}
                       memberships={membershipsByUser.get(u.id) ?? []}
                       dealerships={dealershipList}
                     />

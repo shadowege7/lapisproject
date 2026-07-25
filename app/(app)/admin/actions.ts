@@ -208,3 +208,16 @@ export async function setSuperAdmin(formData: FormData) {
     .eq("id", userId);
   revalidatePath("/admin");
 }
+
+export async function setNotifications(formData: FormData) {
+  const supabase = await requireSuperAdmin();
+  const userId = String(formData.get("user_id") ?? "");
+  const enabled = formData.get("notifications_enabled") === "true";
+  if (!userId) return;
+
+  await supabase
+    .from("profiles")
+    .update({ notifications_enabled: enabled })
+    .eq("id", userId);
+  revalidatePath("/admin");
+}

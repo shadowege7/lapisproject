@@ -3,6 +3,8 @@
 import { redirect } from "next/navigation";
 import { revalidatePath } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
+import { formatCurrency, todayISODate } from "@/lib/format";
+import { notifyStoreEntry } from "@/lib/push";
 
 export async function saveEntry(formData: FormData) {
   const dealershipId = String(formData.get("dealership_id") ?? "");
@@ -52,6 +54,26 @@ export async function saveEntry(formData: FormData) {
       `/dealerships/${dealershipId}/entry?date=${entryDate}&error=${encodeURIComponent(error.message)}`,
     );
   }
+
+  const { data: dealership } = await supabase
+    .from("dealerships")
+    .select("name")
+    .eq("id", dealershipId)
+    .single();
+
+  const totalGross =
+    newFrontEndGross + newBackEndGross + usedFrontEndGross + usedBackEndGross;
+  const when =
+    entryDate === todayISODate()
+      ? "Today's numbers are in"
+      : `Numbers updated for ${entryDate}`;
+
+  await notifyStoreEntry({
+    dealershipId,
+    title: dealership?.name ?? "Store update",
+    body: `${when}: ${newUnits} new · ${usedUnits} used · ${formatCurrency(totalGross)} gross`,
+    excludeUserId: user.id,
+  });
 
   revalidatePath(`/dealerships/${dealershipId}/reports`);
   revalidatePath("/dashboard");

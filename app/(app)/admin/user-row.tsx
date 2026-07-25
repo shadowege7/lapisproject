@@ -5,6 +5,7 @@ import {
   deleteUser,
   resetUserPassword,
   setMembership,
+  setNotifications,
   setSuperAdmin,
   unassignStore,
 } from "./actions";
@@ -30,6 +31,7 @@ export function UserRow({
   fullName,
   isSelf,
   isSuperAdmin,
+  notificationsEnabled,
   memberships,
   dealerships,
 }: {
@@ -38,6 +40,7 @@ export function UserRow({
   fullName: string | null;
   isSelf: boolean;
   isSuperAdmin: boolean;
+  notificationsEnabled: boolean;
   memberships: StoreMembership[];
   dealerships: { id: string; name: string }[];
 }) {
@@ -64,6 +67,11 @@ export function UserRow({
             {isSuperAdmin ? (
               <span className="rounded-full bg-blue-50 px-2 py-0.5 text-xs font-medium text-blue-700 dark:bg-blue-950/60 dark:text-blue-300">
                 super admin
+              </span>
+            ) : null}
+            {notificationsEnabled ? (
+              <span className="rounded-full bg-emerald-50 px-2 py-0.5 text-xs font-medium text-emerald-700 dark:bg-emerald-950/50 dark:text-emerald-300">
+                notified
               </span>
             ) : null}
             {isSelf ? <span className="text-xs text-zinc-400">(you)</span> : null}
@@ -100,6 +108,23 @@ export function UserRow({
               className="text-blue-600 hover:underline dark:text-blue-400"
             >
               {isSuperAdmin ? "Revoke super admin" : "Make super admin"}
+            </button>
+          </form>
+
+          <form action={setNotifications}>
+            <input type="hidden" name="user_id" value={userId} />
+            <input
+              type="hidden"
+              name="notifications_enabled"
+              value={(!notificationsEnabled).toString()}
+            />
+            <button
+              type="submit"
+              className="text-blue-600 hover:underline dark:text-blue-400"
+            >
+              {notificationsEnabled
+                ? "Turn off notifications"
+                : "Turn on notifications"}
             </button>
           </form>
 
