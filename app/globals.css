@@ -46,3 +46,15 @@ body {
   color: var(--foreground);
   font-family: var(--font-geist-sans), Arial, Helvetica, sans-serif;
 }
+
+/* Native dropdown option lists: force a solid, theme-aware background and text
+   so the choices are legible in both light and dark mode (transparent selects
+   otherwise render low-contrast option menus in some browsers). */
+select {
+  color: var(--foreground);
+}
+
+option {
+  background-color: var(--surface);
+  color: var(--foreground);
+}
