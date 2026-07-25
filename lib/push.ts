@@ -1,6 +1,11 @@
 import webpush from "web-push";
 import { createAdminClient } from "@/lib/supabase/admin";
 
+// High urgency so Android/FCM wakes the device and delivers promptly even in
+// Doze/battery-saver (otherwise normal-priority pushes can be held until the
+// app is next opened). TTL keeps it deliverable for a day if the device is off.
+const PUSH_OPTIONS = { TTL: 86400, urgency: "high" as const };
+
 let configured = false;
 
 function configure(): boolean {
@@ -49,6 +54,7 @@ export async function notifyUser(
         await webpush.sendNotification(
           { endpoint: s.endpoint, keys: { p256dh: s.p256dh, auth: s.auth } },
           payload,
+          PUSH_OPTIONS,
         );
         sent += 1;
       } catch (err: unknown) {
@@ -121,6 +127,7 @@ export async function notifyStoreEntry(opts: {
               keys: { p256dh: s.p256dh, auth: s.auth },
             },
             payload,
+            PUSH_OPTIONS,
           );
         } catch (err: unknown) {
           const code = (err as { statusCode?: number })?.statusCode;
