@@ -1,6 +1,6 @@
 "use server";
 
-import { randomBytes } from "crypto";
+import { randomInt } from "crypto";
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
@@ -9,12 +9,12 @@ import type { DealershipRole } from "@/lib/database.types";
 import type { InviteResult, ResetResult } from "./invite-types";
 
 // Readable temp password, e.g. "X7kM-pQ2r-Tw9y" (no ambiguous chars).
+// randomInt is a CSPRNG with unbiased range selection (no modulo bias).
 function generateTempPassword() {
   const alphabet = "ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz23456789";
-  const bytes = randomBytes(12);
   let out = "";
   for (let i = 0; i < 12; i++) {
-    out += alphabet[bytes[i] % alphabet.length];
+    out += alphabet[randomInt(alphabet.length)];
     if (i % 4 === 3 && i < 11) out += "-";
   }
   return out;

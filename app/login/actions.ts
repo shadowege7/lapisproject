@@ -4,7 +4,15 @@ import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 
 function safeNextPath(next: string | null): string {
-  if (!next || !next.startsWith("/") || next.startsWith("//")) {
+  // Only allow internal, single-slash-rooted paths. Reject protocol-relative
+  // ("//host") and backslash tricks ("/\host", which browsers normalize to
+  // "//host") that would let `next` redirect off-site.
+  if (
+    !next ||
+    !next.startsWith("/") ||
+    next.startsWith("//") ||
+    next.includes("\\")
+  ) {
     return "/dashboard";
   }
   return next;
