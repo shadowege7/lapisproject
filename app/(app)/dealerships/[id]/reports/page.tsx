@@ -11,6 +11,8 @@ import {
   todayISODate,
 } from "@/lib/format";
 import { projectMonthEnd } from "@/lib/projection";
+import { ConfirmButton } from "@/app/(app)/admin/confirm-button";
+import { deleteEntry } from "./actions";
 
 interface SummaryRow {
   label: string;
@@ -322,12 +324,34 @@ export default async function ReportsPage({
                       </td>
                       {role === "editor" ? (
                         <td className="py-2.5 pr-4">
-                          <Link
-                            href={`/dealerships/${dealershipId}/entry?date=${e.entry_date}`}
-                            className="text-blue-600 hover:underline dark:text-blue-400"
-                          >
-                            Edit
-                          </Link>
+                          <div className="flex gap-3">
+                            <Link
+                              href={`/dealerships/${dealershipId}/entry?date=${e.entry_date}`}
+                              className="text-blue-600 hover:underline dark:text-blue-400"
+                            >
+                              Edit
+                            </Link>
+                            {user.isSuperAdmin ? (
+                              <form action={deleteEntry}>
+                                <input
+                                  type="hidden"
+                                  name="entry_id"
+                                  value={e.id}
+                                />
+                                <input
+                                  type="hidden"
+                                  name="dealership_id"
+                                  value={dealershipId}
+                                />
+                                <ConfirmButton
+                                  message={`Delete the entry for ${e.entry_date}? This can't be undone.`}
+                                  className="text-red-600 hover:underline dark:text-red-400"
+                                >
+                                  Delete
+                                </ConfirmButton>
+                              </form>
+                            ) : null}
+                          </div>
                         </td>
                       ) : null}
                     </tr>
