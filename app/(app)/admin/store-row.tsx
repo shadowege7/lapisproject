@@ -1,6 +1,6 @@
 "use client";
 
-import { useRef } from "react";
+import { useEffect, useRef, useState } from "react";
 import { setMembership, unassignStore } from "./actions";
 import type { DealershipRole } from "@/lib/database.types";
 
@@ -131,14 +131,19 @@ function StoreRoleSelect({
   role: DealershipRole;
 }) {
   const formRef = useRef<HTMLFormElement>(null);
+  const [value, setValue] = useState<DealershipRole>(role);
+  useEffect(() => setValue(role), [role]);
   return (
     <form ref={formRef} action={setMembership} className="inline-flex">
       <input type="hidden" name="user_id" value={userId} />
       <input type="hidden" name="dealership_id" value={dealershipId} />
       <select
         name="role"
-        defaultValue={role}
-        onChange={() => formRef.current?.requestSubmit()}
+        value={value}
+        onChange={(e) => {
+          setValue(e.target.value as DealershipRole);
+          formRef.current?.requestSubmit();
+        }}
         className={selectClass}
         aria-label="Role"
       >

@@ -1,6 +1,6 @@
 "use client";
 
-import { useActionState, useRef, useState } from "react";
+import { useActionState, useEffect, useRef, useState } from "react";
 import {
   deleteUser,
   resetUserPassword,
@@ -296,14 +296,19 @@ function RoleSelect({
   role: DealershipRole;
 }) {
   const formRef = useRef<HTMLFormElement>(null);
+  const [value, setValue] = useState<DealershipRole>(role);
+  useEffect(() => setValue(role), [role]);
   return (
     <form ref={formRef} action={setMembership} className="inline-flex">
       <input type="hidden" name="user_id" value={userId} />
       <input type="hidden" name="dealership_id" value={dealershipId} />
       <select
         name="role"
-        defaultValue={role}
-        onChange={() => formRef.current?.requestSubmit()}
+        value={value}
+        onChange={(e) => {
+          setValue(e.target.value as DealershipRole);
+          formRef.current?.requestSubmit();
+        }}
         className={selectClass}
         aria-label="Role"
       >
@@ -324,13 +329,18 @@ function PositionSelect({
   positions: { id: string; name: string }[];
 }) {
   const formRef = useRef<HTMLFormElement>(null);
+  const [value, setValue] = useState(positionId ?? "");
+  useEffect(() => setValue(positionId ?? ""), [positionId]);
   return (
     <form ref={formRef} action={setUserPosition} className="inline-flex">
       <input type="hidden" name="user_id" value={userId} />
       <select
         name="position_id"
-        defaultValue={positionId ?? ""}
-        onChange={() => formRef.current?.requestSubmit()}
+        value={value}
+        onChange={(e) => {
+          setValue(e.target.value);
+          formRef.current?.requestSubmit();
+        }}
         className={selectClass}
         aria-label="Position"
       >
@@ -355,13 +365,18 @@ function MainStoreSelect({
   dealerships: { id: string; name: string }[];
 }) {
   const formRef = useRef<HTMLFormElement>(null);
+  const [value, setValue] = useState(mainDealershipId ?? "");
+  useEffect(() => setValue(mainDealershipId ?? ""), [mainDealershipId]);
   return (
     <form ref={formRef} action={setMainStore} className="inline-flex">
       <input type="hidden" name="user_id" value={userId} />
       <select
         name="dealership_id"
-        defaultValue={mainDealershipId ?? ""}
-        onChange={() => formRef.current?.requestSubmit()}
+        value={value}
+        onChange={(e) => {
+          setValue(e.target.value);
+          formRef.current?.requestSubmit();
+        }}
         className={selectClass}
         aria-label="Main store"
       >
