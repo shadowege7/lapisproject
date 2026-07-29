@@ -3,7 +3,12 @@ import { createClient } from "@/lib/supabase/server";
 import { listAllUsers } from "@/lib/supabase/admin";
 import { getCurrentUser } from "@/lib/auth";
 import type { DealershipRole } from "@/lib/database.types";
-import { createDealership, createPosition, deletePosition } from "./actions";
+import {
+  createDealership,
+  createPosition,
+  deletePosition,
+  setPositionRollup,
+} from "./actions";
 import { InviteForm } from "./invite-form";
 import { UsersPanel, type AdminUser } from "./users-panel";
 import { StoreRow } from "./store-row";
@@ -42,7 +47,7 @@ export default async function AdminPage() {
       .select("id, dealership_id, user_id, role"),
     supabase
       .from("positions")
-      .select("id, name, sort_order")
+      .select("id, name, sort_order, can_view_rollup")
       .order("sort_order")
       .order("name"),
     listAllUsers(),
@@ -76,6 +81,7 @@ export default async function AdminPage() {
   const positionsList = (positions ?? []).map((p) => ({
     id: p.id,
     name: p.name,
+    canViewRollup: p.can_view_rollup,
   }));
 
   const allUsersLite = authUsers.map((u) => ({
@@ -186,24 +192,46 @@ export default async function AdminPage() {
       <section className="flex flex-col gap-3">
         <h2 className="font-medium">Positions</h2>
         <p className="text-xs text-zinc-500">
-          Job titles you can assign to users.
+          Job titles you can assign to users. Turn on “Group rollup” for a
+          position to let those users see the all-stores summary at the top of
+          the dashboard. (Super admins always see it.)
         </p>
-        <ul className="flex flex-wrap gap-2">
+        <ul className="flex flex-col gap-2">
           {positionsList.map((p) => (
             <li
               key={p.id}
-              className="flex items-center gap-2 rounded-full border border-zinc-200 px-3 py-1 text-sm dark:border-zinc-700"
+              className="flex flex-wrap items-center justify-between gap-3 rounded-lg border border-zinc-200 px-3 py-2 text-sm dark:border-zinc-800"
             >
-              {p.name}
-              <form action={deletePosition} className="flex">
-                <input type="hidden" name="position_id" value={p.id} />
-                <ConfirmButton
-                  message={`Remove the “${p.name}” position? Anyone assigned to it will have no position.`}
-                  className="text-zinc-400 hover:text-red-600 dark:hover:text-red-400"
-                >
-                  ✕
-                </ConfirmButton>
-              </form>
+              <span className="font-medium">{p.name}</span>
+              <div className="flex items-center gap-4">
+                <form action={setPositionRollup}>
+                  <input type="hidden" name="position_id" value={p.id} />
+                  <input
+                    type="hidden"
+                    name="can_view_rollup"
+                    value={(!p.canViewRollup).toString()}
+                  />
+                  <button
+                    type="submit"
+                    className={
+                      p.canViewRollup
+                        ? "text-blue-600 hover:underline dark:text-blue-400"
+                        : "text-zinc-500 hover:underline"
+                    }
+                  >
+                    {p.canViewRollup ? "Group rollup: on" : "Group rollup: off"}
+                  </button>
+                </form>
+                <form action={deletePosition} className="flex">
+                  <input type="hidden" name="position_id" value={p.id} />
+                  <ConfirmButton
+                    message={`Remove the “${p.name}” position? Anyone assigned to it will have no position.`}
+                    className="text-zinc-400 hover:text-red-600 dark:hover:text-red-400"
+                  >
+                    Remove
+                  </ConfirmButton>
+                </form>
+              </div>
             </li>
           ))}
           {positionsList.length === 0 ? (

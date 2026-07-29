@@ -247,6 +247,20 @@ export async function createPosition(formData: FormData) {
   revalidatePath("/admin");
 }
 
+export async function setPositionRollup(formData: FormData) {
+  const supabase = await requireSuperAdmin();
+  const positionId = String(formData.get("position_id") ?? "");
+  const enabled = formData.get("can_view_rollup") === "true";
+  if (!positionId) return;
+
+  await supabase
+    .from("positions")
+    .update({ can_view_rollup: enabled })
+    .eq("id", positionId);
+  revalidatePath("/admin");
+  revalidatePath("/dashboard");
+}
+
 export async function deletePosition(formData: FormData) {
   const supabase = await requireSuperAdmin();
   const positionId = String(formData.get("position_id") ?? "");

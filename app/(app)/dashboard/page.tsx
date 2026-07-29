@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { createClient } from "@/lib/supabase/server";
+import { createAdminClient } from "@/lib/supabase/admin";
 import { getCurrentUser, effectiveRole } from "@/lib/auth";
 import { formatCurrency, monthStartISODate, todayISODate } from "@/lib/format";
 import { projectMonthEnd } from "@/lib/projection";
@@ -32,12 +33,66 @@ export default async function DashboardPage() {
       .eq("entry_date", todayISODate()),
     supabase
       .from("profiles")
-      .select("main_dealership_id")
+      .select("main_dealership_id, position_id")
       .eq("id", user.id)
       .single(),
   ]);
 
   const mainDealershipId = profile?.main_dealership_id ?? null;
+
+  // Group-wide rollup: visible to super admins, or to users whose position an
+  // admin has granted rollup access.
+  let canViewRollup = user.isSuperAdmin;
+  if (!canViewRollup && profile?.position_id) {
+    const { data: pos } = await supabase
+      .from("positions")
+      .select("can_view_rollup")
+      .eq("id", profile.position_id)
+      .maybeSingle();
+    canViewRollup = pos?.can_view_rollup ?? false;
+  }
+
+  let rollup: {
+    todayGross: number;
+    mtdGross: number;
+    todayNew: number;
+    todayUsed: number;
+    mtdNew: number;
+    mtdUsed: number;
+  } | null = null;
+  if (canViewRollup) {
+    // Sum across ALL stores via the service-role client (bypasses RLS) — safe
+    // because access is gated by canViewRollup above.
+    const admin = createAdminClient();
+    const [{ data: allMonthly }, { data: allToday }] = await Promise.all([
+      admin
+        .from("monthly_summary")
+        .select("total_gross, total_new_units, total_used_units")
+        .eq("month", monthStartISODate()),
+      admin
+        .from("daily_entries")
+        .select(
+          "new_front_end_gross, new_back_end_gross, used_front_end_gross, used_back_end_gross, new_units, used_units",
+        )
+        .eq("entry_date", todayISODate()),
+    ]);
+    rollup = {
+      mtdGross: (allMonthly ?? []).reduce((s, r) => s + r.total_gross, 0),
+      mtdNew: (allMonthly ?? []).reduce((s, r) => s + r.total_new_units, 0),
+      mtdUsed: (allMonthly ?? []).reduce((s, r) => s + r.total_used_units, 0),
+      todayGross: (allToday ?? []).reduce(
+        (s, e) =>
+          s +
+          e.new_front_end_gross +
+          e.new_back_end_gross +
+          e.used_front_end_gross +
+          e.used_back_end_gross,
+        0,
+      ),
+      todayNew: (allToday ?? []).reduce((s, e) => s + e.new_units, 0),
+      todayUsed: (allToday ?? []).reduce((s, e) => s + e.used_units, 0),
+    };
+  }
 
   const roleByDealership = new Map(
     memberships?.map((m) => [m.dealership_id, m.role]),
@@ -102,6 +157,31 @@ export default async function DashboardPage() {
           className="pointer-events-none hidden h-12 w-auto shrink-0 select-none opacity-40 sm:h-14 dark:block"
         />
       </div>
+      {rollup ? (
+        <div className="rounded-xl border border-blue-200 bg-white p-4 shadow-sm dark:border-blue-900/50 dark:bg-[#0e1626]">
+          <p className="mb-3 text-xs font-medium uppercase tracking-wide text-blue-600 dark:text-blue-400">
+            All stores
+          </p>
+          <div className="grid grid-cols-3 divide-x divide-zinc-200 text-center dark:divide-zinc-800">
+            <GrossStat
+              label="Today"
+              value={rollup.todayGross}
+              sub={`${rollup.todayNew} new · ${rollup.todayUsed} used`}
+            />
+            <GrossStat
+              label="This month"
+              value={rollup.mtdGross}
+              sub={`${rollup.mtdNew} new · ${rollup.mtdUsed} used`}
+            />
+            <GrossStat
+              label="Projected"
+              value={projectMonthEnd(rollup.mtdGross)}
+              accent
+              sub={`${Math.round(projectMonthEnd(rollup.mtdNew))} new · ${Math.round(projectMonthEnd(rollup.mtdUsed))} used`}
+            />
+          </div>
+        </div>
+      ) : null}
       <div className="grid gap-4 grid-cols-[repeat(auto-fill,minmax(min(100%,19rem),1fr))]">
         {orderedDealerships.map((dealership) => {
           const role = effectiveRole(
