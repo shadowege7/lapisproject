@@ -79,11 +79,28 @@ export default async function DashboardPage() {
 
   return (
     <div className="flex flex-col gap-5">
-      <div>
-        <p className="text-xs font-medium uppercase tracking-wide text-blue-600 dark:text-blue-400">
-          Daily snapshot
-        </p>
-        <h1 className="text-xl font-semibold tracking-tight">Dealerships</h1>
+      <div className="flex items-center justify-between gap-4">
+        <div>
+          <p className="text-xs font-medium uppercase tracking-wide text-blue-600 dark:text-blue-400">
+            Daily snapshot
+          </p>
+          <h1 className="text-xl font-semibold tracking-tight">Dealerships</h1>
+        </div>
+        {/* Obsidian emblem in light mode, gold in dark (LAPIS) mode. */}
+        {/* eslint-disable-next-line @next/next/no-img-element */}
+        <img
+          src="/Lapis-Obsidian-Emblem.png"
+          alt=""
+          aria-hidden
+          className="pointer-events-none block h-12 w-auto shrink-0 select-none opacity-40 sm:h-14 dark:hidden"
+        />
+        {/* eslint-disable-next-line @next/next/no-img-element */}
+        <img
+          src="/Lapis-Gold-Emblem.png"
+          alt=""
+          aria-hidden
+          className="pointer-events-none hidden h-12 w-auto shrink-0 select-none opacity-40 sm:h-14 dark:block"
+        />
       </div>
       <div className="grid gap-4 grid-cols-[repeat(auto-fill,minmax(min(100%,19rem),1fr))]">
         {orderedDealerships.map((dealership) => {
