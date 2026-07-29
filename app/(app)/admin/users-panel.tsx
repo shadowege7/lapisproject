@@ -13,6 +13,7 @@ export interface AdminUser {
   notificationsEnabled: boolean;
   positionId: string | null;
   mainDealershipId: string | null;
+  lastSignInLabel: string;
   memberships: { dealershipId: string; role: DealershipRole }[];
 }
 
@@ -109,6 +110,7 @@ export function UsersPanel({
                   positionId={u.positionId}
                   positions={positions}
                   mainDealershipId={u.mainDealershipId}
+                  lastSignInLabel={u.lastSignInLabel}
                   memberships={u.memberships}
                   dealerships={dealerships}
                 />

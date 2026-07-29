@@ -23,6 +23,7 @@ export function createAdminClient() {
 export interface AdminUser {
   id: string;
   email: string | null;
+  lastSignInAt: string | null;
 }
 
 /**
@@ -47,7 +48,11 @@ export async function listAllUsers(): Promise<{
 
     if (!error) {
       return {
-        users: data.users.map((u) => ({ id: u.id, email: u.email ?? null })),
+        users: data.users.map((u) => ({
+          id: u.id,
+          email: u.email ?? null,
+          lastSignInAt: u.last_sign_in_at ?? null,
+        })),
         error: null,
       };
     }

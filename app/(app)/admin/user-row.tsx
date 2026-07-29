@@ -37,6 +37,7 @@ export function UserRow({
   positionId,
   positions,
   mainDealershipId,
+  lastSignInLabel,
   memberships,
   dealerships,
 }: {
@@ -49,6 +50,7 @@ export function UserRow({
   positionId: string | null;
   positions: { id: string; name: string }[];
   mainDealershipId: string | null;
+  lastSignInLabel: string;
   memberships: StoreMembership[];
   dealerships: { id: string; name: string }[];
 }) {
@@ -97,18 +99,26 @@ export function UserRow({
             </span>
           </span>
         </span>
-        <svg
-          viewBox="0 0 24 24"
-          fill="none"
-          stroke="currentColor"
-          strokeWidth={2}
-          strokeLinecap="round"
-          strokeLinejoin="round"
-          className="h-4 w-4 shrink-0 text-zinc-400 transition-transform group-open:rotate-90"
-          aria-hidden
-        >
-          <path d="M9 6l6 6-6 6" />
-        </svg>
+        <span className="flex shrink-0 items-center gap-2">
+          <span
+            className="whitespace-nowrap text-xs text-zinc-400"
+            title="Last sign-in"
+          >
+            {lastSignInLabel}
+          </span>
+          <svg
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            strokeWidth={2}
+            strokeLinecap="round"
+            strokeLinejoin="round"
+            className="h-4 w-4 text-zinc-400 transition-transform group-open:rotate-90"
+            aria-hidden
+          >
+            <path d="M9 6l6 6-6 6" />
+          </svg>
+        </span>
       </summary>
 
       <div className="flex flex-col gap-3 border-t border-zinc-100 p-4 dark:border-zinc-800">

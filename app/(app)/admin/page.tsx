@@ -9,6 +9,20 @@ import { UsersPanel, type AdminUser } from "./users-panel";
 import { StoreRow } from "./store-row";
 import { ConfirmButton } from "./confirm-button";
 
+function formatSignIn(iso: string | null): string {
+  if (!iso) return "Never signed in";
+  return (
+    new Date(iso).toLocaleString("en-US", {
+      timeZone: "America/Los_Angeles",
+      month: "short",
+      day: "numeric",
+      year: "numeric",
+      hour: "numeric",
+      minute: "2-digit",
+    }) + " PT"
+  );
+}
+
 export default async function AdminPage() {
   const user = await getCurrentUser();
   if (!user) redirect("/login");
@@ -119,6 +133,7 @@ export default async function AdminPage() {
     notificationsEnabled: notifyById.get(u.id) ?? false,
     positionId: positionIdByUser.get(u.id) ?? null,
     mainDealershipId: mainStoreByUser.get(u.id) ?? null,
+    lastSignInLabel: formatSignIn(u.lastSignInAt),
     memberships: membershipsByUser.get(u.id) ?? [],
   }));
 
