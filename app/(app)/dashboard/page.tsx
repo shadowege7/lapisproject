@@ -60,22 +60,33 @@ export default async function DashboardPage() {
     mtdNew: number;
     mtdUsed: number;
   } | null = null;
+  let leaderboard: {
+    name: string;
+    gross: number;
+    newUnits: number;
+    usedUnits: number;
+  }[] = [];
   if (canViewRollup) {
     // Sum across ALL stores via the service-role client (bypasses RLS) — safe
     // because access is gated by canViewRollup above.
     const admin = createAdminClient();
-    const [{ data: allMonthly }, { data: allToday }] = await Promise.all([
-      admin
-        .from("monthly_summary")
-        .select("total_gross, total_new_units, total_used_units")
-        .eq("month", monthStartISODate()),
-      admin
-        .from("daily_entries")
-        .select(
-          "new_front_end_gross, new_back_end_gross, used_front_end_gross, used_back_end_gross, new_units, used_units",
-        )
-        .eq("entry_date", todayISODate()),
-    ]);
+    const [{ data: allMonthly }, { data: allToday }, { data: allStores }] =
+      await Promise.all([
+        admin
+          .from("monthly_summary")
+          .select(
+            "dealership_id, total_gross, total_new_units, total_used_units",
+          )
+          .eq("month", monthStartISODate()),
+        admin
+          .from("daily_entries")
+          .select(
+            "new_front_end_gross, new_back_end_gross, used_front_end_gross, used_back_end_gross, new_units, used_units",
+          )
+          .eq("entry_date", todayISODate()),
+        admin.from("dealerships").select("id, name").order("name"),
+      ]);
+
     rollup = {
       mtdGross: (allMonthly ?? []).reduce((s, r) => s + r.total_gross, 0),
       mtdNew: (allMonthly ?? []).reduce((s, r) => s + r.total_new_units, 0),
@@ -92,6 +103,21 @@ export default async function DashboardPage() {
       todayNew: (allToday ?? []).reduce((s, e) => s + e.new_units, 0),
       todayUsed: (allToday ?? []).reduce((s, e) => s + e.used_units, 0),
     };
+
+    const mtdByStore = new Map(
+      (allMonthly ?? []).map((r) => [r.dealership_id, r]),
+    );
+    leaderboard = (allStores ?? [])
+      .map((d) => {
+        const m = mtdByStore.get(d.id);
+        return {
+          name: d.name,
+          gross: m?.total_gross ?? 0,
+          newUnits: m?.total_new_units ?? 0,
+          usedUnits: m?.total_used_units ?? 0,
+        };
+      })
+      .sort((a, b) => b.gross - a.gross);
   }
 
   const roleByDealership = new Map(
@@ -180,6 +206,37 @@ export default async function DashboardPage() {
               sub={`${Math.round(projectMonthEnd(rollup.mtdNew))} new · ${Math.round(projectMonthEnd(rollup.mtdUsed))} used`}
             />
           </div>
+        </div>
+      ) : null}
+      {leaderboard.length > 1 ? (
+        <div className="rounded-xl border border-zinc-200 bg-white p-4 shadow-sm dark:border-zinc-800 dark:bg-[#0e1626]">
+          <p className="mb-3 text-xs font-medium uppercase tracking-wide text-zinc-500">
+            Leaderboard · this month
+          </p>
+          <ol className="flex flex-col gap-1.5 text-sm">
+            {leaderboard.map((s, i) => (
+              <li key={s.name} className="flex items-center gap-3">
+                <span className="w-5 shrink-0 text-right font-semibold text-zinc-400">
+                  {i + 1}
+                </span>
+                <span
+                  className={`min-w-0 flex-1 truncate ${
+                    i === 0
+                      ? "font-semibold text-blue-700 dark:text-blue-400"
+                      : "font-medium"
+                  }`}
+                >
+                  {s.name}
+                </span>
+                <span className="hidden shrink-0 text-xs text-zinc-500 sm:inline">
+                  {s.newUnits + s.usedUnits} units
+                </span>
+                <span className="w-28 shrink-0 text-right font-semibold">
+                  {formatCurrency(s.gross)}
+                </span>
+              </li>
+            ))}
+          </ol>
         </div>
       ) : null}
       <div className="grid gap-4 grid-cols-[repeat(auto-fill,minmax(min(100%,19rem),1fr))]">

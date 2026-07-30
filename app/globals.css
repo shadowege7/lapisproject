@@ -58,3 +58,24 @@ option {
   background-color: var(--surface);
   color: var(--foreground);
 }
+
+/* Print: ink-friendly. Force black text on white, drop dark backgrounds and
+   shadows, and repeat table headers across pages. Elements marked print:hidden
+   (nav, buttons, watermarks) are removed by Tailwind's print variant. */
+@media print {
+  body {
+    background: #fff !important;
+  }
+  * {
+    background: transparent !important;
+    color: #000 !important;
+    box-shadow: none !important;
+    border-color: #d4d4d8 !important;
+  }
+  thead {
+    display: table-header-group;
+  }
+  tr {
+    break-inside: avoid;
+  }
+}

@@ -13,6 +13,8 @@ import {
 import { projectMonthEnd } from "@/lib/projection";
 import { ConfirmButton } from "@/app/(app)/admin/confirm-button";
 import { deleteEntry } from "./actions";
+import { ExportCsvButton } from "./export-button";
+import { PrintButton } from "./print-button";
 
 interface SummaryRow {
   label: string;
@@ -176,6 +178,47 @@ export default async function ReportsPage({
     ],
   ];
 
+  const slug = dealership.name.replace(/[^a-z0-9]+/gi, "-").toLowerCase();
+  const dailyCsvHeaders = [
+    "Date",
+    "New units",
+    "New front",
+    "New back",
+    "New gross",
+    "Used units",
+    "Used front",
+    "Used back",
+    "Used gross",
+    "Total gross",
+    "Manager calls",
+    "Sales calls",
+    "Appointments",
+    "Confirmed appts",
+    "Notes",
+  ];
+  const dailyCsvRows: (string | number | null)[][] = (dailyEntries ?? []).map(
+    (e) => [
+      e.entry_date,
+      e.new_units,
+      e.new_front_end_gross,
+      e.new_back_end_gross,
+      e.new_front_end_gross + e.new_back_end_gross,
+      e.used_units,
+      e.used_front_end_gross,
+      e.used_back_end_gross,
+      e.used_front_end_gross + e.used_back_end_gross,
+      e.new_front_end_gross +
+        e.new_back_end_gross +
+        e.used_front_end_gross +
+        e.used_back_end_gross,
+      e.manager_calls,
+      e.sales_calls,
+      e.appointments,
+      e.confirmed_appointments,
+      e.notes ?? "",
+    ],
+  );
+
   return (
     <div className="flex flex-col gap-8">
       <div className="flex flex-wrap items-center justify-between gap-3">
@@ -187,14 +230,23 @@ export default async function ReportsPage({
             {dealership.name}
           </h1>
         </div>
-        {role === "editor" ? (
-          <Link
-            href={`/dealerships/${dealershipId}/entry`}
-            className="rounded-md bg-blue-600 px-4 py-2 text-sm font-semibold text-white shadow-sm transition-colors hover:bg-blue-700"
-          >
-            Enter today&apos;s numbers
-          </Link>
-        ) : null}
+        <div className="flex flex-wrap items-center gap-2 print:hidden">
+          <PrintButton />
+          <ExportCsvButton
+            filename={`${slug}-daily.csv`}
+            headers={dailyCsvHeaders}
+            rows={dailyCsvRows}
+            label="Export daily"
+          />
+          {role === "editor" ? (
+            <Link
+              href={`/dealerships/${dealershipId}/entry`}
+              className="rounded-md bg-blue-600 px-4 py-2 text-sm font-semibold text-white shadow-sm transition-colors hover:bg-blue-700"
+            >
+              Enter today&apos;s numbers
+            </Link>
+          ) : null}
+        </div>
       </div>
 
       <section>
@@ -249,8 +301,17 @@ export default async function ReportsPage({
         </p>
       </section>
 
-      <SummarySection title="Annual" rows={annualRows} />
-      <SummarySection title="Monthly" rows={monthlyRows} compact />
+      <SummarySection
+        title="Annual"
+        rows={annualRows}
+        filename={`${slug}-annual.csv`}
+      />
+      <SummarySection
+        title="Monthly"
+        rows={monthlyRows}
+        compact
+        filename={`${slug}-monthly.csv`}
+      />
 
       <section>
         <h2 className="mb-3 text-sm font-semibold">
@@ -276,7 +337,7 @@ export default async function ReportsPage({
                   Total gross
                 </th>
                 {role === "editor" ? (
-                  <th className="py-2.5 pr-4 font-medium" />
+                  <th className="py-2.5 pr-4 font-medium print:hidden" />
                 ) : null}
               </tr>
             </thead>
@@ -323,7 +384,7 @@ export default async function ReportsPage({
                         {formatCurrency(total)}
                       </td>
                       {role === "editor" ? (
-                        <td className="py-2.5 pr-4">
+                        <td className="py-2.5 pr-4 print:hidden">
                           <div className="flex gap-3">
                             <Link
                               href={`/dealerships/${dealershipId}/entry?date=${e.entry_date}`}
@@ -394,14 +455,52 @@ function SummarySection({
   title,
   rows,
   compact = false,
+  filename,
 }: {
   title: string;
   rows: SummaryRow[];
   compact?: boolean;
+  filename: string;
 }) {
+  const csvHeaders = [
+    "Period",
+    "New units",
+    "New front",
+    "New back",
+    "New gross",
+    "Used units",
+    "Used front",
+    "Used back",
+    "Used gross",
+    "Total gross",
+    "Days",
+  ];
+  const csvRows: (string | number)[][] = rows.map((r) => [
+    r.label,
+    r.total_new_units,
+    r.total_new_front_end_gross,
+    r.total_new_back_end_gross,
+    r.total_new_front_end_gross + r.total_new_back_end_gross,
+    r.total_used_units,
+    r.total_used_front_end_gross,
+    r.total_used_back_end_gross,
+    r.total_used_front_end_gross + r.total_used_back_end_gross,
+    r.total_gross,
+    r.days_logged,
+  ]);
+
   return (
     <section>
-      <h2 className="mb-3 text-sm font-semibold">{title}</h2>
+      <div className="mb-3 flex items-center justify-between gap-2">
+        <h2 className="text-sm font-semibold">{title}</h2>
+        {rows.length > 0 ? (
+          <ExportCsvButton
+            filename={filename}
+            headers={csvHeaders}
+            rows={csvRows}
+          />
+        ) : null}
+      </div>
       {rows.length === 0 ? (
         <p className="text-sm text-zinc-500">No data yet.</p>
       ) : (
