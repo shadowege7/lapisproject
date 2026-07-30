@@ -11,6 +11,7 @@ import {
   setShowLeaderboard,
 } from "./actions";
 import { InviteForm } from "./invite-form";
+import { EmailTestForm } from "./email-test-form";
 import { UsersPanel, type AdminUser } from "./users-panel";
 import { StoreRow } from "./store-row";
 import { ConfirmButton } from "./confirm-button";
@@ -294,6 +295,15 @@ export default async function AdminPage() {
             </button>
           </form>
         </div>
+      </section>
+
+      <section className="flex flex-col gap-3">
+        <h2 className="font-medium">Email</h2>
+        <p className="text-xs text-zinc-500">
+          Verify the SMTP you configured in Supabase → Authentication is
+          delivering. This sends a password-reset email to the address below.
+        </p>
+        <EmailTestForm defaultEmail={user.email} />
       </section>
 
       <section className="flex flex-col gap-3">

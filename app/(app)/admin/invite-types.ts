@@ -12,3 +12,10 @@ export type ResetResult =
   | { status: "reset"; tempPassword: string };
 
 export const INITIAL_RESET_RESULT: ResetResult = { status: "idle" };
+
+export type TestEmailResult =
+  | { status: "idle" }
+  | { status: "error"; message: string }
+  | { status: "sent"; email: string };
+
+export const INITIAL_TEST_EMAIL_RESULT: TestEmailResult = { status: "idle" };

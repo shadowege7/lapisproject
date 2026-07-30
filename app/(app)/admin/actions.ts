@@ -6,7 +6,11 @@ import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { createAdminClient, listAllUsers } from "@/lib/supabase/admin";
 import type { DealershipRole } from "@/lib/database.types";
-import type { InviteResult, ResetResult } from "./invite-types";
+import type {
+  InviteResult,
+  ResetResult,
+  TestEmailResult,
+} from "./invite-types";
 
 // Readable temp password, e.g. "X7kM-pQ2r-Tw9y" (no ambiguous chars).
 // randomInt is a CSPRNG with unbiased range selection (no modulo bias).
@@ -183,6 +187,28 @@ export async function resetUserPassword(
   if (error) return { status: "error", message: error.message };
 
   return { status: "reset", tempPassword };
+}
+
+/**
+ * Send a real Supabase auth email (a password-recovery message) through the
+ * SMTP configured in Supabase → Authentication → SMTP, so an admin can confirm
+ * delivery from the webpage. The recipient must already have an account for an
+ * email to be sent; the link itself can be ignored.
+ */
+export async function sendTestEmail(
+  _prevState: TestEmailResult,
+  formData: FormData,
+): Promise<TestEmailResult> {
+  const supabase = await requireSuperAdmin();
+  const email = String(formData.get("email") ?? "")
+    .trim()
+    .toLowerCase();
+  if (!email) return { status: "error", message: "Enter an email address." };
+
+  const { error } = await supabase.auth.resetPasswordForEmail(email);
+  if (error) return { status: "error", message: error.message };
+
+  return { status: "sent", email };
 }
 
 export async function deleteUser(formData: FormData) {
