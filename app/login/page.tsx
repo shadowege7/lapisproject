@@ -14,26 +14,23 @@ export default async function LoginPage({
       <div className="absolute right-4 top-4">
         <ThemeToggle />
       </div>
-      <div
-        className="pointer-events-none absolute inset-0 -z-10 flex items-center justify-center overflow-hidden"
-        aria-hidden
-      >
-        {/* eslint-disable-next-line @next/next/no-img-element */}
-        <img
-          src="/Lapis-Obsidian-Emblem.png"
-          alt=""
-          className="h-80 w-auto max-w-[90%] select-none opacity-[0.06] dark:hidden"
-        />
-        {/* eslint-disable-next-line @next/next/no-img-element */}
-        <img
-          src="/Lapis-Gold-Emblem.png"
-          alt=""
-          className="hidden h-80 w-auto max-w-[90%] select-none opacity-[0.08] dark:block"
-        />
-      </div>
-      <div className="relative z-10 w-full max-w-sm">
+      <div className="w-full max-w-sm">
         <div className="mb-6 flex flex-col items-center gap-3 text-center">
-          <BrandLogo className="h-12" />
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img
+            src="/Lapis-Obsidian-Emblem.png"
+            alt=""
+            aria-hidden
+            className="h-16 w-auto select-none dark:hidden"
+          />
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img
+            src="/Lapis-Gold-Emblem.png"
+            alt=""
+            aria-hidden
+            className="hidden h-16 w-auto select-none dark:block"
+          />
+          <BrandLogo className="h-10" />
           <p className="text-sm text-zinc-500">Sales Tracker</p>
         </div>
 
