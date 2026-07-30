@@ -283,6 +283,27 @@ export async function setUserPosition(formData: FormData) {
   revalidatePath("/admin");
 }
 
+/** Toggle the dashboard "Leaders" section for everyone at once. */
+export async function setShowLeaderboard(formData: FormData) {
+  const supabase = await requireSuperAdmin();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  const enabled = formData.get("show_leaderboard") === "true";
+
+  await supabase.from("app_settings").upsert(
+    {
+      key: "show_leaderboard",
+      value: enabled,
+      updated_at: new Date().toISOString(),
+      updated_by: user?.id ?? null,
+    },
+    { onConflict: "key" },
+  );
+  revalidatePath("/admin");
+  revalidatePath("/dashboard");
+}
+
 export async function setMainStore(formData: FormData) {
   const supabase = await requireSuperAdmin();
   const userId = String(formData.get("user_id") ?? "");

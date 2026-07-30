@@ -8,6 +8,7 @@ import {
   createPosition,
   deletePosition,
   setPositionRollup,
+  setShowLeaderboard,
 } from "./actions";
 import { InviteForm } from "./invite-form";
 import { UsersPanel, type AdminUser } from "./users-panel";
@@ -61,6 +62,13 @@ export default async function AdminPage() {
     .select(
       "id, is_super_admin, full_name, notifications_enabled, position_id, main_dealership_id",
     );
+
+  const { data: leaderboardSetting } = await supabase
+    .from("app_settings")
+    .select("value")
+    .eq("key", "show_leaderboard")
+    .maybeSingle();
+  const showLeaderboard = leaderboardSetting?.value !== false;
 
   const superAdminById = new Map(
     profiles?.map((p) => [p.id, p.is_super_admin]),
@@ -253,6 +261,39 @@ export default async function AdminPage() {
             Add
           </button>
         </form>
+      </section>
+
+      <section className="flex flex-col gap-3">
+        <h2 className="font-medium">Dashboard</h2>
+        <p className="text-xs text-zinc-500">
+          Settings that change what everyone sees on the dashboard.
+        </p>
+        <div className="flex flex-wrap items-center justify-between gap-3 rounded-lg border border-zinc-200 px-3 py-2 text-sm dark:border-zinc-800">
+          <div>
+            <span className="font-medium">Leaders section</span>
+            <p className="text-xs text-zinc-500">
+              The “Gross leader” and “Unit leader” cards shown above the store
+              list.
+            </p>
+          </div>
+          <form action={setShowLeaderboard}>
+            <input
+              type="hidden"
+              name="show_leaderboard"
+              value={(!showLeaderboard).toString()}
+            />
+            <button
+              type="submit"
+              className={
+                showLeaderboard
+                  ? "text-blue-600 hover:underline dark:text-blue-400"
+                  : "text-zinc-500 hover:underline"
+              }
+            >
+              {showLeaderboard ? "Shown — click to hide" : "Hidden — click to show"}
+            </button>
+          </form>
+        </div>
       </section>
 
       <section className="flex flex-col gap-3">

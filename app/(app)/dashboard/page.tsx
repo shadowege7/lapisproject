@@ -17,6 +17,7 @@ export default async function DashboardPage() {
     { data: monthly },
     { data: todayEntries },
     { data: profile },
+    { data: leaderboardSetting },
   ] = await Promise.all([
     supabase.from("dealerships").select("id, name").order("name"),
     supabase
@@ -36,9 +37,15 @@ export default async function DashboardPage() {
       .select("main_dealership_id, position_id")
       .eq("id", user.id)
       .single(),
+    supabase
+      .from("app_settings")
+      .select("value")
+      .eq("key", "show_leaderboard")
+      .maybeSingle(),
   ]);
 
   const mainDealershipId = profile?.main_dealership_id ?? null;
+  const showLeaderboard = leaderboardSetting?.value !== false;
 
   // Group-wide rollup: visible to super admins, or to users whose position an
   // admin has granted rollup access.
@@ -215,7 +222,7 @@ export default async function DashboardPage() {
           </div>
         </div>
       ) : null}
-      {leaderboard.length > 1 && grossLeader && unitLeader ? (
+      {showLeaderboard && leaderboard.length > 1 && grossLeader && unitLeader ? (
         <div>
           <p className="mb-2 text-xs font-medium uppercase tracking-wide text-zinc-500">
             Leaders · this month
