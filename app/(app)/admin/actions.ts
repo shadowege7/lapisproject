@@ -206,7 +206,31 @@ export async function sendTestEmail(
   if (!email) return { status: "error", message: "Enter an email address." };
 
   const { error } = await supabase.auth.resetPasswordForEmail(email);
-  if (error) return { status: "error", message: error.message };
+  if (error) {
+    // Log the full shape for Vercel → Logs; Supabase sometimes returns an
+    // AuthError whose `.message` is empty ("{}") when GoTrue itself 500s on the
+    // SMTP send, so build a message from whatever fields are populated.
+    console.error("sendTestEmail failed:", {
+      name: error.name,
+      message: error.message,
+      status: (error as { status?: number }).status,
+      code: (error as { code?: string }).code,
+      raw: JSON.stringify(error),
+    });
+    const status = (error as { status?: number }).status;
+    const code = (error as { code?: string }).code;
+    const detail =
+      [
+        error.message && error.message !== "{}" ? error.message : null,
+        code,
+        status ? `HTTP ${status}` : null,
+      ]
+        .filter(Boolean)
+        .join(" · ") ||
+      error.name ||
+      "Supabase returned an empty error — check Supabase → Logs → Auth for the SMTP send error.";
+    return { status: "error", message: detail };
+  }
 
   return { status: "sent", email };
 }
