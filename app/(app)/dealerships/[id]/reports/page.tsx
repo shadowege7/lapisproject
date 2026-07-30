@@ -15,6 +15,7 @@ import { ConfirmButton } from "@/app/(app)/admin/confirm-button";
 import { deleteEntry } from "./actions";
 import { ExportCsvButton } from "./export-button";
 import { PrintButton } from "./print-button";
+import { ImportForm } from "./import-form";
 
 interface SummaryRow {
   label: string;
@@ -447,6 +448,8 @@ export default async function ReportsPage({
           </table>
         </Card>
       </section>
+
+      {role === "editor" ? <ImportForm dealershipId={dealershipId} /> : null}
     </div>
   );
 }

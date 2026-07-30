@@ -281,7 +281,12 @@ export default async function DashboardPage() {
             >
               <div className="flex items-center justify-between gap-2">
                 <h2 className="flex items-center gap-2 font-semibold tracking-tight">
-                  {dealership.name}
+                  <Link
+                    href={`/dealerships/${dealership.id}`}
+                    className="hover:text-blue-700 hover:underline dark:hover:text-blue-400"
+                  >
+                    {dealership.name}
+                  </Link>
                   {dealership.id === mainDealershipId ? (
                     <span className="rounded-full bg-blue-600 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-white">
                       Main
