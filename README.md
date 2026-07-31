@@ -50,13 +50,26 @@ Security), deployed on Vercel.
 
 ### 1. Environment variables
 
+> **This app now shares a Supabase project with the Lapis Launchpad**
+> (`iyjaoyaqgfqytxqdtqfs`), so one account signs you into both. Its previous
+> project `bvtlkvsytlyxcowyavcj` is no longer used, but has been left untouched
+> as a rollback: point the three Supabase variables back at it and this app
+> behaves exactly as it did before.
+>
+> The apps stay separate — separate repos, deployments and URLs. Only the
+> database and auth directory are shared. This app's tables (`dealerships`,
+> `daily_entries`, `positions`, …) kept their names, the Launchpad's sit
+> alongside them, and `profiles` is now one table serving both. See
+> `supabase/migrations/0009_consolidate_sales_tracker.sql` in the Launchpad
+> repo.
+
 ```bash
 cp .env.local.example .env.local
 ```
 
 Fill in the keys from the Supabase dashboard (**Project Settings → API Keys**):
 
-- `NEXT_PUBLIC_SUPABASE_URL` — already set for project `bvtlkvsytlyxcowyavcj`.
+- `NEXT_PUBLIC_SUPABASE_URL` — the shared project, `iyjaoyaqgfqytxqdtqfs`.
 - `NEXT_PUBLIC_SUPABASE_ANON_KEY` — the **publishable** key (`sb_publishable_…`).
 - `SUPABASE_SERVICE_ROLE_KEY` — the **secret** key (`sb_secret_…`). Server‑only
   (used for admin actions like creating/deleting users); never expose it to the
