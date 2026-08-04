@@ -1,4 +1,24 @@
+/** The customer this deployment belongs to. */
 export const COMPANY_NAME = "Lapis Automotive Group";
+
+/** Who owns the software, as distinct from who uses it. */
+export const LEGAL_OWNER = "ShadowEdge LLC";
+
+/**
+ * The copyright line. Kept identical to the Launchpad's, since the two apps
+ * sit on the same domain and a person moves between them.
+ *
+ * The year is read at render rather than hardcoded, so it does not quietly go
+ * stale on New Year's Day. Safe because the pages that show it are
+ * server-rendered per request, not prerendered at build time.
+ */
+export function Copyright({ className = "" }: { className?: string }) {
+  return (
+    <p className={className}>
+      © {new Date().getFullYear()} {LEGAL_OWNER}. All rights reserved.
+    </p>
+  );
+}
 
 /**
  * The Lapis monogram: a lapis-blue rounded tile with an "L". Sized via the

@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { login } from "./actions";
 import { BrandLogo } from "@/app/brand-logo";
+import { Copyright } from "@/app/brand";
 import { ThemeToggle } from "@/app/theme-toggle";
 
 export default async function LoginPage({
@@ -83,6 +84,8 @@ export default async function LoginPage({
             </Link>
           </p>
         </div>
+
+        <Copyright className="mt-6 text-center text-xs text-zinc-500" />
       </div>
     </div>
   );

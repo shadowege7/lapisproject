@@ -3,6 +3,7 @@ import { redirect } from "next/navigation";
 import { getCurrentUser } from "@/lib/auth";
 import { logout } from "@/app/login/actions";
 import { BrandLogo } from "@/app/brand-logo";
+import { COMPANY_NAME, Copyright } from "@/app/brand";
 import { ThemeToggle } from "@/app/theme-toggle";
 
 export default async function AppLayout({
@@ -57,8 +58,11 @@ export default async function AppLayout({
       <main className="mx-auto w-full max-w-7xl flex-1 px-4 py-8">
         {children}
       </main>
-      <footer className="mx-auto w-full max-w-7xl px-4 py-6 text-xs text-zinc-400">
-        Lapis Automotive Group · Sales Tracker
+      {/* Wraps to two stacked lines on a narrow screen rather than squeezing
+          both onto one. */}
+      <footer className="mx-auto flex w-full max-w-7xl flex-wrap items-center justify-between gap-x-4 gap-y-1 px-4 py-6 text-xs text-zinc-400">
+        <p>{COMPANY_NAME} · Sales Tracker</p>
+        <Copyright />
       </footer>
     </div>
   );

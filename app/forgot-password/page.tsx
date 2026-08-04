@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { requestPasswordReset } from "@/app/login/actions";
 import { BrandLogo } from "@/app/brand-logo";
+import { Copyright } from "@/app/brand";
 import { ThemeToggle } from "@/app/theme-toggle";
 
 const field =
@@ -95,6 +96,8 @@ export default async function ForgotPasswordPage({
             </>
           )}
         </div>
+
+        <Copyright className="mt-6 text-center text-xs text-zinc-500" />
       </div>
     </div>
   );
