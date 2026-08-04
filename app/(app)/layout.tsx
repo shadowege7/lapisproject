@@ -58,11 +58,9 @@ export default async function AppLayout({
       <main className="mx-auto w-full max-w-7xl flex-1 px-4 py-8">
         {children}
       </main>
-      {/* Wraps to two stacked lines on a narrow screen rather than squeezing
-          both onto one. */}
-      <footer className="mx-auto flex w-full max-w-7xl flex-wrap items-center justify-between gap-x-4 gap-y-1 px-4 py-6 text-xs text-zinc-400">
+      <footer className="mx-auto w-full max-w-7xl px-4 py-6 text-xs text-zinc-400">
         <p>{COMPANY_NAME} · Sales Tracker</p>
-        <Copyright />
+        <Copyright className="mt-1" />
       </footer>
     </div>
   );
