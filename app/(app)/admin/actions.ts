@@ -5,6 +5,7 @@ import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { createAdminClient, listAllUsers } from "@/lib/supabase/admin";
+import { createResetClient } from "@/lib/supabase/reset-client";
 import type { DealershipRole } from "@/lib/database.types";
 import type {
   InviteResult,
@@ -199,13 +200,17 @@ export async function sendTestEmail(
   _prevState: TestEmailResult,
   formData: FormData,
 ): Promise<TestEmailResult> {
-  const supabase = await requireSuperAdmin();
+  await requireSuperAdmin();
   const email = String(formData.get("email") ?? "")
     .trim()
     .toLowerCase();
   if (!email) return { status: "error", message: "Enter an email address." };
 
-  const { error } = await supabase.auth.resetPasswordForEmail(email);
+  // Deliberately not the ssr client used for the auth check above: it forces
+  // PKCE, and a PKCE reset link is only redeemable in the browser that sent
+  // it — useless for a message the recipient opens on their own device, and
+  // the reason these test emails produced links that always failed.
+  const { error } = await createResetClient().auth.resetPasswordForEmail(email);
   if (error) {
     // Log the full shape for Vercel → Logs; Supabase sometimes returns an
     // AuthError whose `.message` is empty ("{}") when GoTrue itself 500s on the
