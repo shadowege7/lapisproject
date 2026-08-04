@@ -2,7 +2,15 @@ import { createServerClient } from "@supabase/ssr";
 import { NextResponse, type NextRequest } from "next/server";
 import { sharedCookieOptions } from "@/lib/supabase/cookie-options";
 
-const PUBLIC_PATHS = ["/login"];
+// Reachable without a session.
+const PUBLIC_PATHS = ["/login", "/forgot-password"];
+
+// Pointless once you are signed in, so signed-in visitors get sent to the
+// dashboard. Kept separate from PUBLIC_PATHS: the two lists happen to match
+// today, but "may be seen signed out" and "may only be seen signed out" are
+// different questions, and conflating them is what broke the Launchpad's
+// emailed links.
+const SIGNED_OUT_ONLY = ["/login", "/forgot-password"];
 
 export async function proxy(request: NextRequest) {
   let response = NextResponse.next({ request });
@@ -34,18 +42,17 @@ export async function proxy(request: NextRequest) {
     data: { user },
   } = await supabase.auth.getUser();
 
-  const isPublicPath = PUBLIC_PATHS.some((path) =>
-    request.nextUrl.pathname.startsWith(path),
-  );
+  const matches = (paths: string[]) =>
+    paths.some((path) => request.nextUrl.pathname.startsWith(path));
 
-  if (!user && !isPublicPath) {
+  if (!user && !matches(PUBLIC_PATHS)) {
     const url = request.nextUrl.clone();
     url.pathname = "/login";
     url.searchParams.set("next", request.nextUrl.pathname);
     return NextResponse.redirect(url);
   }
 
-  if (user && isPublicPath) {
+  if (user && matches(SIGNED_OUT_ONLY)) {
     const url = request.nextUrl.clone();
     url.pathname = "/dashboard";
     url.search = "";

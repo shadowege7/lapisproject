@@ -124,6 +124,30 @@ password shown once** (no email is sent — share it securely). Assign the user 
 one or more stores as editor or viewer. Users change their own password on the
 **Account** page; a super admin can also reset any user's password.
 
+## Forgotten passwords
+
+`/login` offers **Forgot your password?**, which emails a link. The form always
+reports success, even for an address with no account — otherwise it becomes a
+way to find out who works here.
+
+Two things about that link are worth knowing:
+
+- **It opens the Launchpad, not this app.** Supabase has one Site URL per
+  project and both apps share the project, so `/auth/confirm` lives over there.
+  That is fine: the session cookie is shared across `dealerhaven.app`, so
+  setting a password on the Launchpad signs you in here too. The confirmation
+  screen says so, because otherwise landing on a different domain looks wrong.
+- **It is sent without PKCE**, via `lib/supabase/reset-client.ts`. The
+  `@supabase/ssr` client hardcodes `flowType: "pkce"` after spreading your
+  options, and a PKCE link only redeems in the browser that requested it —
+  useless when the reset is requested on a desktop and the email is read on a
+  phone.
+
+`/forgot-password` is in `PUBLIC_PATHS` in `proxy.ts`, which is a separate list
+from `SIGNED_OUT_ONLY`: "may be seen signed out" and "may *only* be seen signed
+out" are different questions, and conflating them is what broke the Launchpad's
+emailed links once already.
+
 ## Deployment (Vercel)
 
 Hosted on Vercel; every push to `main` redeploys. To reproduce:
@@ -135,9 +159,10 @@ Hosted on Vercel; every push to `main` redeploys. To reproduce:
    `SUPABASE_SERVICE_ROLE_KEY`) plus, for push notifications, the three VAPID
    vars (`NEXT_PUBLIC_VAPID_PUBLIC_KEY`, `VAPID_PRIVATE_KEY`, `VAPID_SUBJECT`).
    Changing env vars requires a redeploy to take effect.
-3. Optional: set the **Site URL** under **Supabase → Authentication → URL
-   Configuration** to the production domain (matters only if email‑based auth
-   flows are added later; the current temp‑password onboarding sends no email).
+3. The **Site URL** under **Supabase → Authentication → URL Configuration**
+   must point at the **Launchpad** (`https://lapis.dealerhaven.app`), not at
+   this app. It is what every emailed auth link is built from, including the
+   ones this app's forgot-password form sends.
 
 GitHub Pages is **not** an option — the app relies on server‑rendered pages,
 Server Actions, and the `proxy.ts` middleware, none of which run on static

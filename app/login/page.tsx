@@ -1,3 +1,4 @@
+import Link from "next/link";
 import { login } from "./actions";
 import { BrandLogo } from "@/app/brand-logo";
 import { ThemeToggle } from "@/app/theme-toggle";
@@ -72,6 +73,15 @@ export default async function LoginPage({
               Sign in
             </button>
           </form>
+
+          <p className="mt-4 text-center text-sm">
+            <Link
+              href="/forgot-password"
+              className="text-blue-600 hover:underline dark:text-blue-400"
+            >
+              Forgot your password?
+            </Link>
+          </p>
         </div>
       </div>
     </div>
