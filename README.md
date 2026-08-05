@@ -180,8 +180,12 @@ would make the category look broken. Stores without the flag never show it. The
 all-stores rollup shows it whenever any store sells them, so the company figure
 does not drop the category on a slow day.
 
-On a phone the Sprinter tile takes a full-width row under New and Used rather
-than squeezing three tiles across ~110px each; it goes inline from `sm` up.
+The dashboard tile sits **inline with New and Used at every width**. That works
+because `VehicleStat` stacks its label above the unit count instead of putting
+them side by side: side by side, a long label like SPRINTER pushed "0 units"
+onto a second line while NEW and USED stayed on one, and that tile's
+Front/Back/Gross rows then sat lower than its neighbours'. Stacking gives every
+tile the same two-line head whatever the label says.
 
 ## Passwords
 

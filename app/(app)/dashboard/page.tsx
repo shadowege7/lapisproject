@@ -373,16 +373,14 @@ export default async function DashboardPage() {
                 <p className="mb-1.5 text-xs font-medium uppercase tracking-wide text-zinc-500">
                   Today
                 </p>
-                {/* Two across normally. With Sprinters there are three, but
-                    three of these tiles across a phone leaves each about 110px
-                    and the figures wrap into a mess — so on the narrowest
-                    screens Sprinter takes a full-width row of its own instead,
-                    and only goes inline from `sm` up. */}
+                {/* Three across wherever Sprinters are tracked, at every
+                    width — they belong beside New and Used, not on a row of
+                    their own. Safe at phone widths because the tile head
+                    stacks its label above the count, so nothing has to fit
+                    label and figure on one line. */}
                 <div
                   className={`grid gap-px overflow-hidden rounded-lg border border-zinc-100 bg-zinc-100 dark:border-zinc-800 dark:bg-zinc-800 ${
-                    dealership.tracks_sprinters
-                      ? "grid-cols-2 sm:grid-cols-3"
-                      : "grid-cols-2"
+                    dealership.tracks_sprinters ? "grid-cols-3" : "grid-cols-2"
                   }`}
                 >
                   <VehicleStat
@@ -400,15 +398,13 @@ export default async function DashboardPage() {
                     gross={todayUsedGross}
                   />
                   {dealership.tracks_sprinters ? (
-                    <div className="col-span-2 sm:col-span-1">
-                      <VehicleStat
-                        label="Sprinter"
-                        units={todayEntry?.sprinter_units ?? 0}
-                        front={todayEntry?.sprinter_front_end_gross ?? 0}
-                        back={todayEntry?.sprinter_back_end_gross ?? 0}
-                        gross={todaySprinterGross}
-                      />
-                    </div>
+                    <VehicleStat
+                      label="Sprinter"
+                      units={todayEntry?.sprinter_units ?? 0}
+                      front={todayEntry?.sprinter_front_end_gross ?? 0}
+                      back={todayEntry?.sprinter_back_end_gross ?? 0}
+                      gross={todaySprinterGross}
+                    />
                   ) : null}
                 </div>
 
@@ -557,11 +553,18 @@ function VehicleStat({
 }) {
   return (
     <div className="bg-white p-3 dark:bg-[var(--surface)]">
-      <div className="flex items-center justify-between">
-        <span className="text-xs font-semibold uppercase tracking-wide text-zinc-500">
+      {/* Label above the count rather than beside it. Side by side, a long
+          label like SPRINTER pushed "0 units" onto a second line while NEW and
+          USED stayed on one, so that tile's Front/Back/Gross rows sat lower
+          than its neighbours'. Stacking gives every tile the same two-line
+          head whatever the label says, so the rows always line up. */}
+      <div>
+        <span className="block truncate text-xs font-semibold uppercase tracking-wide text-zinc-500">
           {label}
         </span>
-        <span className="text-sm font-semibold">{units} units</span>
+        <span className="mt-0.5 block text-sm font-semibold">
+          {units} units
+        </span>
       </div>
       <dl className="mt-2 space-y-1 text-xs">
         <div className="flex justify-between">
