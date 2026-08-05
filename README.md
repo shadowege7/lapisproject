@@ -201,6 +201,10 @@ Lapis navy, matching the Launchpad. 296 C is lighter than the near-black it
 replaced, so `--surface` moved up with it; card backgrounds now read that token
 rather than a hardcoded hex, so the ramp stays in one place.
 
+The bird is **platinum on dark backgrounds, obsidian on light** — the gold
+artwork run through the `.emblem-platinum` filter in `globals.css` rather than
+a second image file, matching the Launchpad.
+
 The light theme still has its pale canvas.
 
 ## Project structure

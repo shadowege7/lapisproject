@@ -181,7 +181,7 @@ export default async function DashboardPage() {
           </p>
           <h1 className="text-xl font-semibold tracking-tight">Dealerships</h1>
         </div>
-        {/* Obsidian emblem in light mode, gold in dark (LAPIS) mode. */}
+        {/* Obsidian emblem in light mode, platinum in dark. */}
         {/* eslint-disable-next-line @next/next/no-img-element */}
         <img
           src="/Lapis-Obsidian-Emblem.png"
@@ -194,7 +194,7 @@ export default async function DashboardPage() {
           src="/Lapis-Gold-Emblem.png"
           alt=""
           aria-hidden
-          className="pointer-events-none hidden h-12 w-auto shrink-0 select-none opacity-40 sm:h-14 dark:block"
+          className="emblem-platinum pointer-events-none hidden h-12 w-auto shrink-0 select-none opacity-40 sm:h-14 dark:block"
         />
       </div>
       {rollup ? (

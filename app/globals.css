@@ -56,6 +56,21 @@ body {
   font-family: var(--font-geist-sans), Arial, Helvetica, sans-serif;
 }
 
+/*
+ * The emblem in platinum, for dark backgrounds. Kept identical to the
+ * Launchpad's, since the two sit on one domain and a person moves between
+ * them.
+ *
+ * Derived from the gold artwork rather than a second image file: one asset
+ * stays the source of truth, and if the emblem is ever redrawn this follows it
+ * automatically. Greyscale removes the gold, the brightness lift takes the
+ * result up to a light metal, and the contrast pull keeps the engraved
+ * cross-hatching from crushing to flat white.
+ */
+.emblem-platinum {
+  filter: grayscale(1) brightness(1.28) contrast(0.88);
+}
+
 /* Native dropdown option lists: force a solid, theme-aware background and text
    so the choices are legible in both light and dark mode (transparent selects
    otherwise render low-contrast option menus in some browsers). */

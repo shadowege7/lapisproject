@@ -30,7 +30,7 @@ export default async function LoginPage({
             src="/Lapis-Gold-Emblem.png"
             alt=""
             aria-hidden
-            className="hidden h-16 w-auto select-none dark:block"
+            className="emblem-platinum hidden h-16 w-auto select-none dark:block"
           />
           <BrandLogo className="h-10" />
           <p className="text-sm text-zinc-500">Sales Tracker</p>
