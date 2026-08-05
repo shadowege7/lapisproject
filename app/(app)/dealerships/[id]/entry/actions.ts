@@ -69,7 +69,7 @@ export async function saveEntry(formData: FormData) {
 
   const { data: dealership } = await supabase
     .from("dealerships")
-    .select("name")
+    .select("name, tracks_sprinters")
     .eq("id", dealershipId)
     .single();
 
@@ -85,12 +85,13 @@ export async function saveEntry(formData: FormData) {
       ? "Today's numbers are in"
       : `Numbers updated for ${entryDate}`;
 
-  // Sprinters only earn a mention when there were some, so the notification
-  // stays short for the stores that never sell one.
+  // Mentioned wherever the store tracks them, including at zero — that is a
+  // real fact about the day for a Sprinter store. Stores that never sell one
+  // keep the shorter notification.
   const counts = [
     `${newUnits} new`,
     `${usedUnits} used`,
-    ...(sprinterUnits > 0 ? [`${sprinterUnits} Sprinter`] : []),
+    ...(dealership?.tracks_sprinters ? [`${sprinterUnits} Sprinter`] : []),
   ].join(" · ");
 
   await notifyStoreEntry({

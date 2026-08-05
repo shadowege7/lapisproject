@@ -26,7 +26,7 @@ export default async function DealershipDetailPage({
     await Promise.all([
       supabase
         .from("dealerships")
-        .select("id, name")
+        .select("id, name, tracks_sprinters")
         .eq("id", dealershipId)
         .single(),
       supabase
@@ -71,12 +71,16 @@ export default async function DealershipDetailPage({
     (month?.total_sprinter_units ?? 0);
   const mtdGross = month?.total_gross ?? 0;
 
-  /** "12 new · 9 used", with Sprinters only where there were any. */
+  /**
+   * "12 new · 9 used · 3 Sprinter". Shown whenever this store tracks
+   * Sprinters, including at zero — a Sprinter store wants that line the same
+   * way it wants its used line.
+   */
   const units = (n: number, used: number, sprinter: number) =>
     [
       `${n} new`,
       `${used} used`,
-      ...(sprinter > 0 ? [`${sprinter} Sprinter`] : []),
+      ...(dealership.tracks_sprinters ? [`${sprinter} Sprinter`] : []),
     ].join(" · ");
 
   const notesEntries = (recent ?? []).filter((e) => e.notes && e.notes.trim());

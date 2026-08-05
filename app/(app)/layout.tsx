@@ -1,6 +1,5 @@
 import Link from "next/link";
-import { redirect } from "next/navigation";
-import { getCurrentUser } from "@/lib/auth";
+import { requireUser } from "@/lib/auth";
 import { logout } from "@/app/login/actions";
 import { BrandLogo } from "@/app/brand-logo";
 import { COMPANY_NAME, Copyright } from "@/app/brand";
@@ -11,8 +10,9 @@ export default async function AppLayout({
 }: {
   children: React.ReactNode;
 }) {
-  const user = await getCurrentUser();
-  if (!user) redirect("/login");
+  // Every page in this group renders inside this layout, so this is the one
+  // place the temporary-password gate has to hold.
+  const user = await requireUser();
 
   return (
     <div className="flex min-h-full flex-1 flex-col">

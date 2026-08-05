@@ -1,3 +1,4 @@
+import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import type { DealershipRole } from "@/lib/database.types";
 
@@ -6,6 +7,8 @@ export interface CurrentUser {
   email: string;
   fullName: string | null;
   isSuperAdmin: boolean;
+  /** Still on the temporary password an admin issued them. */
+  mustChangePassword: boolean;
 }
 
 export async function getCurrentUser(): Promise<CurrentUser | null> {
@@ -18,7 +21,7 @@ export async function getCurrentUser(): Promise<CurrentUser | null> {
 
   const { data: profile } = await supabase
     .from("profiles")
-    .select("full_name, is_super_admin")
+    .select("full_name, is_super_admin, must_change_password")
     .eq("id", user.id)
     .single();
 
@@ -27,7 +30,24 @@ export async function getCurrentUser(): Promise<CurrentUser | null> {
     email: user.email ?? "",
     fullName: profile?.full_name ?? null,
     isSuperAdmin: profile?.is_super_admin ?? false,
+    mustChangePassword: profile?.must_change_password ?? false,
   };
+}
+
+/**
+ * The signed-in user, sent to /set-password first if they are still on a
+ * temporary one.
+ *
+ * The gate lives here rather than in proxy.ts because the flag is on the
+ * profile row, and the proxy only holds the session — checking it there would
+ * mean a database round trip on every request, including every static asset.
+ * Every page in the (app) group goes through this.
+ */
+export async function requireUser(): Promise<CurrentUser> {
+  const user = await getCurrentUser();
+  if (!user) redirect("/login");
+  if (user.mustChangePassword) redirect("/set-password");
+  return user;
 }
 
 /** Resolves the caller's effective role for one dealership (super admins are always editors). */

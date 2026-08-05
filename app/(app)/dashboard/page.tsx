@@ -6,15 +6,25 @@ import { formatCurrency, monthStartISODate, todayISODate } from "@/lib/format";
 import { projectMonthEnd } from "@/lib/projection";
 
 /**
- * "12 new · 9 used", with Sprinters appended only when there were any — most
- * stores never sell one, and a permanent "0 Sprinter" would be noise on every
- * card in the company.
+ * "12 new · 9 used · 3 Sprinter".
+ *
+ * `showSprinter` is the store's own tracks_sprinters flag, not "did any sell":
+ * a Sprinter store wants to see its Sprinter line sitting at 0, the same way it
+ * sees 0 used. Only stores that never sell them omit it.
+ *
+ * The all-stores rollup passes true whenever any store tracks them, so the
+ * company figure does not silently drop the category on a slow day.
  */
-function unitSummary(newUnits: number, used: number, sprinter: number): string {
+function unitSummary(
+  newUnits: number,
+  used: number,
+  sprinter: number,
+  showSprinter: boolean,
+): string {
   return [
     `${newUnits} new`,
     `${used} used`,
-    ...(sprinter > 0 ? [`${sprinter} Sprinter`] : []),
+    ...(showSprinter ? [`${sprinter} Sprinter`] : []),
   ].join(" · ");
 }
 
@@ -153,6 +163,12 @@ export default async function DashboardPage() {
       .sort((a, b) => b.gross - a.gross);
   }
 
+  // The rollup covers every store, so it shows the Sprinter line whenever any
+  // store sells them — not only on days one was sold.
+  const anyStoreTracksSprinters = (dealerships ?? []).some(
+    (d) => d.tracks_sprinters,
+  );
+
   const roleByDealership = new Map(
     memberships?.map((m) => [m.dealership_id, m.role]),
   );
@@ -236,12 +252,18 @@ export default async function DashboardPage() {
                 rollup.todayNew,
                 rollup.todayUsed,
                 rollup.todaySprinter,
+                anyStoreTracksSprinters,
               )}
             />
             <GrossStat
               label="This month"
               value={rollup.mtdGross}
-              sub={unitSummary(rollup.mtdNew, rollup.mtdUsed, rollup.mtdSprinter)}
+              sub={unitSummary(
+                rollup.mtdNew,
+                rollup.mtdUsed,
+                rollup.mtdSprinter,
+                anyStoreTracksSprinters,
+              )}
             />
             <GrossStat
               label="Projected"
@@ -251,6 +273,7 @@ export default async function DashboardPage() {
                 Math.round(projectMonthEnd(rollup.mtdNew)),
                 Math.round(projectMonthEnd(rollup.mtdUsed)),
                 Math.round(projectMonthEnd(rollup.mtdSprinter)),
+                anyStoreTracksSprinters,
               )}
             />
           </div>
@@ -350,10 +373,16 @@ export default async function DashboardPage() {
                 <p className="mb-1.5 text-xs font-medium uppercase tracking-wide text-zinc-500">
                   Today
                 </p>
-                {/* Two across normally, three where Sprinters are tracked. */}
+                {/* Two across normally. With Sprinters there are three, but
+                    three of these tiles across a phone leaves each about 110px
+                    and the figures wrap into a mess — so on the narrowest
+                    screens Sprinter takes a full-width row of its own instead,
+                    and only goes inline from `sm` up. */}
                 <div
                   className={`grid gap-px overflow-hidden rounded-lg border border-zinc-100 bg-zinc-100 dark:border-zinc-800 dark:bg-zinc-800 ${
-                    dealership.tracks_sprinters ? "grid-cols-3" : "grid-cols-2"
+                    dealership.tracks_sprinters
+                      ? "grid-cols-2 sm:grid-cols-3"
+                      : "grid-cols-2"
                   }`}
                 >
                   <VehicleStat
@@ -371,13 +400,15 @@ export default async function DashboardPage() {
                     gross={todayUsedGross}
                   />
                   {dealership.tracks_sprinters ? (
-                    <VehicleStat
-                      label="Sprinter"
-                      units={todayEntry?.sprinter_units ?? 0}
-                      front={todayEntry?.sprinter_front_end_gross ?? 0}
-                      back={todayEntry?.sprinter_back_end_gross ?? 0}
-                      gross={todaySprinterGross}
-                    />
+                    <div className="col-span-2 sm:col-span-1">
+                      <VehicleStat
+                        label="Sprinter"
+                        units={todayEntry?.sprinter_units ?? 0}
+                        front={todayEntry?.sprinter_front_end_gross ?? 0}
+                        back={todayEntry?.sprinter_back_end_gross ?? 0}
+                        gross={todaySprinterGross}
+                      />
+                    </div>
                   ) : null}
                 </div>
 
@@ -420,6 +451,7 @@ export default async function DashboardPage() {
                     todayEntry?.new_units ?? 0,
                     todayEntry?.used_units ?? 0,
                     todayEntry?.sprinter_units ?? 0,
+                    dealership.tracks_sprinters,
                   )}
                 />
                 <GrossStat
@@ -429,13 +461,19 @@ export default async function DashboardPage() {
                     summary?.total_new_units ?? 0,
                     summary?.total_used_units ?? 0,
                     summary?.total_sprinter_units ?? 0,
+                    dealership.tracks_sprinters,
                   )}
                 />
                 <GrossStat
                   label="Projected"
                   value={projectMonthEnd(mtdGross)}
                   accent
-                  sub={unitSummary(projNewUnits, projUsedUnits, projSprinterUnits)}
+                  sub={unitSummary(
+                    projNewUnits,
+                    projUsedUnits,
+                    projSprinterUnits,
+                    dealership.tracks_sprinters,
+                  )}
                 />
               </div>
 
