@@ -40,6 +40,28 @@ export interface ReportFigures {
 /** Where the branding images live. They are served by the Launchpad. */
 const ASSETS = "https://lapis.dealerhaven.app";
 
+/** Pantone 296 C, the Lapis navy. Same value the apps use. */
+const NAVY = "#041e42";
+
+/**
+ * The footer sits on near-white because the logo is dark navy artwork — on a
+ * dark panel it all but disappears. Its text is dark enough to read there.
+ */
+const FOOTER_BG = "#f1f3f6";
+// Slate-700 rather than the lighter grey that reads fine at normal sizes: this
+// text is 11px, and a mid grey on near-white only just clears the readability
+// threshold. This is comfortably past it.
+const FOOTER_TEXT = "#334155";
+
+/**
+ * The footer note. These are unpublished trading figures for a private
+ * business, so the footer says what the reader is holding rather than
+ * explaining how they came to be on the list.
+ */
+const CONFIDENTIALITY =
+  "Confidential — internal Lapis Automotive Group figures, not for " +
+  "distribution. If this reached you in error, please delete it.";
+
 const escape = (value: string) =>
   value
     .replace(/&/g, "&amp;")
@@ -100,6 +122,8 @@ export function buildDailyReport(f: ReportFigures): Omit<Mail, "to"> {
     ...(f.enteredBy ? ["", `Entered by ${f.enteredBy}`] : []),
     "",
     `${f.appUrl}/dealerships`,
+    "",
+    CONFIDENTIALITY,
   ].join("\n");
 
   const cell = "padding:8px 10px;border-bottom:1px solid #dbeafe;font-size:14px;";
@@ -136,14 +160,31 @@ export function buildDailyReport(f: ReportFigures): Omit<Mail, "to"> {
     )
     .join("");
 
-  const html = `
+  // A whole document rather than a fragment, so the colour-scheme hints below
+  // can live in <head>. Without them a mail client in dark mode inverts the
+  // card: the white body turns dark and the navy logo vanishes into the
+  // footer, which is exactly the problem this palette is meant to solve.
+  // Honoured by Apple Mail and Outlook; Gmail on Android still forces its own,
+  // so nothing here depends on it.
+  const html = `<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="color-scheme" content="light only">
+<meta name="supported-color-schemes" content="light only">
+<style>
+  :root { color-scheme: light only; supported-color-schemes: light only; }
+</style>
+</head>
+<body style="margin:0;padding:0;background:#f4f7fc;">
 <table width="100%" cellpadding="0" cellspacing="0" border="0" style="background:#f4f7fc;margin:0;padding:32px 12px;font-family:Arial,Helvetica,sans-serif;">
   <tr>
     <td align="center">
       <table width="600" cellpadding="0" cellspacing="0" border="0" style="width:600px;max-width:100%;background:#ffffff;border-radius:14px;overflow:hidden;border:1px solid #dbeafe;">
 
         <tr>
-          <td align="center" bgcolor="#041e42" style="background:#041e42;padding:24px;">
+          <td align="center" bgcolor="${NAVY}" style="background:${NAVY};background-color:${NAVY};padding:24px;">
             <img src="${ASSETS}/Lapis-Platinum-Emblem.png"
                  alt="Lapis Automotive Group"
                  width="48"
@@ -221,18 +262,14 @@ export function buildDailyReport(f: ReportFigures): Omit<Mail, "to"> {
         </tr>
 
         <tr>
-          <td align="center" bgcolor="#ffffff" style="background:#ffffff;border-top:1px solid #dbeafe;padding:20px;">
+          <td align="center" bgcolor="${FOOTER_BG}" style="background:${FOOTER_BG};background-color:${FOOTER_BG};border-top:1px solid #dfe3ea;padding:20px;">
             <img src="${ASSETS}/lapis-logo.png"
                  alt="Lapis Automotive Group"
                  width="150"
                  style="display:block;width:150px;max-width:100%;height:auto;border:0;outline:none;text-decoration:none;">
-            <p style="margin:12px 0 0;color:#94a3b8;font-size:11px;line-height:17px;">
-              ${
-                f.enteredBy
-                  ? `Entered by ${escape(f.enteredBy)}.<br>`
-                  : ""
-              }You receive this because an administrator added you to this store's
-              report list.<br>Please don't reply to this message.
+            <p style="margin:12px 0 0;color:${FOOTER_TEXT};font-size:11px;line-height:17px;">
+              ${f.enteredBy ? `Entered by ${escape(f.enteredBy)}.<br>` : ""}
+              ${CONFIDENTIALITY}
             </p>
           </td>
         </tr>
@@ -240,7 +277,9 @@ export function buildDailyReport(f: ReportFigures): Omit<Mail, "to"> {
       </table>
     </td>
   </tr>
-</table>`.trim();
+</table>
+</body>
+</html>`.trim();
 
   return { subject, html, text };
 }
