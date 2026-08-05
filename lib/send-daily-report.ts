@@ -17,7 +17,10 @@ import { buildDailyReport, type ReportFigures } from "@/lib/daily-report";
  */
 export async function sendDailyReport(
   dealershipId: string,
-  figures: Omit<ReportFigures, "storeName" | "tracksSprinters" | "appUrl">,
+  figures: Omit<
+    ReportFigures,
+    "storeName" | "storeId" | "tracksSprinters" | "appUrl"
+  >,
 ): Promise<MailResult> {
   try {
     if (!(await isMailConfigured())) {
@@ -61,6 +64,7 @@ export async function sendDailyReport(
     const mail = buildDailyReport({
       ...figures,
       storeName: store.name,
+      storeId: dealershipId,
       tracksSprinters: store.tracks_sprinters,
       appUrl: appUrl(),
     });

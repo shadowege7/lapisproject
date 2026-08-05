@@ -15,6 +15,8 @@ import type { Mail } from "@/lib/email";
 
 export interface ReportFigures {
   storeName: string;
+  /** Used to link straight to this store's reports. */
+  storeId: string;
   entryDate: string;
   isNew: boolean;
   tracksSprinters: boolean;
@@ -62,6 +64,28 @@ const CONFIDENTIALITY =
   "Confidential — internal Lapis Automotive Group figures, not for " +
   "distribution. If this reached you in error, please delete it.";
 
+const MONTHS = [
+  "January", "February", "March", "April", "May", "June",
+  "July", "August", "September", "October", "November", "December",
+];
+
+/**
+ * "2026-08-05" as "August 5, 2026", or "Aug 5, 2026" for the subject line.
+ *
+ * Split by hand rather than through `new Date`. An entry date is a calendar
+ * day, not an instant: `new Date("2026-08-05")` is midnight *UTC*, which
+ * formats as the 4th anywhere west of Greenwich — so every report would name
+ * the wrong day for the people reading it.
+ */
+function formatEntryDate(iso: string, style: "long" | "short"): string {
+  const parts = /^(\d{4})-(\d{2})-(\d{2})$/.exec(iso);
+  if (!parts) return iso;
+
+  const [, year, month, day] = parts;
+  const name = MONTHS[Number(month) - 1] ?? month;
+  return `${style === "short" ? name.slice(0, 3) : name} ${Number(day)}, ${year}`;
+}
+
 const escape = (value: string) =>
   value
     .replace(/&/g, "&amp;")
@@ -95,16 +119,23 @@ function categories(f: ReportFigures): Category[] {
 
 export function buildDailyReport(f: ReportFigures): Omit<Mail, "to"> {
   const rows = categories(f);
+
+  // Straight to the store the mail is about. There is no /dealerships index
+  // page — only /dealerships/[id] — so linking at the section would 404.
+  // Signed-out readers are sent to /login and returned here afterwards.
+  const link = `${f.appUrl}/dealerships/${f.storeId}/reports`;
+  const day = formatEntryDate(f.entryDate, "long");
+  const shortDay = formatEntryDate(f.entryDate, "short");
   const totalUnits = rows.reduce((s, r) => s + r.units, 0);
   const totalGross = rows.reduce((s, r) => s + r.front + r.back, 0);
 
-  const subject = `${f.storeName} — ${f.entryDate}: ${totalUnits} ${
+  const subject = `${f.storeName} — ${shortDay}: ${totalUnits} ${
     totalUnits === 1 ? "unit" : "units"
   }, ${formatCurrency(totalGross)} gross`;
 
   const text = [
     `${f.storeName}`,
-    `${f.isNew ? "Numbers for" : "Updated numbers for"} ${f.entryDate}`,
+    `${f.isNew ? "Numbers for" : "Updated numbers for"} ${day}`,
     "",
     ...rows.map(
       (r) =>
@@ -121,7 +152,7 @@ export function buildDailyReport(f: ReportFigures): Omit<Mail, "to"> {
     ...(f.notes ? ["", `Notes: ${f.notes}`] : []),
     ...(f.enteredBy ? ["", `Entered by ${f.enteredBy}`] : []),
     "",
-    `${f.appUrl}/dealerships`,
+    link,
     "",
     CONFIDENTIALITY,
   ].join("\n");
@@ -198,7 +229,7 @@ export function buildDailyReport(f: ReportFigures): Omit<Mail, "to"> {
               f.storeName,
             )}</h1>
             <p style="margin:0 0 20px;color:#64748b;font-size:14px;">
-              ${f.isNew ? "Numbers for" : "Updated numbers for"} ${escape(f.entryDate)}
+              ${f.isNew ? "Numbers for" : "Updated numbers for"} ${escape(day)}
             </p>
           </td>
         </tr>
@@ -254,9 +285,9 @@ export function buildDailyReport(f: ReportFigures): Omit<Mail, "to"> {
 
         <tr>
           <td align="center" style="padding:24px 28px;">
-            <a href="${f.appUrl}/dealerships"
+            <a href="${link}"
                style="background:#1d4ed8;color:#ffffff;text-decoration:none;padding:11px 24px;border-radius:6px;font-size:14px;font-weight:bold;display:inline-block;">
-              Open the Sales Tracker
+              See this store's reports
             </a>
           </td>
         </tr>
