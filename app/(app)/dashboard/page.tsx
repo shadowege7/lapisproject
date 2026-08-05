@@ -5,6 +5,19 @@ import { getCurrentUser, effectiveRole } from "@/lib/auth";
 import { formatCurrency, monthStartISODate, todayISODate } from "@/lib/format";
 import { projectMonthEnd } from "@/lib/projection";
 
+/**
+ * "12 new · 9 used", with Sprinters appended only when there were any — most
+ * stores never sell one, and a permanent "0 Sprinter" would be noise on every
+ * card in the company.
+ */
+function unitSummary(newUnits: number, used: number, sprinter: number): string {
+  return [
+    `${newUnits} new`,
+    `${used} used`,
+    ...(sprinter > 0 ? [`${sprinter} Sprinter`] : []),
+  ].join(" · ");
+}
+
 export default async function DashboardPage() {
   const user = await getCurrentUser();
   if (!user) return null;
@@ -19,7 +32,10 @@ export default async function DashboardPage() {
     { data: profile },
     { data: leaderboardSetting },
   ] = await Promise.all([
-    supabase.from("dealerships").select("id, name").order("name"),
+    supabase
+      .from("dealerships")
+      .select("id, name, tracks_sprinters")
+      .order("name"),
     supabase
       .from("dealership_members")
       .select("dealership_id, role")
@@ -64,8 +80,10 @@ export default async function DashboardPage() {
     mtdGross: number;
     todayNew: number;
     todayUsed: number;
+    todaySprinter: number;
     mtdNew: number;
     mtdUsed: number;
+    mtdSprinter: number;
   } | null = null;
   let leaderboard: {
     name: string;
@@ -82,33 +100,41 @@ export default async function DashboardPage() {
         admin
           .from("monthly_summary")
           .select(
-            "dealership_id, total_gross, total_new_units, total_used_units",
+            "dealership_id, total_gross, total_new_units, total_used_units, total_sprinter_units",
           )
           .eq("month", monthStartISODate()),
         admin
           .from("daily_entries")
           .select(
-            "new_front_end_gross, new_back_end_gross, used_front_end_gross, used_back_end_gross, new_units, used_units",
+            "new_front_end_gross, new_back_end_gross, used_front_end_gross, used_back_end_gross, sprinter_front_end_gross, sprinter_back_end_gross, new_units, used_units, sprinter_units",
           )
           .eq("entry_date", todayISODate()),
         admin.from("dealerships").select("id, name").order("name"),
       ]);
 
     rollup = {
+      // total_gross comes from the view, which already folds Sprinters in.
       mtdGross: (allMonthly ?? []).reduce((s, r) => s + r.total_gross, 0),
       mtdNew: (allMonthly ?? []).reduce((s, r) => s + r.total_new_units, 0),
       mtdUsed: (allMonthly ?? []).reduce((s, r) => s + r.total_used_units, 0),
+      mtdSprinter: (allMonthly ?? []).reduce(
+        (s, r) => s + r.total_sprinter_units,
+        0,
+      ),
       todayGross: (allToday ?? []).reduce(
         (s, e) =>
           s +
           e.new_front_end_gross +
           e.new_back_end_gross +
           e.used_front_end_gross +
-          e.used_back_end_gross,
+          e.used_back_end_gross +
+          e.sprinter_front_end_gross +
+          e.sprinter_back_end_gross,
         0,
       ),
       todayNew: (allToday ?? []).reduce((s, e) => s + e.new_units, 0),
       todayUsed: (allToday ?? []).reduce((s, e) => s + e.used_units, 0),
+      todaySprinter: (allToday ?? []).reduce((s, e) => s + e.sprinter_units, 0),
     };
 
     const mtdByStore = new Map(
@@ -206,18 +232,26 @@ export default async function DashboardPage() {
             <GrossStat
               label="Today"
               value={rollup.todayGross}
-              sub={`${rollup.todayNew} new · ${rollup.todayUsed} used`}
+              sub={unitSummary(
+                rollup.todayNew,
+                rollup.todayUsed,
+                rollup.todaySprinter,
+              )}
             />
             <GrossStat
               label="This month"
               value={rollup.mtdGross}
-              sub={`${rollup.mtdNew} new · ${rollup.mtdUsed} used`}
+              sub={unitSummary(rollup.mtdNew, rollup.mtdUsed, rollup.mtdSprinter)}
             />
             <GrossStat
               label="Projected"
               value={projectMonthEnd(rollup.mtdGross)}
               accent
-              sub={`${Math.round(projectMonthEnd(rollup.mtdNew))} new · ${Math.round(projectMonthEnd(rollup.mtdUsed))} used`}
+              sub={unitSummary(
+                Math.round(projectMonthEnd(rollup.mtdNew)),
+                Math.round(projectMonthEnd(rollup.mtdUsed)),
+                Math.round(projectMonthEnd(rollup.mtdSprinter)),
+              )}
             />
           </div>
         </div>
@@ -271,7 +305,11 @@ export default async function DashboardPage() {
           const todayUsedGross =
             (todayEntry?.used_front_end_gross ?? 0) +
             (todayEntry?.used_back_end_gross ?? 0);
-          const todayGross = todayNewGross + todayUsedGross;
+          const todaySprinterGross =
+            (todayEntry?.sprinter_front_end_gross ?? 0) +
+            (todayEntry?.sprinter_back_end_gross ?? 0);
+          const todayGross =
+            todayNewGross + todayUsedGross + todaySprinterGross;
 
           const mtdGross = summary?.total_gross ?? 0;
           const projNewUnits = Math.round(
@@ -279,6 +317,9 @@ export default async function DashboardPage() {
           );
           const projUsedUnits = Math.round(
             projectMonthEnd(summary?.total_used_units ?? 0),
+          );
+          const projSprinterUnits = Math.round(
+            projectMonthEnd(summary?.total_sprinter_units ?? 0),
           );
 
           return (
@@ -309,7 +350,12 @@ export default async function DashboardPage() {
                 <p className="mb-1.5 text-xs font-medium uppercase tracking-wide text-zinc-500">
                   Today
                 </p>
-                <div className="grid grid-cols-2 gap-px overflow-hidden rounded-lg border border-zinc-100 bg-zinc-100 dark:border-zinc-800 dark:bg-zinc-800">
+                {/* Two across normally, three where Sprinters are tracked. */}
+                <div
+                  className={`grid gap-px overflow-hidden rounded-lg border border-zinc-100 bg-zinc-100 dark:border-zinc-800 dark:bg-zinc-800 ${
+                    dealership.tracks_sprinters ? "grid-cols-3" : "grid-cols-2"
+                  }`}
+                >
                   <VehicleStat
                     label="New"
                     units={todayEntry?.new_units ?? 0}
@@ -324,6 +370,15 @@ export default async function DashboardPage() {
                     back={todayEntry?.used_back_end_gross ?? 0}
                     gross={todayUsedGross}
                   />
+                  {dealership.tracks_sprinters ? (
+                    <VehicleStat
+                      label="Sprinter"
+                      units={todayEntry?.sprinter_units ?? 0}
+                      front={todayEntry?.sprinter_front_end_gross ?? 0}
+                      back={todayEntry?.sprinter_back_end_gross ?? 0}
+                      gross={todaySprinterGross}
+                    />
+                  ) : null}
                 </div>
 
                 <div className="mt-2 grid grid-cols-2 gap-2">
@@ -361,18 +416,26 @@ export default async function DashboardPage() {
                 <GrossStat
                   label="Today"
                   value={todayGross}
-                  sub={`${todayEntry?.new_units ?? 0} new · ${todayEntry?.used_units ?? 0} used`}
+                  sub={unitSummary(
+                    todayEntry?.new_units ?? 0,
+                    todayEntry?.used_units ?? 0,
+                    todayEntry?.sprinter_units ?? 0,
+                  )}
                 />
                 <GrossStat
                   label="This month"
                   value={mtdGross}
-                  sub={`${summary?.total_new_units ?? 0} new · ${summary?.total_used_units ?? 0} used`}
+                  sub={unitSummary(
+                    summary?.total_new_units ?? 0,
+                    summary?.total_used_units ?? 0,
+                    summary?.total_sprinter_units ?? 0,
+                  )}
                 />
                 <GrossStat
                   label="Projected"
                   value={projectMonthEnd(mtdGross)}
                   accent
-                  sub={`${projNewUnits} new · ${projUsedUnits} used`}
+                  sub={unitSummary(projNewUnits, projUsedUnits, projSprinterUnits)}
                 />
               </div>
 

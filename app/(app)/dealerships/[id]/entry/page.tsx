@@ -26,7 +26,7 @@ export default async function EntryPage({
     await Promise.all([
       supabase
         .from("dealerships")
-        .select("id, name")
+        .select("id, name, tracks_sprinters")
         .eq("id", dealershipId)
         .single(),
       supabase
@@ -116,6 +116,21 @@ export default async function EntryPage({
           frontValue={existing?.used_front_end_gross ?? 0}
           backValue={existing?.used_back_end_gross ?? 0}
         />
+
+        {/* A third category, not a slice of "new": a Sprinter is entered here
+            and nowhere else, so it cannot be counted twice. Only shown where
+            the store actually sells them. */}
+        {dealership.tracks_sprinters ? (
+          <VehicleFieldset
+            title="Sprinter"
+            unitsName="sprinter_units"
+            frontName="sprinter_front_end_gross"
+            backName="sprinter_back_end_gross"
+            unitsValue={existing?.sprinter_units ?? 0}
+            frontValue={existing?.sprinter_front_end_gross ?? 0}
+            backValue={existing?.sprinter_back_end_gross ?? 0}
+          />
+        ) : null}
 
         <ActivityFieldset
           managerCalls={existing?.manager_calls ?? 0}

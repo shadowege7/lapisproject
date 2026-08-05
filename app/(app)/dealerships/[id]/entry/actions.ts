@@ -15,6 +15,15 @@ export async function saveEntry(formData: FormData) {
   const newBackEndGross = Number(formData.get("new_back_end_gross") ?? 0);
   const usedFrontEndGross = Number(formData.get("used_front_end_gross") ?? 0);
   const usedBackEndGross = Number(formData.get("used_back_end_gross") ?? 0);
+  // Absent for every store that does not sell Sprinters, where the fieldset is
+  // never rendered — which reads as zero, and zero is right.
+  const sprinterUnits = Number(formData.get("sprinter_units") ?? 0);
+  const sprinterFrontEndGross = Number(
+    formData.get("sprinter_front_end_gross") ?? 0,
+  );
+  const sprinterBackEndGross = Number(
+    formData.get("sprinter_back_end_gross") ?? 0,
+  );
   const managerCalls = Number(formData.get("manager_calls") ?? 0);
   const salesCalls = Number(formData.get("sales_calls") ?? 0);
   const appointments = Number(formData.get("appointments") ?? 0);
@@ -39,6 +48,9 @@ export async function saveEntry(formData: FormData) {
       new_back_end_gross: newBackEndGross,
       used_front_end_gross: usedFrontEndGross,
       used_back_end_gross: usedBackEndGross,
+      sprinter_units: sprinterUnits,
+      sprinter_front_end_gross: sprinterFrontEndGross,
+      sprinter_back_end_gross: sprinterBackEndGross,
       manager_calls: managerCalls,
       sales_calls: salesCalls,
       appointments: appointments,
@@ -62,16 +74,29 @@ export async function saveEntry(formData: FormData) {
     .single();
 
   const totalGross =
-    newFrontEndGross + newBackEndGross + usedFrontEndGross + usedBackEndGross;
+    newFrontEndGross +
+    newBackEndGross +
+    usedFrontEndGross +
+    usedBackEndGross +
+    sprinterFrontEndGross +
+    sprinterBackEndGross;
   const when =
     entryDate === todayISODate()
       ? "Today's numbers are in"
       : `Numbers updated for ${entryDate}`;
 
+  // Sprinters only earn a mention when there were some, so the notification
+  // stays short for the stores that never sell one.
+  const counts = [
+    `${newUnits} new`,
+    `${usedUnits} used`,
+    ...(sprinterUnits > 0 ? [`${sprinterUnits} Sprinter`] : []),
+  ].join(" · ");
+
   await notifyStoreEntry({
     dealershipId,
     title: dealership?.name ?? "Store update",
-    body: `${when}: ${newUnits} new · ${usedUnits} used · ${formatCurrency(totalGross)} gross`,
+    body: `${when}: ${counts} · ${formatCurrency(totalGross)} gross`,
     excludeUserId: user.id,
   });
 

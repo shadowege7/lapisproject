@@ -24,13 +24,18 @@ export function EntrySanityWarnings() {
       const w: string[] = [];
       const newUnits = num("new_units");
       const usedUnits = num("used_units");
+      // Absent on stores that do not sell Sprinters — num() reads those as 0,
+      // so every check below simply stays quiet there.
+      const sprinterUnits = num("sprinter_units");
       const newGross = num("new_front_end_gross") + num("new_back_end_gross");
       const usedGross =
         num("used_front_end_gross") + num("used_back_end_gross");
+      const sprinterGross =
+        num("sprinter_front_end_gross") + num("sprinter_back_end_gross");
       const appts = num("appointments");
       const confirmed = num("confirmed_appointments");
-      const totalUnits = newUnits + usedUnits;
-      const totalGross = newGross + usedGross;
+      const totalUnits = newUnits + usedUnits + sprinterUnits;
+      const totalGross = newGross + usedGross + sprinterGross;
 
       if (newUnits > 0 && newGross === 0)
         w.push("New units entered but new gross is $0.");
@@ -40,6 +45,10 @@ export function EntrySanityWarnings() {
         w.push("Used units entered but used gross is $0.");
       if (usedGross !== 0 && usedUnits === 0)
         w.push("Used gross entered but 0 used units.");
+      if (sprinterUnits > 0 && sprinterGross === 0)
+        w.push("Sprinter units entered but Sprinter gross is $0.");
+      if (sprinterGross !== 0 && sprinterUnits === 0)
+        w.push("Sprinter gross entered but 0 Sprinter units.");
       if (confirmed > appts)
         w.push("Confirmed appointments exceed total appointments.");
       if (totalUnits > 0 && Math.abs(totalGross / totalUnits) > 50000)

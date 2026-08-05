@@ -1,30 +1,18 @@
 "use server";
 
-import { randomInt } from "crypto";
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { createAdminClient, listAllUsers } from "@/lib/supabase/admin";
 import { createResetClient } from "@/lib/supabase/reset-client";
 import { composeFullName } from "@/lib/names";
+import { generateTempPassword } from "@/lib/password";
 import type { DealershipRole } from "@/lib/database.types";
 import type {
   InviteResult,
   ResetResult,
   TestEmailResult,
 } from "./invite-types";
-
-// Readable temp password, e.g. "X7kM-pQ2r-Tw9y" (no ambiguous chars).
-// randomInt is a CSPRNG with unbiased range selection (no modulo bias).
-function generateTempPassword() {
-  const alphabet = "ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz23456789";
-  let out = "";
-  for (let i = 0; i < 12; i++) {
-    out += alphabet[randomInt(alphabet.length)];
-    if (i % 4 === 3 && i < 11) out += "-";
-  }
-  return out;
-}
 
 async function requireSuperAdmin() {
   const supabase = await createClient();
@@ -103,7 +91,14 @@ export async function inviteAndAssign(
         email,
         password: tempPassword,
         email_confirm: true,
-        user_metadata: fullName ? { full_name: fullName } : undefined,
+        user_metadata: {
+          ...(fullName ? { full_name: fullName } : {}),
+          // Read by the Launchpad's signup trigger into
+          // profiles.must_change_password, which is what forces a real
+          // password to be chosen. This app has no such gate of its own —
+          // see the README.
+          must_change_password: true,
+        },
       });
     if (createError) {
       return { status: "error", message: createError.message };
@@ -215,6 +210,13 @@ export async function resetUserPassword(
     password: tempPassword,
   });
   if (error) return { status: "error", message: error.message };
+
+  // Send them back through the Launchpad's set-password gate, so an
+  // admin-issued password is replaced by one only they know.
+  await admin
+    .from("profiles")
+    .update({ must_change_password: true })
+    .eq("id", userId);
 
   return { status: "reset", tempPassword };
 }

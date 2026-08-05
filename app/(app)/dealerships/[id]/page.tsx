@@ -60,12 +60,24 @@ export default async function DealershipDetailPage({
     ? todayEntry.new_front_end_gross +
       todayEntry.new_back_end_gross +
       todayEntry.used_front_end_gross +
-      todayEntry.used_back_end_gross
+      todayEntry.used_back_end_gross +
+      todayEntry.sprinter_front_end_gross +
+      todayEntry.sprinter_back_end_gross
     : 0;
 
   const mtdUnits =
-    (month?.total_new_units ?? 0) + (month?.total_used_units ?? 0);
+    (month?.total_new_units ?? 0) +
+    (month?.total_used_units ?? 0) +
+    (month?.total_sprinter_units ?? 0);
   const mtdGross = month?.total_gross ?? 0;
+
+  /** "12 new · 9 used", with Sprinters only where there were any. */
+  const units = (n: number, used: number, sprinter: number) =>
+    [
+      `${n} new`,
+      `${used} used`,
+      ...(sprinter > 0 ? [`${sprinter} Sprinter`] : []),
+    ].join(" · ");
 
   const notesEntries = (recent ?? []).filter((e) => e.notes && e.notes.trim());
 
@@ -127,14 +139,22 @@ export default async function DealershipDetailPage({
           <Stat
             label="Units MTD"
             value={String(mtdUnits)}
-            sub={`${month?.total_new_units ?? 0} new · ${month?.total_used_units ?? 0} used`}
+            sub={units(
+              month?.total_new_units ?? 0,
+              month?.total_used_units ?? 0,
+              month?.total_sprinter_units ?? 0,
+            )}
           />
           <Stat
             label="Today"
             value={formatCurrency(todayGross)}
             sub={
               todayEntry
-                ? `${todayEntry.new_units} new · ${todayEntry.used_units} used`
+                ? units(
+                    todayEntry.new_units,
+                    todayEntry.used_units,
+                    todayEntry.sprinter_units,
+                  )
                 : "No entry yet"
             }
           />

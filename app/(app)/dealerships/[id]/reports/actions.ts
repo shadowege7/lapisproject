@@ -8,10 +8,14 @@ export interface ImportRow {
   entry_date: string;
   new_units: number;
   used_units: number;
+  /** Zero unless the file carried Sprinter columns. */
+  sprinter_units: number;
   new_front_end_gross: number;
   new_back_end_gross: number;
   used_front_end_gross: number;
   used_back_end_gross: number;
+  sprinter_front_end_gross: number;
+  sprinter_back_end_gross: number;
   manager_calls: number;
   sales_calls: number;
   appointments: number;
@@ -42,10 +46,13 @@ export async function importEntries(
     entry_date: r.entry_date,
     new_units: r.new_units,
     used_units: r.used_units,
+    sprinter_units: r.sprinter_units,
     new_front_end_gross: r.new_front_end_gross,
     new_back_end_gross: r.new_back_end_gross,
     used_front_end_gross: r.used_front_end_gross,
     used_back_end_gross: r.used_back_end_gross,
+    sprinter_front_end_gross: r.sprinter_front_end_gross,
+    sprinter_back_end_gross: r.sprinter_back_end_gross,
     manager_calls: r.manager_calls,
     sales_calls: r.sales_calls,
     appointments: r.appointments,

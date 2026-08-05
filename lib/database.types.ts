@@ -43,6 +43,8 @@ export interface Database {
         Row: {
           id: string;
           email: string;
+          /** Enforced by the Launchpad's /set-password gate, not by this app. */
+          must_change_password: boolean;
           full_name: string | null;
           first_name: string | null;
           /** What they go by, if different from first_name. */
@@ -57,6 +59,7 @@ export interface Database {
         Insert: {
           id: string;
           email?: string;
+          must_change_password?: boolean;
           full_name?: string | null;
           first_name?: string | null;
           preferred_name?: string | null;
@@ -70,6 +73,7 @@ export interface Database {
         Update: {
           id?: string;
           email?: string;
+          must_change_password?: boolean;
           full_name?: string | null;
           first_name?: string | null;
           preferred_name?: string | null;
@@ -147,16 +151,20 @@ export interface Database {
         Row: {
           id: string;
           name: string;
+          /** Whether this store sells Sprinter vans and reports them apart. */
+          tracks_sprinters: boolean;
           created_at: string;
         };
         Insert: {
           id?: string;
           name: string;
+          tracks_sprinters?: boolean;
           created_at?: string;
         };
         Update: {
           id?: string;
           name?: string;
+          tracks_sprinters?: boolean;
           created_at?: string;
         };
         Relationships: [];
@@ -205,10 +213,14 @@ export interface Database {
           entry_date: string;
           new_units: number;
           used_units: number;
+          /** Only meaningful where dealerships.tracks_sprinters is set. */
+          sprinter_units: number;
           new_front_end_gross: number;
           new_back_end_gross: number;
           used_front_end_gross: number;
           used_back_end_gross: number;
+          sprinter_front_end_gross: number;
+          sprinter_back_end_gross: number;
           manager_calls: number;
           sales_calls: number;
           appointments: number;
@@ -223,10 +235,13 @@ export interface Database {
           entry_date: string;
           new_units: number;
           used_units: number;
+          sprinter_units?: number;
           new_front_end_gross: number;
           new_back_end_gross: number;
           used_front_end_gross: number;
           used_back_end_gross: number;
+          sprinter_front_end_gross?: number;
+          sprinter_back_end_gross?: number;
           manager_calls?: number;
           sales_calls?: number;
           appointments?: number;
@@ -241,10 +256,13 @@ export interface Database {
           entry_date?: string;
           new_units?: number;
           used_units?: number;
+          sprinter_units?: number;
           new_front_end_gross?: number;
           new_back_end_gross?: number;
           used_front_end_gross?: number;
           used_back_end_gross?: number;
+          sprinter_front_end_gross?: number;
+          sprinter_back_end_gross?: number;
           manager_calls?: number;
           sales_calls?: number;
           appointments?: number;
@@ -270,10 +288,13 @@ export interface Database {
           month: string;
           total_new_units: number;
           total_used_units: number;
+          total_sprinter_units: number;
           total_new_front_end_gross: number;
           total_new_back_end_gross: number;
           total_used_front_end_gross: number;
           total_used_back_end_gross: number;
+          total_sprinter_front_end_gross: number;
+          total_sprinter_back_end_gross: number;
           total_front_end_gross: number;
           total_back_end_gross: number;
           total_gross: number;
@@ -287,10 +308,13 @@ export interface Database {
           year: string;
           total_new_units: number;
           total_used_units: number;
+          total_sprinter_units: number;
           total_new_front_end_gross: number;
           total_new_back_end_gross: number;
           total_used_front_end_gross: number;
           total_used_back_end_gross: number;
+          total_sprinter_front_end_gross: number;
+          total_sprinter_back_end_gross: number;
           total_front_end_gross: number;
           total_back_end_gross: number;
           total_gross: number;

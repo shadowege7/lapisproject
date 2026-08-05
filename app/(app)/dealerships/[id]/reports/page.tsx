@@ -21,10 +21,13 @@ interface SummaryRow {
   label: string;
   total_new_units: number;
   total_used_units: number;
+  total_sprinter_units: number;
   total_new_front_end_gross: number;
   total_new_back_end_gross: number;
   total_used_front_end_gross: number;
   total_used_back_end_gross: number;
+  total_sprinter_front_end_gross: number;
+  total_sprinter_back_end_gross: number;
   total_gross: number;
   days_logged: number;
 }
@@ -49,7 +52,7 @@ export default async function ReportsPage({
   ] = await Promise.all([
     supabase
       .from("dealerships")
-      .select("id, name")
+      .select("id, name, tracks_sprinters")
       .eq("id", dealershipId)
       .single(),
     supabase
@@ -82,14 +85,19 @@ export default async function ReportsPage({
   const role = effectiveRole(user, membership?.role);
   if (!role) redirect("/dashboard");
 
+  const sprinters = dealership.tracks_sprinters;
+
   const annualRows: SummaryRow[] = (annual ?? []).map((r) => ({
     label: formatYear(r.year),
     total_new_units: r.total_new_units,
     total_used_units: r.total_used_units,
+    total_sprinter_units: r.total_sprinter_units,
     total_new_front_end_gross: r.total_new_front_end_gross,
     total_new_back_end_gross: r.total_new_back_end_gross,
     total_used_front_end_gross: r.total_used_front_end_gross,
     total_used_back_end_gross: r.total_used_back_end_gross,
+    total_sprinter_front_end_gross: r.total_sprinter_front_end_gross,
+    total_sprinter_back_end_gross: r.total_sprinter_back_end_gross,
     total_gross: r.total_gross,
     days_logged: r.days_logged,
   }));
@@ -98,10 +106,13 @@ export default async function ReportsPage({
     label: formatMonth(r.month),
     total_new_units: r.total_new_units,
     total_used_units: r.total_used_units,
+    total_sprinter_units: r.total_sprinter_units,
     total_new_front_end_gross: r.total_new_front_end_gross,
     total_new_back_end_gross: r.total_new_back_end_gross,
     total_used_front_end_gross: r.total_used_front_end_gross,
     total_used_back_end_gross: r.total_used_back_end_gross,
+    total_sprinter_front_end_gross: r.total_sprinter_front_end_gross,
+    total_sprinter_back_end_gross: r.total_sprinter_back_end_gross,
     total_gross: r.total_gross,
     days_logged: r.days_logged,
   }));
@@ -167,17 +178,58 @@ export default async function ReportsPage({
       true,
       true,
     ],
+    ...(sprinters
+      ? ([
+          [
+            "Sprinter units",
+            tE?.sprinter_units ?? 0,
+            tm?.total_sprinter_units ?? 0,
+            false,
+            false,
+          ],
+          [
+            "Sprinter front",
+            tE?.sprinter_front_end_gross ?? 0,
+            tm?.total_sprinter_front_end_gross ?? 0,
+            true,
+            false,
+          ],
+          [
+            "Sprinter back",
+            tE?.sprinter_back_end_gross ?? 0,
+            tm?.total_sprinter_back_end_gross ?? 0,
+            true,
+            false,
+          ],
+          [
+            "Sprinter gross",
+            (tE?.sprinter_front_end_gross ?? 0) +
+              (tE?.sprinter_back_end_gross ?? 0),
+            (tm?.total_sprinter_front_end_gross ?? 0) +
+              (tm?.total_sprinter_back_end_gross ?? 0),
+            true,
+            true,
+          ],
+        ] as [string, number, number, boolean, boolean][])
+      : []),
     [
       "Total gross",
       (tE?.new_front_end_gross ?? 0) +
         (tE?.new_back_end_gross ?? 0) +
         (tE?.used_front_end_gross ?? 0) +
-        (tE?.used_back_end_gross ?? 0),
+        (tE?.used_back_end_gross ?? 0) +
+        (tE?.sprinter_front_end_gross ?? 0) +
+        (tE?.sprinter_back_end_gross ?? 0),
       tm?.total_gross ?? 0,
       true,
       true,
     ],
   ];
+
+  // Date + 4 new + 4 used + total gross, plus 4 more where Sprinters show.
+  // Used for the notes row's colSpan and the empty-state message, both of
+  // which look broken if the count is off by one.
+  const columnCount = 10 + (sprinters ? 4 : 0);
 
   const slug = dealership.name.replace(/[^a-z0-9]+/gi, "-").toLowerCase();
   const dailyCsvHeaders = [
@@ -190,6 +242,9 @@ export default async function ReportsPage({
     "Used front",
     "Used back",
     "Used gross",
+    ...(sprinters
+      ? ["Sprinter units", "Sprinter front", "Sprinter back", "Sprinter gross"]
+      : []),
     "Total gross",
     "Manager calls",
     "Sales calls",
@@ -208,10 +263,20 @@ export default async function ReportsPage({
       e.used_front_end_gross,
       e.used_back_end_gross,
       e.used_front_end_gross + e.used_back_end_gross,
+      ...(sprinters
+        ? [
+            e.sprinter_units,
+            e.sprinter_front_end_gross,
+            e.sprinter_back_end_gross,
+            e.sprinter_front_end_gross + e.sprinter_back_end_gross,
+          ]
+        : []),
       e.new_front_end_gross +
         e.new_back_end_gross +
         e.used_front_end_gross +
-        e.used_back_end_gross,
+        e.used_back_end_gross +
+        e.sprinter_front_end_gross +
+        e.sprinter_back_end_gross,
       e.manager_calls,
       e.sales_calls,
       e.appointments,
@@ -306,12 +371,14 @@ export default async function ReportsPage({
         title="Annual"
         rows={annualRows}
         filename={`${slug}-annual.csv`}
+        sprinters={sprinters}
       />
       <SummarySection
         title="Monthly"
         rows={monthlyRows}
         compact
         filename={`${slug}-monthly.csv`}
+        sprinters={sprinters}
       />
 
       <section>
@@ -334,6 +401,14 @@ export default async function ReportsPage({
                 <th className="py-2.5 pr-4 font-medium">Used front</th>
                 <th className="py-2.5 pr-4 font-medium">Used back</th>
                 <th className="py-2.5 pr-4 font-medium">Used gross</th>
+                {sprinters ? (
+                  <>
+                    <th className="py-2.5 pr-4 font-medium">Sprinter units</th>
+                    <th className="py-2.5 pr-4 font-medium">Sprinter front</th>
+                    <th className="py-2.5 pr-4 font-medium">Sprinter back</th>
+                    <th className="py-2.5 pr-4 font-medium">Sprinter gross</th>
+                  </>
+                ) : null}
                 <th className="py-2.5 pr-4 font-medium text-blue-700 dark:text-blue-400">
                   Total gross
                 </th>
@@ -347,8 +422,10 @@ export default async function ReportsPage({
                 const newGross = e.new_front_end_gross + e.new_back_end_gross;
                 const usedGross =
                   e.used_front_end_gross + e.used_back_end_gross;
-                const total = newGross + usedGross;
-                const cols = role === "editor" ? 11 : 10;
+                const sprinterGross =
+                  e.sprinter_front_end_gross + e.sprinter_back_end_gross;
+                const total = newGross + usedGross + sprinterGross;
+                const cols = columnCount + (role === "editor" ? 1 : 0);
                 return (
                   <Fragment key={e.id}>
                     <tr
@@ -381,6 +458,20 @@ export default async function ReportsPage({
                       <td className="py-2.5 pr-4 font-medium">
                         {formatCurrency(usedGross)}
                       </td>
+                      {sprinters ? (
+                        <>
+                          <td className="py-2.5 pr-4">{e.sprinter_units}</td>
+                          <td className="py-2.5 pr-4">
+                            {formatCurrency(e.sprinter_front_end_gross)}
+                          </td>
+                          <td className="py-2.5 pr-4">
+                            {formatCurrency(e.sprinter_back_end_gross)}
+                          </td>
+                          <td className="py-2.5 pr-4 font-medium">
+                            {formatCurrency(sprinterGross)}
+                          </td>
+                        </>
+                      ) : null}
                       <td className="py-2.5 pr-4 font-semibold text-blue-700 dark:text-blue-400">
                         {formatCurrency(total)}
                       </td>
@@ -437,7 +528,7 @@ export default async function ReportsPage({
               {(dailyEntries ?? []).length === 0 ? (
                 <tr>
                   <td
-                    colSpan={role === "editor" ? 11 : 10}
+                    colSpan={columnCount + (role === "editor" ? 1 : 0)}
                     className="py-4 text-zinc-500"
                   >
                     No entries yet.
@@ -459,12 +550,16 @@ function SummarySection({
   rows,
   compact = false,
   filename,
+  sprinters,
 }: {
   title: string;
   rows: SummaryRow[];
   compact?: boolean;
   filename: string;
+  sprinters: boolean;
 }) {
+  // The CSV always carries the full breakdown, even in the compact table:
+  // exporting is where someone goes to do their own sums.
   const csvHeaders = [
     "Period",
     "New units",
@@ -475,6 +570,9 @@ function SummarySection({
     "Used front",
     "Used back",
     "Used gross",
+    ...(sprinters
+      ? ["Sprinter units", "Sprinter front", "Sprinter back", "Sprinter gross"]
+      : []),
     "Total gross",
     "Days",
   ];
@@ -488,6 +586,14 @@ function SummarySection({
     r.total_used_front_end_gross,
     r.total_used_back_end_gross,
     r.total_used_front_end_gross + r.total_used_back_end_gross,
+    ...(sprinters
+      ? [
+          r.total_sprinter_units,
+          r.total_sprinter_front_end_gross,
+          r.total_sprinter_back_end_gross,
+          r.total_sprinter_front_end_gross + r.total_sprinter_back_end_gross,
+        ]
+      : []),
     r.total_gross,
     r.days_logged,
   ]);
@@ -528,6 +634,24 @@ function SummarySection({
                     <th className="py-2.5 pr-4 font-medium">Used gross</th>
                   </>
                 )}
+                {sprinters ? (
+                  <>
+                    <th className="py-2.5 pr-4 font-medium">Sprinter units</th>
+                    {compact ? null : (
+                      <>
+                        <th className="py-2.5 pr-4 font-medium">
+                          Sprinter front
+                        </th>
+                        <th className="py-2.5 pr-4 font-medium">
+                          Sprinter back
+                        </th>
+                        <th className="py-2.5 pr-4 font-medium">
+                          Sprinter gross
+                        </th>
+                      </>
+                    )}
+                  </>
+                ) : null}
                 <th className="py-2.5 pr-4 font-medium text-blue-700 dark:text-blue-400">
                   Total gross
                 </th>
@@ -575,6 +699,27 @@ function SummarySection({
                       </td>
                     </>
                   )}
+                  {sprinters ? (
+                    <>
+                      <td className="py-2.5 pr-4">{r.total_sprinter_units}</td>
+                      {compact ? null : (
+                        <>
+                          <td className="py-2.5 pr-4">
+                            {formatCurrency(r.total_sprinter_front_end_gross)}
+                          </td>
+                          <td className="py-2.5 pr-4">
+                            {formatCurrency(r.total_sprinter_back_end_gross)}
+                          </td>
+                          <td className="py-2.5 pr-4 font-medium">
+                            {formatCurrency(
+                              r.total_sprinter_front_end_gross +
+                                r.total_sprinter_back_end_gross,
+                            )}
+                          </td>
+                        </>
+                      )}
+                    </>
+                  ) : null}
                   <td className="py-2.5 pr-4 font-semibold text-blue-700 dark:text-blue-400">
                     {formatCurrency(r.total_gross)}
                   </td>
