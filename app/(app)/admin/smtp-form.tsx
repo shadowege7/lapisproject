@@ -48,6 +48,24 @@ export function SmtpForm({
         </p>
       ) : null}
 
+      {/* Shown whenever anything has been saved, including after it was
+          cleared: if these settings change unexpectedly, the first useful
+          question is who touched them and when. */}
+      {settings.updatedAt ? (
+        <p className="text-xs text-zinc-500">
+          Last changed{settings.updatedBy ? ` by ${settings.updatedBy}` : ""} on{" "}
+          {new Date(settings.updatedAt).toLocaleString("en-US", {
+            timeZone: "America/Los_Angeles",
+            month: "short",
+            day: "numeric",
+            year: "numeric",
+            hour: "numeric",
+            minute: "2-digit",
+          })}{" "}
+          PT
+        </p>
+      ) : null}
+
       {error ? (
         <p
           role="alert"

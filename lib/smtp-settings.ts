@@ -33,6 +33,8 @@ export interface SmtpSummary {
   hasPassword: boolean;
   source: "database" | "environment" | "unset";
   updatedAt: string | null;
+  /** Who saved them last, so an unexpected change is traceable. */
+  updatedBy: string | null;
 }
 
 interface Row {
@@ -42,13 +44,14 @@ interface Row {
   password: string | null;
   mail_from: string | null;
   updated_at: string | null;
+  updated_by: string | null;
 }
 
 async function readRow(): Promise<Row | null> {
   try {
     const { data } = await createAdminClient()
       .from("smtp_settings")
-      .select("host, port, username, password, mail_from, updated_at")
+      .select("host, port, username, password, mail_from, updated_at, updated_by")
       .eq("only_row", true)
       .maybeSingle();
     return data ?? null;
@@ -97,6 +100,18 @@ export async function getSmtpConfig(): Promise<SmtpConfig | null> {
 export async function getSmtpSummary(): Promise<SmtpSummary> {
   const row = await readRow();
 
+  // Who last saved them. Resolved here rather than joined, because the table
+  // is read with the admin client and a join would widen what that touches.
+  let updatedBy: string | null = null;
+  if (row?.updated_by) {
+    const { data: person } = await createAdminClient()
+      .from("profiles")
+      .select("full_name, email")
+      .eq("id", row.updated_by)
+      .maybeSingle();
+    updatedBy = person?.full_name || person?.email || null;
+  }
+
   if (row?.host && row.username && row.password) {
     return {
       host: row.host,
@@ -106,6 +121,7 @@ export async function getSmtpSummary(): Promise<SmtpSummary> {
       hasPassword: true,
       source: "database",
       updatedAt: row.updated_at,
+      updatedBy,
     };
   }
 
@@ -119,6 +135,7 @@ export async function getSmtpSummary(): Promise<SmtpSummary> {
       hasPassword: true,
       source: "environment",
       updatedAt: null,
+      updatedBy: null,
     };
   }
 
@@ -132,5 +149,6 @@ export async function getSmtpSummary(): Promise<SmtpSummary> {
     hasPassword: Boolean(row?.password),
     source: "unset",
     updatedAt: row?.updated_at ?? null,
+    updatedBy,
   };
 }

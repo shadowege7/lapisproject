@@ -237,6 +237,15 @@ in code. The saved password is never sent to the browser; the form shows only
 that one exists, and leaving the field blank keeps it, so a typo in the host
 can be fixed without re-entering the secret.
 
+The screen shows when the settings were last changed and by whom. There is one
+row for the whole business, so a save replaces what was there — that line is
+how an unexpected change gets noticed.
+
+**Never point these at a test server on the live database.** They are a single
+shared row: doing so replaces the real credentials for everyone, and clearing
+them afterwards does not bring the password back. Test against a local Supabase
+stack, or a throwaway project.
+
 `SMTP_HOST` / `SMTP_PORT` / `SMTP_USER` / `SMTP_PASSWORD` / `SMTP_FROM` still
 work as a fallback (see `.env.local.example`), so a fresh deployment can send
 before anyone opens the settings, and there is a way back in if what is saved
