@@ -191,10 +191,10 @@ export default async function DashboardPage() {
         />
         {/* eslint-disable-next-line @next/next/no-img-element */}
         <img
-          src="/Lapis-Gold-Emblem.png"
+          src="/Lapis-Platinum-Emblem.png"
           alt=""
           aria-hidden
-          className="emblem-platinum pointer-events-none hidden h-12 w-auto shrink-0 select-none opacity-40 sm:h-14 dark:block"
+          className="pointer-events-none hidden h-12 w-auto shrink-0 select-none opacity-40 sm:h-14 dark:block"
         />
       </div>
       {rollup ? (

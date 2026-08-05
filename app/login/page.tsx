@@ -27,10 +27,10 @@ export default async function LoginPage({
           />
           {/* eslint-disable-next-line @next/next/no-img-element */}
           <img
-            src="/Lapis-Gold-Emblem.png"
+            src="/Lapis-Platinum-Emblem.png"
             alt=""
             aria-hidden
-            className="emblem-platinum hidden h-16 w-auto select-none dark:block"
+            className="hidden h-16 w-auto select-none dark:block"
           />
           <BrandLogo className="h-10" />
           <p className="text-sm text-zinc-500">Sales Tracker</p>
