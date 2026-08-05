@@ -217,16 +217,38 @@ Some deliberate choices:
 - **It can never fail a save.** Mail problems are logged and swallowed; the
   entry is already committed by then.
 
-### Configuring it
+### Configuring the mail server
 
-Plain SMTP (`SMTP_HOST`, `SMTP_PORT`, `SMTP_USER`, `SMTP_PASSWORD`, and
-optionally `SMTP_FROM`) — see `.env.local.example`. The Google Workspace relay
-already used for Supabase auth mail works as-is, and so does any provider that
-speaks SMTP; switching is four environment variables and no code.
+**Admin → Mail server.** Host, port, username, password and an optional From
+address, changeable at any time without a redeploy, with a **Send test** button
+right beneath — SMTP settings are the kind of thing you want to prove rather
+than hope about.
 
-**Until those are set nothing is sent.** The admin screen says so rather than
-letting someone believe reports are going out, and choices made there are saved
-and take effect the moment the credentials land.
+The Google Workspace relay already used for Supabase auth mail works as-is, and
+so does any provider that speaks SMTP.
+
+The credentials live in `public.smtp_settings`, which is **deliberately not
+`app_settings`**: that table is readable by every signed-in user by design,
+because it drives shared UI, and a relay password there would be handed to
+every employee with a login. `smtp_settings` has no RLS policies at all and its
+grants are revoked, so PostgREST returns `403` to a super admin asking directly
+— only `service_role` reaches it. Being a super admin is checked in the action,
+in code. The saved password is never sent to the browser; the form shows only
+that one exists, and leaving the field blank keeps it, so a typo in the host
+can be fixed without re-entering the secret.
+
+`SMTP_HOST` / `SMTP_PORT` / `SMTP_USER` / `SMTP_PASSWORD` / `SMTP_FROM` still
+work as a fallback (see `.env.local.example`), so a fresh deployment can send
+before anyone opens the settings, and there is a way back in if what is saved
+is ever wrong. Saved settings win; the admin screen says which is in use.
+
+**With neither, nothing is sent.** The admin screen says so rather than letting
+someone believe reports are going out, and recipients chosen in the meantime
+are saved and take effect the moment credentials land.
+
+Note the **Sign-in email** section is a different thing: password resets and
+invitations are sent by Supabase, using the SMTP configured under Supabase →
+Authentication. Changing the mail server here does not affect those.
 
 ## Passwords
 

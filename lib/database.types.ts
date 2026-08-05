@@ -174,6 +174,42 @@ export interface Database {
         };
         Relationships: [];
       };
+      // Mail server for the daily report. service_role only — the table has no
+      // RLS policies and no grants to `authenticated`, so nothing reachable
+      // from a browser can read the password. See 0017 in the Launchpad repo.
+      smtp_settings: {
+        Row: {
+          only_row: boolean;
+          host: string | null;
+          port: number;
+          username: string | null;
+          password: string | null;
+          mail_from: string | null;
+          updated_at: string;
+          updated_by: string | null;
+        };
+        Insert: {
+          only_row?: boolean;
+          host?: string | null;
+          port?: number;
+          username?: string | null;
+          password?: string | null;
+          mail_from?: string | null;
+          updated_at?: string;
+          updated_by?: string | null;
+        };
+        Update: {
+          only_row?: boolean;
+          host?: string | null;
+          port?: number;
+          username?: string | null;
+          password?: string | null;
+          mail_from?: string | null;
+          updated_at?: string;
+          updated_by?: string | null;
+        };
+        Relationships: [];
+      };
       // Who gets emailed a store's numbers when they are saved. Kept apart
       // from dealership_members on purpose — see 0016 in the Launchpad repo.
       daily_report_recipients: {

@@ -20,7 +20,9 @@ export async function sendDailyReport(
   figures: Omit<ReportFigures, "storeName" | "tracksSprinters" | "appUrl">,
 ): Promise<MailResult> {
   try {
-    if (!isMailConfigured()) return { sent: false, reason: "SMTP not configured" };
+    if (!(await isMailConfigured())) {
+      return { sent: false, reason: "no mail server configured" };
+    }
 
     const admin = createAdminClient();
 

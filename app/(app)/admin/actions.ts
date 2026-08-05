@@ -7,6 +7,8 @@ import { createAdminClient, listAllUsers } from "@/lib/supabase/admin";
 import { createResetClient } from "@/lib/supabase/reset-client";
 import { composeFullName } from "@/lib/names";
 import { generateTempPassword } from "@/lib/password";
+import { sendMail } from "@/lib/email";
+import { getSmtpConfig } from "@/lib/smtp-settings";
 import type { DealershipRole } from "@/lib/database.types";
 import type {
   InviteResult,
@@ -162,6 +164,113 @@ export async function removeMembership(formData: FormData) {
 
   await supabase.from("dealership_members").delete().eq("id", membershipId);
   revalidatePath("/admin");
+}
+
+/**
+ * Save the mail server the daily report sends through.
+ *
+ * Written with the admin client because `smtp_settings` is deliberately
+ * unreadable and unwritable by any browser-facing role — being a super admin
+ * is checked here, in code, not by a policy. Leaving the password blank keeps
+ * the stored one, so an admin can correct a typo in the host without having to
+ * re-enter the secret (and without the page ever needing to hold it).
+ */
+export async function saveSmtpSettings(formData: FormData): Promise<void> {
+  await requireSuperAdmin();
+
+  const supabase = await createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+
+  const back = (key: string, value: string) =>
+    redirect(`/admin?${key}=${encodeURIComponent(value)}`);
+
+  const host = String(formData.get("host") ?? "").trim();
+  const port = Number(formData.get("port") ?? 587);
+  const username = String(formData.get("username") ?? "").trim();
+  const password = String(formData.get("password") ?? "");
+  const mailFrom = String(formData.get("mail_from") ?? "").trim();
+
+  if (!host) back("smtp_error", "Enter a mail server host.");
+  if (!Number.isInteger(port) || port < 1 || port > 65535) {
+    back("smtp_error", "Port must be between 1 and 65535.");
+  }
+  if (!username) {
+    back("smtp_error", "Enter the username to sign in with.");
+  }
+
+  const admin = createAdminClient();
+
+  if (!password) {
+    const { data: existing } = await admin
+      .from("smtp_settings")
+      .select("password")
+      .eq("only_row", true)
+      .maybeSingle();
+    if (!existing?.password) {
+      back("smtp_error", "Enter the password — none is saved yet.");
+    }
+  }
+
+  const { error } = await admin.from("smtp_settings").upsert(
+    {
+      only_row: true,
+      host,
+      port,
+      username,
+      mail_from: mailFrom || null,
+      // Omitted entirely when blank, so the stored value survives.
+      ...(password ? { password } : {}),
+      updated_at: new Date().toISOString(),
+      updated_by: user?.id ?? null,
+    },
+    { onConflict: "only_row" },
+  );
+
+  if (error) back("smtp_error", error.message);
+
+  revalidatePath("/admin");
+  back("smtp", "saved");
+}
+
+/**
+ * Send the current settings a real message, so they can be proven before
+ * anyone relies on them. Goes only to the admin who asked.
+ */
+export async function sendTestReportEmail(formData: FormData): Promise<void> {
+  await requireSuperAdmin();
+
+  const back = (key: string, value: string) =>
+    redirect(`/admin?${key}=${encodeURIComponent(value)}`);
+
+  const to = String(formData.get("email") ?? "")
+    .trim()
+    .toLowerCase();
+  if (!to) back("smtp_error", "Enter an address to test.");
+
+  const config = await getSmtpConfig();
+  if (!config) {
+    back("smtp_error", "No mail server is configured yet.");
+    return;
+  }
+
+  const result = await sendMail({
+    to: [to],
+    subject: "Lapis Sales Tracker — test message",
+    text:
+      "This is a test from the Sales Tracker admin page.\n\n" +
+      `Sent through ${config.host}:${config.port} as ${config.username}.\n` +
+      "If you are reading this, the daily store reports will send.",
+    html:
+      `<p>This is a test from the Sales Tracker admin page.</p>` +
+      `<p>Sent through <strong>${config.host}:${config.port}</strong> as ` +
+      `<strong>${config.username}</strong>.</p>` +
+      `<p>If you are reading this, the daily store reports will send.</p>`,
+  });
+
+  if (!result.sent) back("smtp_error", result.reason);
+  back("smtp_test", to);
 }
 
 /**

@@ -14,7 +14,8 @@ import { InviteForm } from "./invite-form";
 import { EmailTestForm } from "./email-test-form";
 import { UsersPanel, type AdminUser } from "./users-panel";
 import { StoreRow } from "./store-row";
-import { isMailConfigured } from "@/lib/email";
+import { SmtpForm } from "./smtp-form";
+import { getSmtpSummary } from "@/lib/smtp-settings";
 import { ConfirmButton } from "./confirm-button";
 
 function formatSignIn(iso: string | null): string {
@@ -34,10 +35,21 @@ function formatSignIn(iso: string | null): string {
 export default async function AdminPage({
   searchParams,
 }: {
-  searchParams: Promise<{ email_changed?: string; email_error?: string }>;
+  searchParams: Promise<{
+    email_changed?: string;
+    email_error?: string;
+    smtp?: string;
+    smtp_test?: string;
+    smtp_error?: string;
+  }>;
 }) {
-  const { email_changed: emailChanged, email_error: emailError } =
-    await searchParams;
+  const {
+    email_changed: emailChanged,
+    email_error: emailError,
+    smtp: smtpSaved,
+    smtp_test: smtpTested,
+    smtp_error: smtpError,
+  } = await searchParams;
   const user = await getCurrentUser();
   if (!user) redirect("/login");
   if (!user.isSuperAdmin) redirect("/dashboard");
@@ -75,8 +87,10 @@ export default async function AdminPage({
   }
 
   // Surfaced so an admin choosing recipients is told when nothing can
-  // actually be sent, rather than assuming it works.
-  const mailConfigured = isMailConfigured();
+  // actually be sent, rather than assuming it works. The summary deliberately
+  // carries no password — only whether one is stored.
+  const smtp = await getSmtpSummary();
+  const mailConfigured = smtp.source !== "unset";
 
   const authUsers = usersResult.users;
   const authUsersError = usersResult.error;
@@ -342,10 +356,22 @@ export default async function AdminPage({
       </section>
 
       <section className="flex flex-col gap-3">
-        <h2 className="font-medium">Email</h2>
+        <h2 className="font-medium">Mail server</h2>
+        <SmtpForm
+          settings={smtp}
+          defaultTestEmail={user.email}
+          saved={smtpSaved === "saved"}
+          tested={smtpTested ?? null}
+          error={smtpError ?? null}
+        />
+      </section>
+
+      <section className="flex flex-col gap-3">
+        <h2 className="font-medium">Sign-in email</h2>
         <p className="text-xs text-zinc-500">
-          Verify the SMTP you configured in Supabase → Authentication is
-          delivering. This sends a password-reset email to the address below.
+          Separate from the mail server above: password resets and invitations
+          are sent by Supabase, using the SMTP configured under Supabase →
+          Authentication. This checks that one is delivering.
         </p>
         <EmailTestForm defaultEmail={user.email} />
       </section>
