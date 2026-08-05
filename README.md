@@ -208,6 +208,16 @@ image data was copied through untouched and the two differ only in colour.
 
 The light theme still has its pale canvas.
 
+The favicon and the installed app icons are the **platinum bird on a 296 C
+tile**, generated from the emblem rather than drawn, and each reuses the
+framing of the file it replaced so only the colours changed. The manifest's
+`background_color` and `theme_color` are 296 C to match, so the splash screen
+no longer flashes white.
+
+**The `?v=` on the manifest icon URLs is load-bearing.** An installed app keeps
+its old icon indefinitely; bump it whenever the icons change or phones will
+carry on showing the previous one.
+
 ## Project structure
 
 - `app/login` — sign‑in page (Server Action calls Supabase Auth).
