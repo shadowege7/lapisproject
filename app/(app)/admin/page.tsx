@@ -15,6 +15,7 @@ import { EmailTestForm } from "./email-test-form";
 import { UsersPanel, type AdminUser } from "./users-panel";
 import { StoreRow } from "./store-row";
 import { SmtpForm } from "./smtp-form";
+import { AdminSection } from "./admin-section";
 import { getSmtpSummary } from "@/lib/smtp-settings";
 import { ConfirmButton } from "./confirm-button";
 
@@ -190,7 +191,9 @@ export default async function AdminPage({
   }));
 
   return (
-    <div className="flex flex-col gap-10">
+    // Tighter than it was: the sections are cards now, so the border does the
+    // separating that a large gap used to.
+    <div className="flex flex-col gap-4">
       {emailChanged ? (
         <p
           role="status"
@@ -217,12 +220,14 @@ export default async function AdminPage({
         <h1 className="text-xl font-semibold tracking-tight">Admin</h1>
       </div>
 
-      <section className="flex flex-col gap-3">
-        <h2 className="font-medium">Dealerships</h2>
-        <p className="text-xs text-zinc-500">
-          Open a store to see and edit who has access. Super admins have full
-          access to every store.
-        </p>
+      <AdminSection
+        title="Dealerships"
+        meta={`${dealershipList.length} ${
+          dealershipList.length === 1 ? "store" : "stores"
+        }`}
+        hint="Open a store to see and edit who has access, and who gets its daily report by email. Super admins have full access to every store."
+        defaultOpen
+      >
         <div className="flex flex-col gap-2">
           {dealershipList.map((d) => (
             <StoreRow
@@ -254,15 +259,15 @@ export default async function AdminPage({
             Add
           </button>
         </form>
-      </section>
+      </AdminSection>
 
-      <section className="flex flex-col gap-3">
-        <h2 className="font-medium">Positions</h2>
-        <p className="text-xs text-zinc-500">
-          Job titles you can assign to users. Turn on “Group rollup” for a
-          position to let those users see the all-stores summary at the top of
-          the dashboard. (Super admins always see it.)
-        </p>
+      <AdminSection
+        title="Positions"
+        meta={`${positionsList.length} ${
+          positionsList.length === 1 ? "position" : "positions"
+        }`}
+        hint="Job titles you can assign to users. Turn on “Group rollup” for a position to let those users see the all-stores summary at the top of the dashboard. (Super admins always see it.)"
+      >
         <ul className="flex flex-col gap-2">
           {positionsList.map((p) => (
             <li
@@ -320,13 +325,13 @@ export default async function AdminPage({
             Add
           </button>
         </form>
-      </section>
+      </AdminSection>
 
-      <section className="flex flex-col gap-3">
-        <h2 className="font-medium">Dashboard</h2>
-        <p className="text-xs text-zinc-500">
-          Settings that change what everyone sees on the dashboard.
-        </p>
+      <AdminSection
+        title="Dashboard"
+        meta={showLeaderboard ? "Leaders shown" : "Leaders hidden"}
+        hint="Settings that change what everyone sees on the dashboard."
+      >
         <div className="flex flex-wrap items-center justify-between gap-3 rounded-lg border border-zinc-200 px-3 py-2 text-sm dark:border-zinc-800">
           <div>
             <span className="font-medium">Leaders section</span>
@@ -353,10 +358,21 @@ export default async function AdminPage({
             </button>
           </form>
         </div>
-      </section>
+      </AdminSection>
 
-      <section className="flex flex-col gap-3">
-        <h2 className="font-medium">Mail server</h2>
+      {/* Opened automatically when a save or test just happened, so the
+          result is not hidden behind a closed heading. */}
+      <AdminSection
+        title="Mail server"
+        meta={
+          smtp.source === "unset"
+            ? "Not set up — no reports sending"
+            : `${smtp.host}${
+                smtp.source === "environment" ? " (from environment)" : ""
+              }`
+        }
+        defaultOpen={Boolean(smtpSaved || smtpTested || smtpError)}
+      >
         <SmtpForm
           settings={smtp}
           defaultTestEmail={user.email}
@@ -364,29 +380,28 @@ export default async function AdminPage({
           tested={smtpTested ?? null}
           error={smtpError ?? null}
         />
-      </section>
+      </AdminSection>
 
-      <section className="flex flex-col gap-3">
-        <h2 className="font-medium">Sign-in email</h2>
-        <p className="text-xs text-zinc-500">
-          Separate from the mail server above: password resets and invitations
-          are sent by Supabase, using the SMTP configured under Supabase →
-          Authentication. This checks that one is delivering.
-        </p>
+      <AdminSection
+        title="Sign-in email"
+        meta="Password resets and invitations"
+        hint="Separate from the mail server above: password resets and invitations are sent by Supabase, using the SMTP configured under Supabase → Authentication. This checks that one is delivering."
+      >
         <EmailTestForm defaultEmail={user.email} />
-      </section>
+      </AdminSection>
 
-      <section className="flex flex-col gap-3">
-        <h2 className="font-medium">Add a user</h2>
+      <AdminSection title="Add a user">
         <InviteForm dealerships={dealershipList} positions={positionsList} />
-      </section>
+      </AdminSection>
 
-      <section className="flex flex-col gap-3">
-        <h2 className="font-medium">Users &amp; access</h2>
-        <p className="text-xs text-zinc-500">
-          Search, or open a domain group and then a user, to set their position,
-          per-store editor/viewer access, notifications, or password.
-        </p>
+      <AdminSection
+        title="Users & access"
+        meta={`${usersData.length} ${
+          usersData.length === 1 ? "user" : "users"
+        }`}
+        hint="Search, or open a domain group and then a user, to set their position, per-store editor/viewer access, notifications, or password."
+        defaultOpen
+      >
         {authUsersError ? (
           <p className="rounded-md bg-red-50 px-3 py-2 text-sm text-red-700 dark:bg-red-950 dark:text-red-300">
             Couldn&apos;t load the user list ({authUsersError.message}). Reload
@@ -399,7 +414,7 @@ export default async function AdminPage({
             positions={positionsList}
           />
         )}
-      </section>
+      </AdminSection>
     </div>
   );
 }
