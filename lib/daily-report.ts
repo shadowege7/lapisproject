@@ -15,8 +15,6 @@ import type { Mail } from "@/lib/email";
 
 export interface ReportFigures {
   storeName: string;
-  /** Used to link straight to this store's reports. */
-  storeId: string;
   entryDate: string;
   isNew: boolean;
   tracksSprinters: boolean;
@@ -120,10 +118,13 @@ function categories(f: ReportFigures): Category[] {
 export function buildDailyReport(f: ReportFigures): Omit<Mail, "to"> {
   const rows = categories(f);
 
-  // Straight to the store the mail is about. There is no /dealerships index
-  // page — only /dealerships/[id] — so linking at the section would 404.
+  // The dashboard, not this store's reports: most readers are on more than
+  // one store's list, and the dashboard shows all of them at once.
+  //
+  // Not "/dealerships" — that path has no page behind it, only
+  // /dealerships/[id], and linking there sent everyone to a 404.
   // Signed-out readers are sent to /login and returned here afterwards.
-  const link = `${f.appUrl}/dealerships/${f.storeId}/reports`;
+  const link = `${f.appUrl}/dashboard`;
   const day = formatEntryDate(f.entryDate, "long");
   const shortDay = formatEntryDate(f.entryDate, "short");
   const totalUnits = rows.reduce((s, r) => s + r.units, 0);
@@ -287,7 +288,7 @@ export function buildDailyReport(f: ReportFigures): Omit<Mail, "to"> {
           <td align="center" style="padding:24px 28px;">
             <a href="${link}"
                style="background:#1d4ed8;color:#ffffff;text-decoration:none;padding:11px 24px;border-radius:6px;font-size:14px;font-weight:bold;display:inline-block;">
-              See this store's reports
+              Open the Sales Tracker
             </a>
           </td>
         </tr>
