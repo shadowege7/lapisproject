@@ -2,6 +2,7 @@
 
 import { useActionState, useEffect, useRef, useState } from "react";
 import {
+  changeUserEmail,
   deleteUser,
   resetUserPassword,
   setMainStore,
@@ -68,7 +69,7 @@ export function UserRow({
     (dealerships.length > 0 && memberships.length === dealerships.length);
 
   return (
-    <details className="group rounded-lg border border-zinc-200 bg-white dark:border-zinc-800 dark:bg-[#0e1626]">
+    <details className="group rounded-lg border border-zinc-200 bg-white dark:border-zinc-800 dark:bg-[var(--surface)]">
       <summary className="flex cursor-pointer list-none items-center justify-between gap-3 px-4 py-2.5 [&::-webkit-details-marker]:hidden">
         <span className="min-w-0">
           <span className="block truncate">
@@ -187,6 +188,8 @@ export function UserRow({
           />
         </div>
 
+        <EmailField userId={userId} email={email} />
+
         {resetState.status === "reset" ? (
           <TempPassword password={resetState.tempPassword} email={email} />
         ) : null}
@@ -292,6 +295,60 @@ export function UserRow({
           )}
         </div>
       </div>
+    </details>
+  );
+}
+
+/**
+ * Changing the address a user signs in with.
+ *
+ * A <details> and a plain form action rather than client state: it keeps
+ * working without JavaScript, and the outcome comes back as a banner at the
+ * top of the page instead of needing state threaded through this row.
+ * Collapsed because this is their identity for both apps, and an input
+ * pre-filled with the current address is one stray keystroke from an
+ * accidental edit.
+ */
+function EmailField({ userId, email }: { userId: string; email: string }) {
+  return (
+    <details className="group text-sm">
+      <summary className="flex cursor-pointer list-none flex-wrap items-center gap-2 [&::-webkit-details-marker]:hidden">
+        <span className="text-zinc-500">Sign-in email</span>
+        <span className="font-mono text-xs">{email}</span>
+        <span className="text-blue-600 group-open:hidden dark:text-blue-400">
+          Change
+        </span>
+      </summary>
+
+      <form
+        action={changeUserEmail}
+        className="mt-2 flex flex-wrap items-center gap-2"
+      >
+        <input type="hidden" name="user_id" value={userId} />
+        <label className="sr-only" htmlFor={`email-${userId}`}>
+          Sign-in email
+        </label>
+        <input
+          id={`email-${userId}`}
+          name="email"
+          type="email"
+          defaultValue={email}
+          required
+          className="min-w-56 rounded-md border border-zinc-300 bg-transparent px-2 py-1 text-sm outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-500/30 dark:border-zinc-700"
+        />
+        <button
+          type="submit"
+          className="rounded-md bg-blue-600 px-3 py-1 text-sm font-semibold text-white hover:bg-blue-700"
+        >
+          Save
+        </button>
+      </form>
+
+      <p className="mt-1 text-xs text-zinc-400">
+        This is what they sign in with, on the Launchpad as well as here. The
+        change takes effect immediately — no confirmation email is sent, so tell
+        them.
+      </p>
     </details>
   );
 }

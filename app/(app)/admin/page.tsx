@@ -30,7 +30,13 @@ function formatSignIn(iso: string | null): string {
   );
 }
 
-export default async function AdminPage() {
+export default async function AdminPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ email_changed?: string; email_error?: string }>;
+}) {
+  const { email_changed: emailChanged, email_error: emailError } =
+    await searchParams;
   const user = await getCurrentUser();
   if (!user) redirect("/login");
   if (!user.isSuperAdmin) redirect("/dashboard");
@@ -154,6 +160,25 @@ export default async function AdminPage() {
 
   return (
     <div className="flex flex-col gap-10">
+      {emailChanged ? (
+        <p
+          role="status"
+          className="rounded-xl bg-emerald-50 px-4 py-3 text-sm text-emerald-800 dark:bg-emerald-950/50 dark:text-emerald-300"
+        >
+          They now sign in as <strong>{emailChanged}</strong> — on the Launchpad
+          as well as here. Let them know; no email was sent.
+        </p>
+      ) : null}
+
+      {emailError ? (
+        <p
+          role="alert"
+          className="rounded-xl bg-red-50 px-4 py-3 text-sm text-red-700 dark:bg-red-950/50 dark:text-red-300"
+        >
+          {emailError}
+        </p>
+      ) : null}
+
       <div>
         <p className="text-xs font-medium uppercase tracking-wide text-blue-600 dark:text-blue-400">
           Lapis Automotive Group

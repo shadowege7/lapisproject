@@ -35,10 +35,19 @@ export interface Database {
           },
         ];
       };
+      // Shared with the Launchpad, which owns several columns this app never
+      // touches. `email` is kept in step with auth.users by a trigger — see
+      // 0014_sync_profile_email.sql in the Launchpad repo — so nothing here
+      // should write it directly.
       profiles: {
         Row: {
           id: string;
+          email: string;
           full_name: string | null;
+          first_name: string | null;
+          /** What they go by, if different from first_name. */
+          preferred_name: string | null;
+          last_name: string | null;
           is_super_admin: boolean;
           notifications_enabled: boolean;
           position_id: string | null;
@@ -47,7 +56,11 @@ export interface Database {
         };
         Insert: {
           id: string;
+          email?: string;
           full_name?: string | null;
+          first_name?: string | null;
+          preferred_name?: string | null;
+          last_name?: string | null;
           is_super_admin?: boolean;
           notifications_enabled?: boolean;
           position_id?: string | null;
@@ -56,7 +69,11 @@ export interface Database {
         };
         Update: {
           id?: string;
+          email?: string;
           full_name?: string | null;
+          first_name?: string | null;
+          preferred_name?: string | null;
+          last_name?: string | null;
           is_super_admin?: boolean;
           notifications_enabled?: boolean;
           position_id?: string | null;

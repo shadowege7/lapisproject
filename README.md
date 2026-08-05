@@ -124,6 +124,32 @@ password shown once** (no email is sent — share it securely). Assign the user 
 one or more stores as editor or viewer. Users change their own password on the
 **Account** page; a super admin can also reset any user's password.
 
+Names are entered as **first / preferred / last** rather than one box, so
+someone who goes by a name other than their legal one is shown correctly
+without losing what payroll needs. `profiles.full_name` — which this app reads
+everywhere — is composed from those parts by `lib/names.ts` rather than typed,
+so the two cannot disagree. That file is a copy of the Launchpad's: the apps
+share the `profiles` table but not a module, so a change to the rule has to be
+made in both.
+
+### Changing the address someone signs in with
+
+On the **Admin** page, inside a user's row, collapsed behind the address itself
+so it cannot be edited by accident. It is their identity for the Launchpad too
+— one Supabase project sits behind both — so it changes in both at once.
+
+It applies immediately rather than waiting on a confirmation click in the old
+mailbox, which is the point: this gets used when an address was wrong or is
+unreachable. **Nothing is emailed**, so tell them, or their next sign-in fails
+for no visible reason.
+
+A collision is checked before the call rather than after: Supabase reports the
+underlying unique violation as a 500 whose `AuthError.message` is the literal
+string `"{}"` — the same empty-error shape the test-email form works around.
+`profiles.email` is kept in step with `auth.users` by a database trigger (see
+`0014_sync_profile_email.sql` in the Launchpad repo), so asking it first gives
+a real answer.
+
 ## Forgotten passwords
 
 `/login` offers **Forgot your password?**, which emails a link. The form always
@@ -167,6 +193,15 @@ Hosted on Vercel; every push to `main` redeploys. To reproduce:
 GitHub Pages is **not** an option — the app relies on server‑rendered pages,
 Server Actions, and the `proxy.ts` middleware, none of which run on static
 hosting.
+
+## Colour
+
+The dark theme — the default — is built on **Pantone 296 C (`#041E42`)**, the
+Lapis navy, matching the Launchpad. 296 C is lighter than the near-black it
+replaced, so `--surface` moved up with it; card backgrounds now read that token
+rather than a hardcoded hex, so the ramp stays in one place.
+
+The light theme still has its pale canvas.
 
 ## Project structure
 

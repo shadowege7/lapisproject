@@ -122,7 +122,7 @@ export function ImportForm({ dealershipId }: { dealershipId: string }) {
   }
 
   return (
-    <details className="rounded-xl border border-zinc-200 bg-white dark:border-zinc-800 dark:bg-[#0e1626] print:hidden">
+    <details className="rounded-xl border border-zinc-200 bg-white dark:border-zinc-800 dark:bg-[var(--surface)] print:hidden">
       <summary className="cursor-pointer list-none px-4 py-3 text-sm font-semibold [&::-webkit-details-marker]:hidden">
         Import / backfill from CSV
       </summary>

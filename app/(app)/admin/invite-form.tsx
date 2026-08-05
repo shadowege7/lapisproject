@@ -27,8 +27,21 @@ export function InviteForm({
           <input type="email" name="email" required className={inputClass} />
         </label>
         <label className="flex flex-col gap-1 text-sm font-medium">
-          Full name (optional)
-          <input type="text" name="full_name" className={inputClass} />
+          First name
+          <input type="text" name="first_name" className={inputClass} />
+        </label>
+        <label className="flex flex-col gap-1 text-sm font-medium">
+          Preferred name
+          <input
+            type="text"
+            name="preferred_name"
+            placeholder="Optional"
+            className={inputClass}
+          />
+        </label>
+        <label className="flex flex-col gap-1 text-sm font-medium">
+          Last name
+          <input type="text" name="last_name" className={inputClass} />
         </label>
         <label className="flex flex-col gap-1 text-sm font-medium">
           Dealership
@@ -88,7 +101,8 @@ export function InviteForm({
 
       <p className="text-xs text-zinc-500">
         No email is sent. The user is created with a starter password, shown
-        once below — share it securely.
+        once below — share it securely. Preferred name is what they get called
+        around the business; leave it blank to use their first name.
       </p>
     </div>
   );

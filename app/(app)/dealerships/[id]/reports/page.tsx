@@ -597,7 +597,7 @@ function formatMetric(value: number, isCurrency: boolean): string {
 
 function Card({ children }: { children: React.ReactNode }) {
   return (
-    <div className="overflow-x-auto rounded-xl border border-zinc-200 bg-white px-4 shadow-sm dark:border-zinc-800 dark:bg-[#0e1626]">
+    <div className="overflow-x-auto rounded-xl border border-zinc-200 bg-white px-4 shadow-sm dark:border-zinc-800 dark:bg-[var(--surface)]">
       {children}
     </div>
   );

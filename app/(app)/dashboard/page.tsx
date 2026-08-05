@@ -198,7 +198,7 @@ export default async function DashboardPage() {
         />
       </div>
       {rollup ? (
-        <div className="rounded-xl border border-blue-200 bg-white p-4 shadow-sm dark:border-blue-900/50 dark:bg-[#0e1626]">
+        <div className="rounded-xl border border-blue-200 bg-white p-4 shadow-sm dark:border-blue-900/50 dark:bg-[var(--surface)]">
           <p className="mb-3 text-xs font-medium uppercase tracking-wide text-blue-600 dark:text-blue-400">
             All stores
           </p>
@@ -228,7 +228,7 @@ export default async function DashboardPage() {
             Leaders · this month
           </p>
           <div className="grid gap-4 sm:grid-cols-2">
-            <div className="rounded-xl border border-blue-200 bg-white p-4 shadow-sm dark:border-blue-900/50 dark:bg-[#0e1626]">
+            <div className="rounded-xl border border-blue-200 bg-white p-4 shadow-sm dark:border-blue-900/50 dark:bg-[var(--surface)]">
               <p className="text-xs font-medium uppercase tracking-wide text-blue-600 dark:text-blue-400">
                 Gross leader
               </p>
@@ -239,7 +239,7 @@ export default async function DashboardPage() {
                 {formatCurrency(grossLeader.gross)} gross
               </p>
             </div>
-            <div className="rounded-xl border border-blue-200 bg-white p-4 shadow-sm dark:border-blue-900/50 dark:bg-[#0e1626]">
+            <div className="rounded-xl border border-blue-200 bg-white p-4 shadow-sm dark:border-blue-900/50 dark:bg-[var(--surface)]">
               <p className="text-xs font-medium uppercase tracking-wide text-blue-600 dark:text-blue-400">
                 Unit leader
               </p>
@@ -284,7 +284,7 @@ export default async function DashboardPage() {
           return (
             <div
               key={dealership.id}
-              className="flex flex-col gap-4 rounded-xl border border-zinc-200 bg-white p-5 shadow-sm transition-shadow hover:border-blue-200 hover:shadow-md dark:border-zinc-800 dark:bg-[#0e1626] dark:hover:border-blue-900"
+              className="flex flex-col gap-4 rounded-xl border border-zinc-200 bg-white p-5 shadow-sm transition-shadow hover:border-blue-200 hover:shadow-md dark:border-zinc-800 dark:bg-[var(--surface)] dark:hover:border-blue-900"
             >
               <div className="flex items-center justify-between gap-2">
                 <h2 className="flex items-center gap-2 font-semibold tracking-tight">
@@ -455,7 +455,7 @@ function VehicleStat({
   gross: number;
 }) {
   return (
-    <div className="bg-white p-3 dark:bg-[#0e1626]">
+    <div className="bg-white p-3 dark:bg-[var(--surface)]">
       <div className="flex items-center justify-between">
         <span className="text-xs font-semibold uppercase tracking-wide text-zinc-500">
           {label}

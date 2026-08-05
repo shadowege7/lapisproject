@@ -177,7 +177,7 @@ export default async function DealershipDetailPage({
           {team.length === 0 ? (
             <p className="text-sm text-zinc-500">No one has access yet.</p>
           ) : (
-            <div className="overflow-hidden rounded-xl border border-zinc-200 bg-white dark:border-zinc-800 dark:bg-[#0e1626]">
+            <div className="overflow-hidden rounded-xl border border-zinc-200 bg-white dark:border-zinc-800 dark:bg-[var(--surface)]">
               <table className="w-full text-sm">
                 <thead>
                   <tr className="border-b border-zinc-200 text-left text-xs uppercase tracking-wide text-zinc-500 dark:border-zinc-800">
@@ -270,7 +270,7 @@ function Stat({
   accent?: boolean;
 }) {
   return (
-    <div className="rounded-xl border border-zinc-200 bg-white p-4 dark:border-zinc-800 dark:bg-[#0e1626]">
+    <div className="rounded-xl border border-zinc-200 bg-white p-4 dark:border-zinc-800 dark:bg-[var(--surface)]">
       <p className="text-xs font-medium uppercase tracking-wide text-zinc-500">
         {label}
       </p>

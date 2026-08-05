@@ -6,6 +6,7 @@ import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { createAdminClient, listAllUsers } from "@/lib/supabase/admin";
 import { createResetClient } from "@/lib/supabase/reset-client";
+import { composeFullName } from "@/lib/names";
 import type { DealershipRole } from "@/lib/database.types";
 import type {
   InviteResult,
@@ -61,7 +62,19 @@ export async function inviteAndAssign(
   const email = String(formData.get("email") ?? "")
     .trim()
     .toLowerCase();
-  const fullName = String(formData.get("full_name") ?? "").trim();
+  const firstName = String(formData.get("first_name") ?? "").trim();
+  const preferredName = String(formData.get("preferred_name") ?? "").trim();
+  const lastName = String(formData.get("last_name") ?? "").trim();
+  // `full_name` stays the display name of record — this app reads it
+  // everywhere — so it is composed from the parts rather than typed.
+  const fullName =
+    composeFullName({
+      first_name: firstName,
+      preferred_name: preferredName,
+      last_name: lastName,
+      // A file or form filled in before the split may still send one box.
+      full_name: String(formData.get("full_name") ?? "").trim(),
+    }) ?? "";
   const dealershipId = String(formData.get("dealership_id") ?? "");
   const role = String(formData.get("role") ?? "viewer") as DealershipRole;
   const positionId = String(formData.get("position_id") ?? "");
@@ -113,10 +126,26 @@ export async function inviteAndAssign(
     return { status: "error", message: memberError.message };
   }
 
-  if (positionId) {
+  // The parts are stored alongside the composed name, so the Launchpad can
+  // greet someone by the name they actually go by. Only written for accounts
+  // created here — an address that already existed keeps whatever it had
+  // rather than being overwritten by boxes this admin may have left blank.
+  const nameParts =
+    tempPassword && (firstName || preferredName || lastName)
+      ? {
+          first_name: firstName || null,
+          preferred_name: preferredName || null,
+          last_name: lastName || null,
+        }
+      : {};
+
+  if (positionId || Object.keys(nameParts).length > 0) {
     await supabase
       .from("profiles")
-      .update({ position_id: positionId })
+      .update({
+        ...(positionId ? { position_id: positionId } : {}),
+        ...nameParts,
+      })
       .eq("id", userId);
   }
 
@@ -188,6 +217,91 @@ export async function resetUserPassword(
   if (error) return { status: "error", message: error.message };
 
   return { status: "reset", tempPassword };
+}
+
+const EMAIL = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+
+/**
+ * Change the address a user signs in with.
+ *
+ * This is their identity for both apps — one Supabase project sits behind the
+ * Launchpad and this one — so it changes in both at once.
+ *
+ * `email_confirm: true` applies it immediately rather than parking it as a
+ * pending change awaiting a click in the old mailbox, which is the point: this
+ * is used when someone's name changed or their address was wrong, and the old
+ * mailbox may be unreachable. `public.profiles.email` follows via a database
+ * trigger, so it cannot drift.
+ */
+export async function changeUserEmail(formData: FormData): Promise<void> {
+  await requireSuperAdmin();
+
+  const userId = String(formData.get("user_id") ?? "");
+  const email = String(formData.get("email") ?? "")
+    .trim()
+    .toLowerCase();
+
+  const back = (key: string, value: string) =>
+    redirect(`/admin?${key}=${encodeURIComponent(value)}`);
+
+  if (!userId) back("email_error", "Missing user.");
+  if (!email) back("email_error", "Enter an email address.");
+  if (!EMAIL.test(email)) {
+    back("email_error", "That doesn't look like an email address.");
+  }
+
+  const admin = createAdminClient();
+
+  // Checked up front, because Supabase does not report this usefully: the
+  // underlying unique violation surfaces as a 500 whose AuthError message is
+  // the string "{}" — the same empty-error shape sendTestEmail works around
+  // below. profiles.email is kept in step with auth.users by a trigger, so
+  // asking here gives a real answer.
+  const { data: clash } = await admin
+    .from("profiles")
+    .select("id")
+    .eq("email", email)
+    .neq("id", userId)
+    .maybeSingle();
+
+  if (clash) {
+    back("email_error", "That address already belongs to another account.");
+  }
+
+  const { error } = await admin.auth.admin.updateUserById(userId, {
+    email,
+    email_confirm: true,
+  });
+
+  if (error) {
+    // Belt and braces for the same collision, in case a profile row is
+    // missing. The empty-message case is why the check above exists.
+    const raw = `${error.message} ${(error as { code?: string }).code ?? ""} ${JSON.stringify(error)}`;
+    const taken =
+      raw.includes("23505") ||
+      raw.includes("duplicate key") ||
+      raw.includes("already been registered") ||
+      raw.includes("email_exists");
+
+    console.error("changeUserEmail failed:", {
+      userId,
+      status: (error as { status?: number }).status,
+      code: (error as { code?: string }).code,
+      message: error.message,
+    });
+
+    back(
+      "email_error",
+      taken
+        ? "That address already belongs to another account."
+        : error.message && error.message !== "{}"
+          ? error.message
+          : "Could not change the address. Check the server logs.",
+    );
+  }
+
+  revalidatePath("/admin");
+  back("email_changed", email);
 }
 
 /**

@@ -77,7 +77,7 @@ export function UsersPanel({
           <details
             key={domain}
             open={query ? true : undefined}
-            className="group rounded-xl border border-zinc-200 bg-white dark:border-zinc-800 dark:bg-[#0e1626]"
+            className="group rounded-xl border border-zinc-200 bg-white dark:border-zinc-800 dark:bg-[var(--surface)]"
           >
             <summary className="flex cursor-pointer list-none items-center justify-between gap-3 px-4 py-3 [&::-webkit-details-marker]:hidden">
               <span className="font-medium">{domain}</span>

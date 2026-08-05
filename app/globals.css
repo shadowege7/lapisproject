@@ -13,11 +13,20 @@
   --brand-strong: #1e3a8a;
 }
 
+/*
+ * The dark theme is built on Pantone 296 C (#041E42), the Lapis navy — the
+ * same ramp as the Launchpad, since the two sit on one domain and a person
+ * moves between them.
+ *
+ * 296 C is *lighter* than the near-black this used to sit on, so --surface had
+ * to move up with it. Left alone, every card would have rendered darker than
+ * the page behind it and the sense of depth would have inverted.
+ */
 .dark {
   color-scheme: dark;
-  --background: #060b16;
+  --background: #041e42;
   --foreground: #e6edf6;
-  --surface: #0e1626;
+  --surface: #0a2a54;
   --brand: #3b82f6;
   --brand-strong: #60a5fa;
 }

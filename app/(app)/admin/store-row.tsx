@@ -29,7 +29,7 @@ export function StoreRow({
   const available = allUsers.filter((u) => !assignedIds.has(u.id));
 
   return (
-    <details className="group rounded-xl border border-zinc-200 bg-white dark:border-zinc-800 dark:bg-[#0e1626]">
+    <details className="group rounded-xl border border-zinc-200 bg-white dark:border-zinc-800 dark:bg-[var(--surface)]">
       <summary className="flex cursor-pointer list-none items-center justify-between gap-3 px-4 py-3 [&::-webkit-details-marker]:hidden">
         <span className="font-medium">{name}</span>
         <span className="flex items-center gap-2 text-xs text-zinc-500">
