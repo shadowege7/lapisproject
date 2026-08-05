@@ -14,6 +14,7 @@ import { InviteForm } from "./invite-form";
 import { EmailTestForm } from "./email-test-form";
 import { UsersPanel, type AdminUser } from "./users-panel";
 import { StoreRow } from "./store-row";
+import { isMailConfigured } from "@/lib/email";
 import { ConfirmButton } from "./confirm-button";
 
 function formatSignIn(iso: string | null): string {
@@ -47,6 +48,7 @@ export default async function AdminPage({
     { data: dealerships },
     { data: members },
     { data: positions },
+    { data: reportRecipients },
     usersResult,
   ] = await Promise.all([
     supabase.from("dealerships").select("id, name").order("name"),
@@ -58,8 +60,23 @@ export default async function AdminPage({
       .select("id, name, sort_order, can_view_rollup")
       .order("sort_order")
       .order("name"),
+    supabase
+      .from("daily_report_recipients")
+      .select("dealership_id, profile_id"),
     listAllUsers(),
   ]);
+
+  const recipientsByStore = new Map<string, string[]>();
+  for (const r of reportRecipients ?? []) {
+    recipientsByStore.set(r.dealership_id, [
+      ...(recipientsByStore.get(r.dealership_id) ?? []),
+      r.profile_id,
+    ]);
+  }
+
+  // Surfaced so an admin choosing recipients is told when nothing can
+  // actually be sent, rather than assuming it works.
+  const mailConfigured = isMailConfigured();
 
   const authUsers = usersResult.users;
   const authUsersError = usersResult.error;
@@ -200,6 +217,8 @@ export default async function AdminPage({
               name={d.name}
               members={membersByStore.get(d.id) ?? []}
               allUsers={allUsersLite}
+              subscribedIds={recipientsByStore.get(d.id) ?? []}
+              mailConfigured={mailConfigured}
             />
           ))}
           {dealershipList.length === 0 ? (

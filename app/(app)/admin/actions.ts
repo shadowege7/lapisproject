@@ -164,6 +164,39 @@ export async function removeMembership(formData: FormData) {
   revalidatePath("/admin");
 }
 
+/**
+ * Add or remove someone from a store's emailed daily report.
+ *
+ * Separate from store membership on purpose: being sent the numbers and being
+ * able to edit them are different jobs. A regional manager may want the report
+ * for a store they have no access to, and plenty of editors do not want a mail
+ * every evening.
+ */
+export async function setReportRecipient(formData: FormData) {
+  const supabase = await requireSuperAdmin();
+  const dealershipId = String(formData.get("dealership_id") ?? "");
+  const profileId = String(formData.get("profile_id") ?? "");
+  const wanted = String(formData.get("subscribed") ?? "") === "true";
+  if (!dealershipId || !profileId) return;
+
+  if (wanted) {
+    await supabase
+      .from("daily_report_recipients")
+      .upsert(
+        { dealership_id: dealershipId, profile_id: profileId },
+        { onConflict: "dealership_id,profile_id" },
+      );
+  } else {
+    await supabase
+      .from("daily_report_recipients")
+      .delete()
+      .eq("dealership_id", dealershipId)
+      .eq("profile_id", profileId);
+  }
+
+  revalidatePath("/admin");
+}
+
 /** Assign a user to a store, or change their role there (upsert). */
 export async function setMembership(formData: FormData) {
   const supabase = await requireSuperAdmin();

@@ -45,6 +45,9 @@ export interface Database {
           email: string;
           /** Enforced by the Launchpad's /set-password gate, not by this app. */
           must_change_password: boolean;
+          /** The Launchpad's "has this person left" flag. Read here so a
+           *  departed employee stops receiving store report emails. */
+          is_active: boolean;
           full_name: string | null;
           first_name: string | null;
           /** What they go by, if different from first_name. */
@@ -60,6 +63,7 @@ export interface Database {
           id: string;
           email?: string;
           must_change_password?: boolean;
+          is_active?: boolean;
           full_name?: string | null;
           first_name?: string | null;
           preferred_name?: string | null;
@@ -74,6 +78,7 @@ export interface Database {
           id?: string;
           email?: string;
           must_change_password?: boolean;
+          is_active?: boolean;
           full_name?: string | null;
           first_name?: string | null;
           preferred_name?: string | null;
@@ -165,6 +170,26 @@ export interface Database {
           id?: string;
           name?: string;
           tracks_sprinters?: boolean;
+          created_at?: string;
+        };
+        Relationships: [];
+      };
+      // Who gets emailed a store's numbers when they are saved. Kept apart
+      // from dealership_members on purpose — see 0016 in the Launchpad repo.
+      daily_report_recipients: {
+        Row: {
+          dealership_id: string;
+          profile_id: string;
+          created_at: string;
+        };
+        Insert: {
+          dealership_id: string;
+          profile_id: string;
+          created_at?: string;
+        };
+        Update: {
+          dealership_id?: string;
+          profile_id?: string;
           created_at?: string;
         };
         Relationships: [];

@@ -5,6 +5,7 @@ import { revalidatePath } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
 import { formatCurrency, todayISODate } from "@/lib/format";
 import { notifyStoreEntry } from "@/lib/push";
+import { sendDailyReport } from "@/lib/send-daily-report";
 
 export async function saveEntry(formData: FormData) {
   const dealershipId = String(formData.get("dealership_id") ?? "");
@@ -37,6 +38,16 @@ export async function saveEntry(formData: FormData) {
     data: { user },
   } = await supabase.auth.getUser();
   if (!user) redirect("/login");
+
+  // Asked before the upsert, so the email can say "numbers for" rather than
+  // "updated numbers for" on the first save of a day. Afterwards there is no
+  // way to tell the two apart.
+  const { data: previous } = await supabase
+    .from("daily_entries")
+    .select("id")
+    .eq("dealership_id", dealershipId)
+    .eq("entry_date", entryDate)
+    .maybeSingle();
 
   const { error } = await supabase.from("daily_entries").upsert(
     {
@@ -99,6 +110,36 @@ export async function saveEntry(formData: FormData) {
     title: dealership?.name ?? "Store update",
     body: `${when}: ${counts} · ${formatCurrency(totalGross)} gross`,
     excludeUserId: user.id,
+  });
+
+  // The emailed report goes to whoever an admin subscribed to this store.
+  // Deliberately awaited rather than left dangling: a serverless function can
+  // be frozen the moment its response is sent, and an unawaited send would be
+  // killed part-way often enough to look like flaky delivery. It never throws.
+  const { data: me } = await supabase
+    .from("profiles")
+    .select("full_name")
+    .eq("id", user.id)
+    .single();
+
+  await sendDailyReport(dealershipId, {
+    entryDate,
+    isNew: !previous,
+    newUnits,
+    newFront: newFrontEndGross,
+    newBack: newBackEndGross,
+    usedUnits,
+    usedFront: usedFrontEndGross,
+    usedBack: usedBackEndGross,
+    sprinterUnits,
+    sprinterFront: sprinterFrontEndGross,
+    sprinterBack: sprinterBackEndGross,
+    managerCalls,
+    salesCalls,
+    appointments,
+    confirmedAppointments,
+    notes: notes.length ? notes : null,
+    enteredBy: me?.full_name ?? null,
   });
 
   revalidatePath(`/dealerships/${dealershipId}/reports`);
