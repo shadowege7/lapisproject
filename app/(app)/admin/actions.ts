@@ -598,6 +598,32 @@ export async function setUserPosition(formData: FormData) {
 }
 
 /** Toggle the dashboard "Leaders" section for everyone at once. */
+/**
+ * Whether super admins see the all-stores rollup.
+ *
+ * Only affects admins. A position that has been granted rollup access keeps
+ * it either way — this is the switch for the people who get it automatically.
+ */
+export async function setAdminRollup(formData: FormData) {
+  const supabase = await requireSuperAdmin();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  const enabled = formData.get("admin_rollup") === "true";
+
+  await supabase.from("app_settings").upsert(
+    {
+      key: "admin_rollup",
+      value: enabled,
+      updated_at: new Date().toISOString(),
+      updated_by: user?.id ?? null,
+    },
+    { onConflict: "key" },
+  );
+  revalidatePath("/admin");
+  revalidatePath("/dashboard");
+}
+
 export async function setShowLeaderboard(formData: FormData) {
   const supabase = await requireSuperAdmin();
   const {

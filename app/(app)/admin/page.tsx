@@ -8,6 +8,7 @@ import {
   createPosition,
   deletePosition,
   setPositionRollup,
+  setAdminRollup,
   setShowLeaderboard,
 } from "./actions";
 import { InviteForm } from "./invite-form";
@@ -102,12 +103,18 @@ export default async function AdminPage({
       "id, is_super_admin, full_name, notifications_enabled, position_id, main_dealership_id",
     );
 
-  const { data: leaderboardSetting } = await supabase
+  const { data: settings } = await supabase
     .from("app_settings")
-    .select("value")
-    .eq("key", "show_leaderboard")
-    .maybeSingle();
-  const showLeaderboard = leaderboardSetting?.value !== false;
+    .select("key, value")
+    .in("key", ["show_leaderboard", "admin_rollup"]);
+
+  const setting = (key: string) =>
+    (settings ?? []).find((s) => s.key === key)?.value;
+
+  // Both default to on, so a missing row behaves the way it did before the
+  // setting existed.
+  const showLeaderboard = setting("show_leaderboard") !== false;
+  const adminRollup = setting("admin_rollup") !== false;
 
   const superAdminById = new Map(
     profiles?.map((p) => [p.id, p.is_super_admin]),
@@ -329,7 +336,10 @@ export default async function AdminPage({
 
       <AdminSection
         title="Dashboard"
-        meta={showLeaderboard ? "Leaders shown" : "Leaders hidden"}
+        meta={[
+          showLeaderboard ? "Leaders shown" : "Leaders hidden",
+          adminRollup ? "rollup on for admins" : "rollup off for admins",
+        ].join(" · ")}
         hint="Settings that change what everyone sees on the dashboard."
       >
         <div className="flex flex-wrap items-center justify-between gap-3 rounded-lg border border-zinc-200 px-3 py-2 text-sm dark:border-zinc-800">
@@ -355,6 +365,34 @@ export default async function AdminPage({
               }
             >
               {showLeaderboard ? "Shown — click to hide" : "Hidden — click to show"}
+            </button>
+          </form>
+        </div>
+
+        <div className="flex flex-wrap items-center justify-between gap-3 rounded-lg border border-zinc-200 px-3 py-2 text-sm dark:border-zinc-800">
+          <div>
+            <span className="font-medium">All-stores rollup for admins</span>
+            <p className="text-xs text-zinc-500">
+              The group-wide totals at the top of the dashboard. Super admins
+              get these automatically; this turns that off. Positions with
+              “Group rollup” switched on keep it either way.
+            </p>
+          </div>
+          <form action={setAdminRollup}>
+            <input
+              type="hidden"
+              name="admin_rollup"
+              value={(!adminRollup).toString()}
+            />
+            <button
+              type="submit"
+              className={
+                adminRollup
+                  ? "text-blue-600 hover:underline dark:text-blue-400"
+                  : "text-zinc-500 hover:underline"
+              }
+            >
+              {adminRollup ? "On — click to turn off" : "Off — click to turn on"}
             </button>
           </form>
         </div>

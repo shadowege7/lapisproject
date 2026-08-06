@@ -4,6 +4,7 @@ import { logout } from "@/app/login/actions";
 import { BrandLogo } from "@/app/brand-logo";
 import { APP_NAME, COMPANY_NAME, Copyright } from "@/app/brand";
 import { ThemeToggle } from "@/app/theme-toggle";
+import { HeaderMenu } from "./header-menu";
 
 export default async function AppLayout({
   children,
@@ -18,17 +19,10 @@ export default async function AppLayout({
     <div className="flex min-h-full flex-1 flex-col">
       <header className="sticky top-0 z-10 border-b border-blue-100 bg-white/80 backdrop-blur dark:border-blue-950/60 dark:bg-[var(--surface)]/80 print:hidden">
         <div className="mx-auto flex w-full max-w-7xl flex-wrap items-center justify-between gap-3 px-4 py-3">
-          {/* Full width on a phone so it centres on its own row, with the nav
-              wrapping beneath; back to a left-aligned item from `sm` up. This
-              is the only mark on a narrow screen — the centred one below is
-              hidden there. */}
-          <Link
-            href="/dashboard"
-            className="flex w-full shrink-0 justify-center sm:w-auto sm:justify-start"
-          >
+          <Link href="/dashboard" className="shrink-0">
             <BrandLogo className="h-6" />
           </Link>
-          <nav className="flex items-center gap-4 text-sm">
+          <HeaderMenu>
             <Link
               href="/dashboard"
               className="font-medium text-zinc-600 hover:text-blue-700 dark:text-zinc-300 dark:hover:text-blue-400"
@@ -49,7 +43,11 @@ export default async function AppLayout({
             >
               Account
             </Link>
-            <span className="hidden text-zinc-400 sm:inline">{user.email}</span>
+            {/* In the menu on a phone, where there is room for it; alongside
+                the links from `md` up only if the bar is wide enough. */}
+            <span className="text-zinc-400 max-sm:order-first sm:hidden md:inline">
+              {user.email}
+            </span>
             <form action={logout}>
               <button
                 type="submit"
@@ -59,15 +57,13 @@ export default async function AppLayout({
               </button>
             </form>
             <ThemeToggle />
-          </nav>
+          </HeaderMenu>
         </div>
       </header>
       {/* The mark at full size under the sticky header — the header copy is
-          deliberately small so it does not compete with it. Hidden on phones,
-          where the header already carries a centred mark and a second one
-          costs scarce vertical space. Hidden when printing too, where a
-          report's own title carries the branding. */}
-      <div className="hidden justify-center px-4 pt-8 pb-2 sm:flex print:hidden">
+          deliberately small so it does not compete with it. Hidden when
+          printing, where a report's own title carries the branding. */}
+      <div className="flex justify-center px-4 pt-8 pb-2 print:hidden">
         <BrandLogo className="h-9" />
       </div>
 

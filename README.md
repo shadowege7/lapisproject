@@ -342,6 +342,26 @@ when it was added to the home screen, and re-reading the manifest does not
 change it — the `?v=` on the icons does nothing for this. Anyone who installed
 it as "Lapis Sales" keeps that until they remove and re-add it.
 
+## The all-stores rollup
+
+The group-wide totals at the top of the dashboard. Two things grant it:
+
+- **A position**, under Admin → Positions → *Group rollup*.
+- **Being a super admin**, automatically — and that half can now be switched
+  off under **Admin → Dashboard → All-stores rollup for admins**.
+
+The switch only governs the automatic grant. A position with *Group rollup* on
+keeps the rollup whether the switch is on or off, which is what makes it usable:
+you can hand the rollup to the people who should have it and stop it following
+every administrator around.
+
+Both settings live in `app_settings` and default to on, so a missing row behaves
+the way it did before the setting existed.
+
+**Note** a person with the rollup granted but no store assignments still sees
+"You don't have access to any dealerships yet" and nothing else — the dashboard
+stops there before it reaches the rollup. That predates the switch.
+
 ## Colour
 
 The dark theme — the default — is built on **Pantone 296 C (`#041E42`)**, the

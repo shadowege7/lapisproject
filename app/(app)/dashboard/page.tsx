@@ -41,7 +41,7 @@ export default async function DashboardPage() {
     { data: monthly },
     { data: todayEntries },
     { data: profile },
-    { data: leaderboardSetting },
+    { data: settings },
   ] = await Promise.all([
     supabase
       .from("dealerships")
@@ -66,17 +66,23 @@ export default async function DashboardPage() {
       .single(),
     supabase
       .from("app_settings")
-      .select("value")
-      .eq("key", "show_leaderboard")
-      .maybeSingle(),
+      .select("key, value")
+      .in("key", ["show_leaderboard", "admin_rollup"]),
   ]);
 
-  const mainDealershipId = profile?.main_dealership_id ?? null;
-  const showLeaderboard = leaderboardSetting?.value !== false;
+  const setting = (key: string) =>
+    (settings ?? []).find((s) => s.key === key)?.value;
 
-  // Group-wide rollup: visible to super admins, or to users whose position an
-  // admin has granted rollup access.
-  let canViewRollup = user.isSuperAdmin;
+  const mainDealershipId = profile?.main_dealership_id ?? null;
+  // Both default to on, so a missing row behaves the way it did before the
+  // setting existed.
+  const showLeaderboard = setting("show_leaderboard") !== false;
+  const adminRollup = setting("admin_rollup") !== false;
+
+  // Group-wide rollup: super admins see it unless an admin has switched it
+  // off for them, and anyone whose position has been granted rollup access
+  // sees it regardless of that switch — the switch is about admins.
+  let canViewRollup = user.isSuperAdmin && adminRollup;
   if (!canViewRollup && profile?.position_id) {
     const { data: pos } = await supabase
       .from("positions")
