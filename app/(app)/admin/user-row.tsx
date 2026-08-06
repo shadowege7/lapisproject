@@ -314,7 +314,7 @@ export function UserRow({
               </select>
               <button
                 type="submit"
-                className="rounded-md bg-blue-600 px-3 py-1 text-sm font-semibold text-white hover:bg-blue-700"
+                className="rounded-md btn-primary px-3 py-1 text-sm font-semibold"
               >
                 Add
               </button>
@@ -367,7 +367,7 @@ function EmailField({ userId, email }: { userId: string; email: string }) {
         />
         <button
           type="submit"
-          className="rounded-md bg-blue-600 px-3 py-1 text-sm font-semibold text-white hover:bg-blue-700"
+          className="rounded-md btn-primary px-3 py-1 text-sm font-semibold"
         >
           Save
         </button>

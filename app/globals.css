@@ -4,41 +4,260 @@
    `dark` class. The theme is toggled by ThemeToggle and defaults to dark. */
 @custom-variant dark (&:where(.dark, .dark *));
 
-:root {
-  color-scheme: light;
-  --background: #eef2f9;
-  --foreground: #0f172a;
-  --surface: #ffffff;
-  --brand: #1d4ed8;
-  --brand-strong: #1e3a8a;
+/*
+ * ---------------------------------------------------------------------------
+ * Brand fonts
+ * ---------------------------------------------------------------------------
+ * Compadre, Monument Grotesk and GT America Mono are licensed faces, so the
+ * files are not in the repo. Drop the .woff2 files into `public/fonts/` with
+ * the names below and they take over on the next load; until then every rule
+ * falls through to Geist, which is metrically close enough that nothing moves.
+ *
+ * Declared by hand rather than through next/font/local on purpose: that helper
+ * fails the *build* when a file is missing, which would make the site
+ * undeployable until the licences are sorted. A missing @font-face is a silent
+ * fallback instead.
+ */
+@font-face {
+  font-family: "Monument Grotesk";
+  src: url("/fonts/MonumentGrotesk-Regular.woff2") format("woff2");
+  font-weight: 400;
+  font-style: normal;
+  font-display: swap;
+}
+@font-face {
+  font-family: "Monument Grotesk";
+  src: url("/fonts/MonumentGrotesk-Medium.woff2") format("woff2");
+  font-weight: 500;
+  font-style: normal;
+  font-display: swap;
+}
+@font-face {
+  font-family: "Monument Grotesk";
+  src: url("/fonts/MonumentGrotesk-Bold.woff2") format("woff2");
+  font-weight: 600 700;
+  font-style: normal;
+  font-display: swap;
+}
+@font-face {
+  font-family: "Compadre";
+  src: url("/fonts/Compadre-Regular.woff2") format("woff2");
+  font-weight: 400;
+  font-style: normal;
+  font-display: swap;
+}
+@font-face {
+  font-family: "GT America Mono";
+  src: url("/fonts/GTAmericaMono-Regular.woff2") format("woff2");
+  font-weight: 400;
+  font-style: normal;
+  font-display: swap;
+}
+@font-face {
+  font-family: "GT America Mono";
+  src: url("/fonts/GTAmericaMono-Medium.woff2") format("woff2");
+  font-weight: 500 700;
+  font-style: normal;
+  font-display: swap;
 }
 
 /*
- * The dark theme is built on Pantone 296 C (#041E42), the Lapis navy — the
- * same ramp as the Launchpad, since the two sit on one domain and a person
- * moves between them.
+ * ---------------------------------------------------------------------------
+ * The palette
+ * ---------------------------------------------------------------------------
+ * Four brand colours, and only the pairings the brand guide approves:
  *
- * 296 C is *lighter* than the near-black this used to sit on, so --surface had
- * to move up with it. Left alone, every card would have rendered darker than
- * the page behind it and the sense of depth would have inverted.
+ *   Marble    #e8ede8   PMS 642
+ *   Chambray  #9eb2bf   PMS 2155
+ *   Slate     #526c7f   PMS 7462
+ *   Obsidian  #0d2133   PMS 296
+ *
+ * Light theme is the Marble flood: Chambray, Slate and Obsidian on top.
+ * Dark theme is the Slate flood: Marble, Chambray and Obsidian on top.
+ *
+ * The measured contrasts decide where each one goes — there is no room for
+ * taste here, because the palette is narrow:
+ *
+ *   Obsidian on Marble   13.8   body text, light
+ *   Slate    on Marble    4.65  muted text, light
+ *   Chambray on Marble    1.85  borders and fills only, never text
+ *   Marble   on Slate     4.65  text sitting straight on the dark page
+ *   Marble   on Obsidian  13.8  body text, dark
+ *   Chambray on Obsidian  7.47  muted text, dark
+ *   Slate    on Obsidian  2.97  borders and fills only, never text
+ *
+ * Which is why the dark theme floods the page with Slate but puts every card
+ * on Obsidian: Chambray is unusable as text on Slate, and readable on
+ * Obsidian. Cards on a Slate flood are themselves an approved pairing.
  */
-.dark {
-  color-scheme: dark;
-  --background: #041e42;
-  --foreground: #e6edf6;
-  --surface: #0a2a54;
-  --brand: #3b82f6;
-  --brand-strong: #60a5fa;
+:root {
+  color-scheme: light;
+
+  --marble: #e8ede8;
+  --chambray: #9eb2bf;
+  --slate: #526c7f;
+  --obsidian: #0d2133;
+
+  --background: var(--marble);
+  --foreground: var(--obsidian);
+  --surface: #ffffff;
+  --brand: var(--slate);
+  --brand-strong: var(--obsidian);
+  /* The corner wash on the page. Chambray in light: Obsidian at any strength
+     muddies a Marble ground. */
+  --wash: var(--chambray);
+
+  /* The primary action. Its label has to move with its fill — see the note in
+     the dark block for why one fixed pair cannot serve both themes. */
+  --btn: var(--obsidian);
+  --btn-ink: var(--marble);
+  --btn-hover: #1b3d5c;
+
+  /* Neutral ramp. Light runs the usual way — low numbers pale, high numbers
+     ink — from a Marble tint down to Obsidian.
+     400 and 500 are both Slate, which looks like an oversight and is not: a
+     Marble ground needs luminance at or below 0.147 before small text reaches
+     4.5, and Slate is 0.141. There is no lighter muted tone available, so the
+     faint slot and the muted slot share the only one that works. */
+  --n-50: #fbfcfb;
+  --n-100: #e4eae7;
+  --n-200: #d3ddd9;
+  --n-300: #b9c8cd;
+  --n-400: #526c7f;
+  --n-500: #526c7f;
+  --n-600: #41586b;
+  --n-700: #31465a;
+  --n-800: #1e3348;
+  --n-900: #0d2133;
+
+  /* Accent ramp: 600 is the filled button, 500 the focus ring, 400 and below
+     tints and hairlines. Slate carries the button in both themes — it is the
+     only brand colour that holds a white label (5.5) while still separating
+     from the surface behind it. */
+  --a-50: #eaf0f3;
+  --a-100: #d8e3ea;
+  --a-200: #c2d2dd;
+  --a-300: #a6bccb;
+  --a-400: #7796a9;
+  --a-500: #526c7f;
+  --a-600: #526c7f;
+  --a-700: #41586b;
+  --a-800: #2b4055;
+  --a-900: #1b3049;
+  --a-950: #0d2133;
 }
 
+.dark {
+  color-scheme: dark;
+
+  --background: var(--slate);
+  --foreground: var(--marble);
+  --surface: var(--obsidian);
+  --brand: var(--chambray);
+  --brand-strong: var(--marble);
+  --wash: var(--marble);
+
+  /*
+   * A Slate button on a Slate page is invisible, and an Obsidian one vanishes
+   * into an Obsidian card — so the fill has to be Marble, which stands clear
+   * of both (4.65 on the page, 13.8 on a card). Marble cannot carry a white
+   * label, so the label flips to Obsidian with it. Hence a token pair rather
+   * than a single background colour.
+   */
+  --btn: var(--marble);
+  --btn-ink: var(--obsidian);
+  --btn-hover: #ffffff;
+
+  /*
+   * Dark splits the ramp in two rather than simply inverting it, because the
+   * app uses one class — `text-zinc-500` — for muted text in *both* themes.
+   * On an Obsidian card that has to be light to be read at all.
+   *
+   *   50–500   text tones, pale, and readable on Obsidian
+   *   600–900  structural tones, dark, for borders and fills
+   *
+   * The text tones sit at Marble and no dimmer, which looks heavy-handed until
+   * you do the arithmetic: a Slate ground needs a relative luminance of 0.807
+   * before small text reaches 4.5, and Marble is 0.836. Anything visibly
+   * dimmer than Marble — Chambray at 2.51, a Chambray/Marble blend at 3.5 —
+   * fails on every label that sits on the page rather than inside a card.
+   * Hierarchy in this theme comes from size and weight instead of tone.
+   */
+  --n-50: #ffffff;
+  --n-100: #f7faf7;
+  --n-200: #eef2ee;
+  --n-300: #eef2ee;
+  --n-400: #e8ede8;
+  --n-500: #e8ede8;
+  --n-600: #3f6076;
+  --n-700: #2b4964;
+  --n-800: #23405a;
+  --n-900: #172f45;
+
+  /* 700 sits *lighter* than 600 here: hover on a dark ground reads as a lift,
+     not a deepening. */
+  --a-50: #f2f6f8;
+  --a-100: #e3ebef;
+  --a-200: #cddae2;
+  --a-300: #b6c8d3;
+  --a-400: #9eb2bf;
+  --a-500: #7f9cae;
+  --a-600: #526c7f;
+  --a-700: #66849b;
+  --a-800: #21384f;
+  --a-900: #16293c;
+  --a-950: #0b1a29;
+}
+
+/*
+ * `inline` matters: it makes Tailwind emit `var(--n-500)` into the utility
+ * rather than baking today's value in, so every `text-zinc-500` in the app
+ * follows the theme without a single class being rewritten.
+ */
 @theme inline {
   --color-background: var(--background);
   --color-foreground: var(--foreground);
   --color-surface: var(--surface);
   --color-brand: var(--brand);
   --color-brand-strong: var(--brand-strong);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
+
+  --color-marble: var(--marble);
+  --color-chambray: var(--chambray);
+  --color-slate: var(--slate);
+  --color-obsidian: var(--obsidian);
+
+  --color-zinc-50: var(--n-50);
+  --color-zinc-100: var(--n-100);
+  --color-zinc-200: var(--n-200);
+  --color-zinc-300: var(--n-300);
+  --color-zinc-400: var(--n-400);
+  --color-zinc-500: var(--n-500);
+  --color-zinc-600: var(--n-600);
+  --color-zinc-700: var(--n-700);
+  --color-zinc-800: var(--n-800);
+  --color-zinc-900: var(--n-900);
+
+  --color-blue-50: var(--a-50);
+  --color-blue-100: var(--a-100);
+  --color-blue-200: var(--a-200);
+  --color-blue-300: var(--a-300);
+  --color-blue-400: var(--a-400);
+  --color-blue-500: var(--a-500);
+  --color-blue-600: var(--a-600);
+  --color-blue-700: var(--a-700);
+  --color-blue-800: var(--a-800);
+  --color-blue-900: var(--a-900);
+  --color-blue-950: var(--a-950);
+
+  /* Monument Grotesk does the work; Compadre appears on headings only; GT
+     America Mono carries figures, addresses and anything meant to be read a
+     character at a time. */
+  --font-sans: "Monument Grotesk", var(--font-geist-sans), ui-sans-serif,
+    system-ui, Arial, sans-serif;
+  --font-serif: "Compadre", Georgia, "Iowan Old Style", "Times New Roman",
+    serif;
+  --font-mono: "GT America Mono", var(--font-geist-mono), ui-monospace,
+    "SFMono-Regular", monospace;
 }
 
 /* Fluid base font: ~16px on phones, ramping up to ~19px on large screens.
@@ -50,10 +269,30 @@ html {
 
 body {
   background:
-    radial-gradient(60rem 60rem at 100% -10%, color-mix(in srgb, var(--brand) 12%, transparent), transparent 60%),
+    radial-gradient(60rem 60rem at 100% -10%, color-mix(in srgb, var(--wash) 22%, transparent), transparent 60%),
     var(--background);
   color: var(--foreground);
-  font-family: var(--font-geist-sans), Arial, Helvetica, sans-serif;
+  font-family: var(--font-sans);
+}
+
+/* The filled action, in both themes. A plain class rather than utilities
+   because the fill and the label have to change together. */
+.btn-primary {
+  background-color: var(--btn);
+  color: var(--btn-ink);
+}
+
+.btn-primary:hover {
+  background-color: var(--btn-hover);
+}
+
+/* Compadre is a display face: page titles only, and left at its natural
+   weight. Section headings stay in the sans, where they have to sit quietly
+   next to data. */
+h1 {
+  font-family: var(--font-serif);
+  font-weight: 400;
+  letter-spacing: 0.01em;
 }
 
 /* Native dropdown option lists: force a solid, theme-aware background and text

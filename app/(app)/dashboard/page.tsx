@@ -283,7 +283,7 @@ export default async function DashboardPage() {
       </div>
       {rollup ? (
         <div className="rounded-xl border border-blue-200 bg-white p-4 shadow-sm dark:border-blue-900/50 dark:bg-[var(--surface)]">
-          <p className="mb-3 text-xs font-medium uppercase tracking-wide text-blue-600 dark:text-blue-400">
+          <p className="mb-3 text-xs font-medium uppercase tracking-wide text-zinc-500">
             All stores
           </p>
           <div className="grid grid-cols-3 divide-x divide-zinc-200 text-center dark:divide-zinc-800">
@@ -328,7 +328,7 @@ export default async function DashboardPage() {
           </p>
           <div className="grid gap-4 sm:grid-cols-2">
             <div className="rounded-xl border border-blue-200 bg-white p-4 shadow-sm dark:border-blue-900/50 dark:bg-[var(--surface)]">
-              <p className="text-xs font-medium uppercase tracking-wide text-blue-600 dark:text-blue-400">
+              <p className="text-xs font-medium uppercase tracking-wide text-zinc-500">
                 Gross leader
               </p>
               <p className="mt-1 truncate text-lg font-semibold tracking-tight">
@@ -339,7 +339,7 @@ export default async function DashboardPage() {
               </p>
             </div>
             <div className="rounded-xl border border-blue-200 bg-white p-4 shadow-sm dark:border-blue-900/50 dark:bg-[var(--surface)]">
-              <p className="text-xs font-medium uppercase tracking-wide text-blue-600 dark:text-blue-400">
+              <p className="text-xs font-medium uppercase tracking-wide text-zinc-500">
                 Unit leader
               </p>
               <p className="mt-1 truncate text-lg font-semibold tracking-tight">
@@ -402,7 +402,7 @@ export default async function DashboardPage() {
                     {dealership.name}
                   </Link>
                   {dealership.id === mainDealershipId ? (
-                    <span className="rounded-full bg-blue-600 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-white">
+                    <span className="rounded-full btn-primary px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide">
                       Main
                     </span>
                   ) : null}
@@ -453,20 +453,12 @@ export default async function DashboardPage() {
 
                 <div className="mt-2 grid grid-cols-2 gap-2">
                   <ActivityStat
-                    label="Manager calls"
-                    value={todayEntry?.manager_calls ?? 0}
-                  />
-                  <ActivityStat
                     label="Sales calls"
                     value={todayEntry?.sales_calls ?? 0}
                   />
                   <ActivityStat
                     label="Appointments"
                     value={todayEntry?.appointments ?? 0}
-                  />
-                  <ActivityStat
-                    label="Confirmed appts"
-                    value={todayEntry?.confirmed_appointments ?? 0}
                   />
                 </div>
               </div>
@@ -562,10 +554,14 @@ export default async function DashboardPage() {
               </div>
 
               <div className="flex gap-4 text-sm">
+                {/* The card's main action, so it takes the strongest tone
+                    available. In this palette the accent is *quieter* than the
+                    body colour, and leaving it on the accent made the primary
+                    action read as the lesser of the two links. */}
                 {role === "editor" ? (
                   <Link
                     href={`/dealerships/${dealership.id}/entry`}
-                    className="font-medium text-blue-600 hover:underline dark:text-blue-400"
+                    className="font-semibold text-zinc-900 underline underline-offset-4 dark:text-zinc-50"
                   >
                     Enter today&apos;s numbers
                   </Link>
@@ -606,7 +602,7 @@ function GrossStat({
         {label}
       </div>
       <div
-        className={`mt-1 font-semibold text-zinc-900 dark:text-zinc-50 ${
+        className={`mt-1 font-mono font-semibold tabular-nums text-zinc-900 dark:text-zinc-50 ${
           accent ? "text-base" : "text-sm"
         }`}
       >
@@ -675,7 +671,7 @@ function PaceSeparator() {
 function ActivityStat({ label, value }: { label: string; value: number }) {
   return (
     <div className="rounded-lg border border-zinc-100 bg-zinc-50/60 px-3 py-2 dark:border-zinc-800 dark:bg-white/[0.02]">
-      <div className="text-lg font-semibold">{value}</div>
+      <div className="font-mono text-lg font-semibold tabular-nums">{value}</div>
       <div className="break-words text-xs text-zinc-500">{label}</div>
     </div>
   );

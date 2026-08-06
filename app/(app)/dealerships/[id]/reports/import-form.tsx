@@ -16,11 +16,8 @@ const HEADER_MAP: Record<string, keyof ImportRow> = {
   "sprinter units": "sprinter_units",
   "sprinter front": "sprinter_front_end_gross",
   "sprinter back": "sprinter_back_end_gross",
-  "manager calls": "manager_calls",
   "sales calls": "sales_calls",
   appointments: "appointments",
-  "confirmed appts": "confirmed_appointments",
-  "confirmed appointments": "confirmed_appointments",
   notes: "notes",
 };
 
@@ -87,10 +84,8 @@ export function ImportForm({ dealershipId }: { dealershipId: string }) {
           used_back_end_gross: 0,
           sprinter_front_end_gross: 0,
           sprinter_back_end_gross: 0,
-          manager_calls: 0,
           sales_calls: 0,
           appointments: 0,
-          confirmed_appointments: 0,
           notes: null,
         };
         headers.forEach((h, idx) => {
@@ -155,7 +150,7 @@ export function ImportForm({ dealershipId }: { dealershipId: string }) {
           value={text}
           onChange={(e) => setText(e.target.value)}
           rows={5}
-          placeholder="Date,New units,New front,New back,Used units,Used front,Used back,Manager calls,Sales calls,Appointments,Confirmed appts,Notes"
+          placeholder="Date,New units,New front,New back,Used units,Used front,Used back,Sales calls,Appointments,Notes"
           className="rounded-md border border-zinc-300 bg-transparent px-3 py-2 font-mono text-xs outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-500/30 dark:border-zinc-700"
         />
         <div className="flex items-center gap-3">
@@ -163,7 +158,7 @@ export function ImportForm({ dealershipId }: { dealershipId: string }) {
             type="button"
             onClick={run}
             disabled={busy || !text.trim()}
-            className="w-fit rounded-md bg-blue-600 px-4 py-2 text-sm font-semibold text-white hover:bg-blue-700 disabled:opacity-60"
+            className="w-fit rounded-md btn-primary px-4 py-2 text-sm font-semibold disabled:opacity-60"
           >
             {busy ? "Importing…" : "Import"}
           </button>

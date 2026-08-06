@@ -25,12 +25,8 @@ export async function saveEntry(formData: FormData) {
   const sprinterBackEndGross = Number(
     formData.get("sprinter_back_end_gross") ?? 0,
   );
-  const managerCalls = Number(formData.get("manager_calls") ?? 0);
   const salesCalls = Number(formData.get("sales_calls") ?? 0);
   const appointments = Number(formData.get("appointments") ?? 0);
-  const confirmedAppointments = Number(
-    formData.get("confirmed_appointments") ?? 0,
-  );
   const notes = String(formData.get("notes") ?? "").trim();
 
   const supabase = await createClient();
@@ -62,10 +58,8 @@ export async function saveEntry(formData: FormData) {
       sprinter_units: sprinterUnits,
       sprinter_front_end_gross: sprinterFrontEndGross,
       sprinter_back_end_gross: sprinterBackEndGross,
-      manager_calls: managerCalls,
       sales_calls: salesCalls,
       appointments: appointments,
-      confirmed_appointments: confirmedAppointments,
       notes: notes.length ? notes : null,
       created_by: user.id,
     },
@@ -134,10 +128,8 @@ export async function saveEntry(formData: FormData) {
     sprinterUnits,
     sprinterFront: sprinterFrontEndGross,
     sprinterBack: sprinterBackEndGross,
-    managerCalls,
     salesCalls,
     appointments,
-    confirmedAppointments,
     notes: notes.length ? notes : null,
     enteredBy: me?.full_name ?? null,
   });

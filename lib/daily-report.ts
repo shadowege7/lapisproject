@@ -28,10 +28,8 @@ export interface ReportFigures {
   sprinterUnits: number;
   sprinterFront: number;
   sprinterBack: number;
-  managerCalls: number;
   salesCalls: number;
   appointments: number;
-  confirmedAppointments: number;
   notes: string | null;
   enteredBy: string | null;
   /** Absolute base for the images and the link back into the app. */
@@ -148,9 +146,8 @@ export function buildDailyReport(f: ReportFigures): Omit<Mail, "to"> {
     "",
     `Total: ${totalUnits} units · ${formatCurrency(totalGross)} gross`,
     "",
-    `Manager calls: ${f.managerCalls}`,
     `Sales calls: ${f.salesCalls}`,
-    `Appointments: ${f.appointments} (${f.confirmedAppointments} confirmed)`,
+    `Appointments: ${f.appointments}`,
     ...(f.notes ? ["", `Notes: ${f.notes}`] : []),
     ...(f.enteredBy ? ["", `Entered by ${f.enteredBy}`] : []),
     "",
@@ -179,14 +176,12 @@ export function buildDailyReport(f: ReportFigures): Omit<Mail, "to"> {
     .join("");
 
   const activity = [
-    ["Manager calls", f.managerCalls],
     ["Sales calls", f.salesCalls],
     ["Appointments", f.appointments],
-    ["Confirmed", f.confirmedAppointments],
   ]
     .map(
       ([label, value]) => `
-        <td width="25%" align="center" style="padding:10px 4px;">
+        <td width="50%" align="center" style="padding:10px 4px;">
           <div style="font-size:20px;font-weight:bold;color:#0f172a;">${value}</div>
           <div style="font-size:11px;color:#64748b;">${label}</div>
         </td>`,

@@ -133,7 +133,7 @@ export function NotificationsToggle() {
           type="button"
           onClick={enabled ? disable : enable}
           disabled={busy}
-          className="w-fit rounded-md bg-blue-600 px-4 py-2 text-sm font-semibold text-white shadow-sm transition-colors hover:bg-blue-700 disabled:opacity-60"
+          className="w-fit rounded-md btn-primary px-4 py-2 text-sm font-semibold shadow-sm transition-colors disabled:opacity-60"
         >
           {busy
             ? "Working…"

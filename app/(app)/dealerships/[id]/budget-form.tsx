@@ -90,7 +90,7 @@ export function BudgetForm({
           ))}
           <button
             type="submit"
-            className="rounded-md bg-blue-600 px-3 py-2 text-sm font-semibold text-white shadow-sm transition-colors hover:bg-blue-700"
+            className="rounded-md btn-primary px-3 py-2 text-sm font-semibold shadow-sm transition-colors"
           >
             Save budget
           </button>

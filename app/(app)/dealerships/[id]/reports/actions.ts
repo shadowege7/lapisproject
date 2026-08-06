@@ -16,10 +16,8 @@ export interface ImportRow {
   used_back_end_gross: number;
   sprinter_front_end_gross: number;
   sprinter_back_end_gross: number;
-  manager_calls: number;
   sales_calls: number;
   appointments: number;
-  confirmed_appointments: number;
   notes: string | null;
 }
 
@@ -53,10 +51,8 @@ export async function importEntries(
     used_back_end_gross: r.used_back_end_gross,
     sprinter_front_end_gross: r.sprinter_front_end_gross,
     sprinter_back_end_gross: r.sprinter_back_end_gross,
-    manager_calls: r.manager_calls,
     sales_calls: r.sales_calls,
     appointments: r.appointments,
-    confirmed_appointments: r.confirmed_appointments,
     notes: r.notes && r.notes.length ? r.notes : null,
     created_by: user.id,
   }));

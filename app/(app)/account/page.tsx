@@ -27,7 +27,7 @@ export default async function AccountPage({
   return (
     <div className="flex max-w-md flex-col gap-6">
       <div>
-        <p className="text-xs font-medium uppercase tracking-wide text-blue-600 dark:text-blue-400">
+        <p className="text-xs font-medium uppercase tracking-wide text-zinc-500">
           Account
         </p>
         <h1 className="text-xl font-semibold tracking-tight">
@@ -73,7 +73,7 @@ export default async function AccountPage({
         </label>
         <button
           type="submit"
-          className="w-fit rounded-md bg-blue-600 px-4 py-2 text-sm font-semibold text-white shadow-sm transition-colors hover:bg-blue-700"
+          className="w-fit rounded-md btn-primary px-4 py-2 text-sm font-semibold shadow-sm transition-colors"
         >
           Update password
         </button>

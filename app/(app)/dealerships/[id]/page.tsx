@@ -129,7 +129,7 @@ export default async function DealershipDetailPage({
     <div className="flex flex-col gap-8">
       <div className="flex flex-wrap items-end justify-between gap-3">
         <div>
-          <p className="text-xs font-medium uppercase tracking-wide text-blue-600 dark:text-blue-400">
+          <p className="text-xs font-medium uppercase tracking-wide text-zinc-500">
             Store
           </p>
           <h1 className="text-2xl font-semibold tracking-tight">
@@ -143,7 +143,7 @@ export default async function DealershipDetailPage({
           {role === "editor" ? (
             <Link
               href={`/dealerships/${dealershipId}/entry`}
-              className="rounded-md bg-blue-600 px-4 py-2 text-sm font-semibold text-white shadow-sm transition-colors hover:bg-blue-700"
+              className="rounded-md btn-primary px-4 py-2 text-sm font-semibold shadow-sm transition-colors"
             >
               Enter today&apos;s numbers
             </Link>
@@ -353,7 +353,7 @@ function Stat({
         {label}
       </p>
       <p
-        className={`mt-1 text-xl font-semibold tabular-nums ${
+        className={`mt-1 font-mono text-xl font-semibold tabular-nums ${
           accent ? "text-blue-700 dark:text-blue-400" : ""
         }`}
       >

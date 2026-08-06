@@ -319,10 +319,8 @@ export interface Database {
           used_back_end_gross: number;
           sprinter_front_end_gross: number;
           sprinter_back_end_gross: number;
-          manager_calls: number;
           sales_calls: number;
           appointments: number;
-          confirmed_appointments: number;
           notes: string | null;
           created_by: string | null;
           updated_at: string;
@@ -340,10 +338,8 @@ export interface Database {
           used_back_end_gross: number;
           sprinter_front_end_gross?: number;
           sprinter_back_end_gross?: number;
-          manager_calls?: number;
           sales_calls?: number;
           appointments?: number;
-          confirmed_appointments?: number;
           notes?: string | null;
           created_by?: string | null;
           updated_at?: string;
@@ -361,10 +357,8 @@ export interface Database {
           used_back_end_gross?: number;
           sprinter_front_end_gross?: number;
           sprinter_back_end_gross?: number;
-          manager_calls?: number;
           sales_calls?: number;
           appointments?: number;
-          confirmed_appointments?: number;
           notes?: string | null;
           created_by?: string | null;
           updated_at?: string;

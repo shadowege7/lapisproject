@@ -225,7 +225,7 @@ export default async function AdminPage({
       ) : null}
 
       <div>
-        <p className="text-xs font-medium uppercase tracking-wide text-blue-600 dark:text-blue-400">
+        <p className="text-xs font-medium uppercase tracking-wide text-zinc-500">
           Lapis Automotive Group
         </p>
         <h1 className="text-xl font-semibold tracking-tight">Admin</h1>
@@ -265,7 +265,7 @@ export default async function AdminPage({
           />
           <button
             type="submit"
-            className="rounded-md bg-blue-600 px-3 py-2 text-sm font-semibold text-white shadow-sm transition-colors hover:bg-blue-700"
+            className="rounded-md btn-primary px-3 py-2 text-sm font-semibold shadow-sm transition-colors"
           >
             Add
           </button>
@@ -331,7 +331,7 @@ export default async function AdminPage({
           />
           <button
             type="submit"
-            className="rounded-md bg-blue-600 px-3 py-2 text-sm font-semibold text-white shadow-sm transition-colors hover:bg-blue-700"
+            className="rounded-md btn-primary px-3 py-2 text-sm font-semibold shadow-sm transition-colors"
           >
             Add
           </button>

@@ -17,9 +17,9 @@ Security), deployed on Vercel.
 ## Features
 
 - **Daily entry** — per store, per day: new & used unit counts, front‑ and
-  back‑end gross for new and used, and activity (manager calls, sales calls,
-  appointments, confirmed appointments), plus free‑text notes. Editing a past
-  day is a click away from the reports table.
+  back‑end gross for new and used, and activity (sales calls and
+  appointments), plus free‑text notes. Editing a past day is a click away from
+  the reports table.
 - **Dashboard** — one card per store showing **today's** breakdown, today's
   notes, and Today / Month‑to‑date / **Projected month‑end** gross and units.
   The projection assumes the current daily pace holds for the rest of the month.
@@ -238,6 +238,16 @@ can grant it to themselves through the ordinary "update my own profile" policy.
 
 See `0018_store_budgets.sql` in the Launchpad repo.
 
+## Activity metrics
+
+Two are recorded each day: **sales calls** and **appointments**.
+
+There were four. Manager calls and confirmed appointments were dropped in
+`0019_drop_unused_activity_metrics.sql` once the business stopped using them —
+columns and all, rather than left sitting at zero, so nobody has to work out
+later whether a column of noughts means "none happened" or "nobody filled it
+in". The table was empty at the time, so nothing was lost.
+
 ## The daily report email
 
 When a store's numbers are saved, the day is emailed to whoever an admin
@@ -415,10 +425,75 @@ stops there before it reaches the rollup. That predates the switch.
 
 ## Colour
 
-The dark theme — the default — is built on **Pantone 296 C (`#041E42`)**, the
-Lapis navy, matching the Launchpad. 296 C is lighter than the near-black it
-replaced, so `--surface` moved up with it; card backgrounds now read that token
-rather than a hardcoded hex, so the ramp stays in one place.
+Four brand colours, and only the pairings the brand guide approves:
+
+| | Hex | PMS |
+| --- | --- | --- |
+| Marble | `#e8ede8` | 642 C/U |
+| Chambray | `#9eb2bf` | 2155 C/U |
+| Slate | `#526c7f` | 7462 C/U |
+| Obsidian | `#0d2133` | 296 C/U |
+
+**Light is the Marble flood; dark — still the default — is the Slate flood.**
+
+Where each colour lands was decided by measurement, not taste, because the
+palette is narrow:
+
+| on | Marble | Chambray | Slate | Obsidian |
+| --- | --- | --- | --- | --- |
+| **Marble** | — | 1.85 | 4.65 | 13.81 |
+| **Chambray** | 1.85 | — | 2.51 | 7.47 |
+| **Slate** | 4.65 | 2.51 | — | 2.97 |
+| **Obsidian** | 13.81 | 7.47 | 2.97 | — |
+
+Three consequences worth knowing before changing anything here:
+
+**Dark floods the page with Slate but puts every card on Obsidian.** Chambray
+is unusable as text on Slate (2.51) and comfortable on Obsidian (7.47), so the
+cards buy back the whole muted range. A card on a Slate flood is itself an
+approved pairing.
+
+**Muted text has nowhere to hide.** A Slate ground needs luminance ≥ 0.807
+before small text reaches 4.5, and Marble is 0.836 — so on the dark page,
+anything visibly dimmer than Marble fails. Marble needs ≤ 0.147, and Slate is
+0.141, so the light page has exactly one muted tone. `--n-400` and `--n-500`
+are therefore the same colour in both themes, and hierarchy comes from size and
+weight instead. That is not an oversight.
+
+**The primary button carries its own label colour** (`--btn` / `--btn-ink`,
+used through `.btn-primary`). A Slate button disappears on a Slate page and an
+Obsidian one disappears into an Obsidian card; the only fill that stands clear
+of both is Marble, and Marble cannot hold a white label. So the fill and the
+label flip together — Obsidian on Marble in light, Marble on Obsidian in dark.
+
+Nothing above required rewriting component classes. `@theme inline` remaps
+Tailwind's `zinc` and `blue` scales onto CSS variables that change with the
+theme, so all ~300 existing `text-zinc-500` / `bg-blue-600` utilities follow
+the brand. Semantic colours — red, green, amber for alerts and budget pace —
+are left alone, since they mean something other than "brand".
+
+Every text run on the dashboard, store, entry and account pages was measured
+against what is actually painted behind it, in both themes, and all of them
+clear WCAG AA.
+
+## Type
+
+Three faces, none of which ship with the repo — they are licensed:
+
+- **Monument Grotesk** — everything: body, labels, tables, buttons.
+- **Compadre** — page titles only (`h1`), at its natural weight.
+- **GT America Mono** — figures, email addresses, temporary passwords, the CSV
+  paste box. Anything read a character at a time or compared down a column.
+
+Drop the `.woff2` files into `public/fonts/` with the names in the `@font-face`
+blocks at the top of `app/globals.css` and they take over on the next load.
+Until then every rule falls through to Geist, which is still installed for
+exactly that reason.
+
+They are declared with hand-written `@font-face` rather than `next/font/local`
+on purpose: that helper fails the **build** when a file is missing, which would
+leave the site undeployable until the licences are sorted. A missing
+`@font-face` is a silent fallback instead.
 
 The logo is the **LAPIS wordmark alone** — `lapis-wordmark.png`, with
 `lapis-wordmark-white.png` for dark backgrounds. The manufacturer marks were
@@ -429,8 +504,6 @@ The bird is **platinum on dark backgrounds, obsidian on light**, matching the
 Launchpad. `Lapis-Platinum-Emblem.png` is a real file, made from the gold one
 by rewriting its palette — the emblem is an indexed PNG, so the compressed
 image data was copied through untouched and the two differ only in colour.
-
-The light theme still has its pale canvas.
 
 The favicon and the installed app icons are the **platinum bird on a 296 C
 tile**, generated from the emblem rather than drawn, and each reuses the

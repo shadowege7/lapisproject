@@ -246,10 +246,8 @@ export default async function ReportsPage({
       ? ["Sprinter units", "Sprinter front", "Sprinter back", "Sprinter gross"]
       : []),
     "Total gross",
-    "Manager calls",
     "Sales calls",
     "Appointments",
-    "Confirmed appts",
     "Notes",
   ];
   const dailyCsvRows: (string | number | null)[][] = (dailyEntries ?? []).map(
@@ -277,10 +275,8 @@ export default async function ReportsPage({
         e.used_back_end_gross +
         e.sprinter_front_end_gross +
         e.sprinter_back_end_gross,
-      e.manager_calls,
       e.sales_calls,
       e.appointments,
-      e.confirmed_appointments,
       e.notes ?? "",
     ],
   );
@@ -289,7 +285,7 @@ export default async function ReportsPage({
     <div className="flex flex-col gap-8">
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div>
-          <p className="text-xs font-medium uppercase tracking-wide text-blue-600 dark:text-blue-400">
+          <p className="text-xs font-medium uppercase tracking-wide text-zinc-500">
             Reports
           </p>
           <h1 className="text-xl font-semibold tracking-tight">
@@ -307,7 +303,7 @@ export default async function ReportsPage({
           {role === "editor" ? (
             <Link
               href={`/dealerships/${dealershipId}/entry`}
-              className="rounded-md bg-blue-600 px-4 py-2 text-sm font-semibold text-white shadow-sm transition-colors hover:bg-blue-700"
+              className="rounded-md btn-primary px-4 py-2 text-sm font-semibold shadow-sm transition-colors"
             >
               Enter today&apos;s numbers
             </Link>

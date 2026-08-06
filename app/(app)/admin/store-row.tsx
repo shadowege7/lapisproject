@@ -125,7 +125,7 @@ export function StoreRow({
             </select>
             <button
               type="submit"
-              className="rounded-md bg-blue-600 px-3 py-1 text-sm font-semibold text-white hover:bg-blue-700"
+              className="rounded-md btn-primary px-3 py-1 text-sm font-semibold"
             >
               Add
             </button>
@@ -208,7 +208,7 @@ function ReportRecipients({
                     aria-hidden
                     className={`flex h-4 w-4 shrink-0 items-center justify-center rounded border text-[10px] font-bold ${
                       on
-                        ? "border-blue-600 bg-blue-600 text-white"
+                        ? "border-blue-600 btn-primary"
                         : "border-zinc-300 dark:border-zinc-600"
                     }`}
                   >

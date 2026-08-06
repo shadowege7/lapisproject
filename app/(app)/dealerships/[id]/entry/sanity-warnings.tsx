@@ -32,8 +32,6 @@ export function EntrySanityWarnings() {
         num("used_front_end_gross") + num("used_back_end_gross");
       const sprinterGross =
         num("sprinter_front_end_gross") + num("sprinter_back_end_gross");
-      const appts = num("appointments");
-      const confirmed = num("confirmed_appointments");
       const totalUnits = newUnits + usedUnits + sprinterUnits;
       const totalGross = newGross + usedGross + sprinterGross;
 
@@ -49,8 +47,6 @@ export function EntrySanityWarnings() {
         w.push("Sprinter units entered but Sprinter gross is $0.");
       if (sprinterGross !== 0 && sprinterUnits === 0)
         w.push("Sprinter gross entered but 0 Sprinter units.");
-      if (confirmed > appts)
-        w.push("Confirmed appointments exceed total appointments.");
       if (totalUnits > 0 && Math.abs(totalGross / totalUnits) > 50000)
         w.push("Gross per unit is unusually high — check for an extra digit.");
 

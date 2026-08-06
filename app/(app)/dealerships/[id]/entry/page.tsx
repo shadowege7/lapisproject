@@ -53,9 +53,12 @@ export default async function EntryPage({
   return (
     <div className="flex max-w-xl flex-col gap-6">
       <div>
+        {/* Neutral rather than the accent: this sits on the page background,
+            where Chambray reaches only 2.51. The underline carries the "this
+            is a link" job that the colour was doing. */}
         <Link
           href={`/dealerships/${dealershipId}/reports`}
-          className="text-xs font-medium text-blue-600 hover:underline dark:text-blue-400"
+          className="text-xs font-medium text-zinc-500 underline underline-offset-2 hover:text-zinc-900 dark:hover:text-white"
         >
           ← Back to reports
         </Link>
@@ -133,10 +136,8 @@ export default async function EntryPage({
         ) : null}
 
         <ActivityFieldset
-          managerCalls={existing?.manager_calls ?? 0}
           salesCalls={existing?.sales_calls ?? 0}
           appointments={existing?.appointments ?? 0}
-          confirmedAppointments={existing?.confirmed_appointments ?? 0}
         />
 
         <label className="flex flex-col gap-1 text-sm font-medium">
@@ -154,7 +155,7 @@ export default async function EntryPage({
 
         <button
           type="submit"
-          className="mt-1 w-fit rounded-md bg-blue-600 px-4 py-2 text-sm font-semibold text-white shadow-sm transition-colors hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500/50"
+          className="mt-1 w-fit rounded-md btn-primary px-4 py-2 text-sm font-semibold shadow-sm transition-colors focus:outline-none focus:ring-2 focus:ring-blue-500/50"
         >
           {existing ? "Update entry" : "Save entry"}
         </button>
@@ -164,23 +165,17 @@ export default async function EntryPage({
 }
 
 function ActivityFieldset({
-  managerCalls,
   salesCalls,
   appointments,
-  confirmedAppointments,
 }: {
-  managerCalls: number;
   salesCalls: number;
   appointments: number;
-  confirmedAppointments: number;
 }) {
   const inputClass =
     "mt-auto rounded-md border border-zinc-300 bg-transparent px-3 py-2 text-sm outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-500/30 dark:border-zinc-700";
   const fields: [string, string, number][] = [
-    ["Manager calls", "manager_calls", managerCalls],
     ["Sales calls", "sales_calls", salesCalls],
     ["Appointments", "appointments", appointments],
-    ["Confirmed appointments", "confirmed_appointments", confirmedAppointments],
   ];
   return (
     <fieldset className="rounded-xl border border-zinc-200 bg-white/60 p-4 dark:border-zinc-800 dark:bg-white/[0.02]">
@@ -188,7 +183,7 @@ function ActivityFieldset({
         <span className="h-2 w-2 rounded-full bg-blue-500" />
         Activity
       </legend>
-      <div className="mt-2 grid grid-cols-2 gap-4 sm:grid-cols-4">
+      <div className="mt-2 grid grid-cols-2 gap-4">
         {fields.map(([label, name, value]) => (
           <label key={name} className="flex flex-col gap-1 text-sm font-medium">
             {label}
