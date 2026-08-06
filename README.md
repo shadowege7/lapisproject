@@ -27,6 +27,9 @@ Security), deployed on Vercel.
   new/used front/back/gross breakdown), an **Annual** rollup with the same
   detail, a compact **Monthly** trend list, and a **Daily** table with per‑day
   detail and notes.
+- **Budgets** — a monthly unit goal per store, shown on the dashboard tile and
+  used to colour the projection green or red. Editable by admins and by anyone
+  an admin permits.
 - **Admin** — create stores, onboard users, assign per‑store editor/viewer
   access, reset passwords, and grant/revoke super admin.
 - **Account** — every user can change their own password, and opt each device
@@ -186,6 +189,54 @@ them side by side: side by side, a long label like SPRINTER pushed "0 units"
 onto a second line while NEW and USED stayed on one, and that tile's
 Front/Back/Gross rows then sat lower than its neighbours'. Stacking gives every
 tile the same two-line head whatever the label says.
+
+## Budgets
+
+A **budget** is the store's unit goal for the month — how many cars it means to
+sell, split New / Used / Sprinter. It carries no gross: the goal a sales floor
+works to is a car count, and mixing a dollar figure into it would only invite
+the question of which gross was meant.
+
+It sits on the dashboard tile **between This month and Projected**, which is
+where it reads as the line the month is measured against: what has sold, what
+was aimed for, where the month lands.
+
+The projection is then coloured against it — **green** when the month-end
+projection reaches the goal, **red** when it falls short — separately for New,
+Used and Sprinter, so a store beating its used goal while missing new sees
+exactly that rather than one blended verdict. Hovering a figure gives the
+comparison in words.
+
+**A category with no budget is left uncoloured, not marked red.** A goal nobody
+set is not a goal that was missed, and colouring it red would train people to
+ignore the colour. A store with no budget row at all shows "Not set" and a dash
+instead of a total.
+
+One row per store per month, so raising a goal mid-month does not rewrite
+history; a check constraint pins `month` to the first of the month, which stops
+two rows for one month drifting apart. The row records who last changed it and
+when, and the store page shows that line — a goal that moves is worth
+attributing.
+
+### Who may edit a budget
+
+Two things grant it, and both are in `profiles`:
+
+- **Being a super admin.**
+- **`can_edit_budgets`**, granted per user under **Admin → Users →
+  *Allow budget editing***. Granted users wear a "budgets" chip in the list.
+
+The editor is on the store page and simply is not rendered for anyone else, but
+the real enforcement is **RLS**: `store_budgets` is writable only when
+`public.can_edit_budgets()` says so, and the save uses the signed-in user's own
+Supabase client, so a hand-made POST from someone without the permission is
+rejected by the database. Reading is separate and wider — anyone who can see
+the store can see its goal.
+
+`can_edit_budgets` is also listed in the guard trigger on `profiles`, so nobody
+can grant it to themselves through the ordinary "update my own profile" policy.
+
+See `0018_store_budgets.sql` in the Launchpad repo.
 
 ## The daily report email
 

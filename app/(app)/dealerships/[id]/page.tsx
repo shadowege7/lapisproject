@@ -10,20 +10,29 @@ import {
   todayISODate,
 } from "@/lib/format";
 import { projectMonthEnd } from "@/lib/projection";
+import { BudgetForm } from "./budget-form";
 
 export default async function DealershipDetailPage({
   params,
+  searchParams,
 }: {
   params: Promise<{ id: string }>;
+  searchParams: Promise<{ budget?: string; budget_error?: string }>;
 }) {
   const { id: dealershipId } = await params;
+  const { budget: budgetSaved, budget_error: budgetError } = await searchParams;
   const user = await getCurrentUser();
   if (!user) redirect("/login");
 
   const supabase = await createClient();
 
-  const [{ data: dealership }, { data: membership }, { data: month }, { data: recent }] =
-    await Promise.all([
+  const [
+    { data: dealership },
+    { data: membership },
+    { data: month },
+    { data: recent },
+    { data: budget },
+  ] = await Promise.all([
       supabase
         .from("dealerships")
         .select("id, name, tracks_sprinters")
@@ -47,6 +56,12 @@ export default async function DealershipDetailPage({
         .eq("dealership_id", dealershipId)
         .order("entry_date", { ascending: false })
         .limit(14),
+      supabase
+        .from("store_budgets")
+        .select("new_units, used_units, sprinter_units, updated_at")
+        .eq("dealership_id", dealershipId)
+        .eq("month", monthStartISODate())
+        .maybeSingle(),
     ]);
 
   if (!dealership) notFound();
@@ -164,6 +179,24 @@ export default async function DealershipDetailPage({
           />
         </div>
       </section>
+
+      {budgetError ? (
+        <p
+          role="alert"
+          className="rounded-md bg-red-50 px-3 py-2 text-sm text-red-700 dark:bg-red-950 dark:text-red-300"
+        >
+          Couldn&apos;t save the budget: {budgetError}
+        </p>
+      ) : null}
+
+      <BudgetForm
+        dealershipId={dealershipId}
+        month={monthStartISODate()}
+        tracksSprinters={dealership.tracks_sprinters}
+        budget={budget}
+        canEdit={user.canEditBudgets}
+        saved={budgetSaved === "saved"}
+      />
 
       <section>
         <h2 className="mb-3 text-sm font-semibold">Recent notes</h2>

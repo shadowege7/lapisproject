@@ -3,6 +3,7 @@
 import { useActionState, useEffect, useRef, useState } from "react";
 import {
   changeUserEmail,
+  setBudgetAccess,
   deleteUser,
   resetUserPassword,
   setMainStore,
@@ -34,6 +35,7 @@ export function UserRow({
   fullName,
   isSelf,
   isSuperAdmin,
+  canEditBudgets,
   notificationsEnabled,
   positionId,
   positions,
@@ -47,6 +49,7 @@ export function UserRow({
   fullName: string | null;
   isSelf: boolean;
   isSuperAdmin: boolean;
+  canEditBudgets: boolean;
   notificationsEnabled: boolean;
   positionId: string | null;
   positions: { id: string; name: string }[];
@@ -92,6 +95,11 @@ export function UserRow({
             {notificationsEnabled ? (
               <span className="rounded-full bg-emerald-50 px-2 py-0.5 text-xs font-medium text-emerald-700 dark:bg-emerald-950/50 dark:text-emerald-300">
                 notified
+              </span>
+            ) : null}
+            {canEditBudgets && !isSuperAdmin ? (
+              <span className="rounded-full bg-amber-50 px-2 py-0.5 text-xs font-medium text-amber-700 dark:bg-amber-950/50 dark:text-amber-300">
+                budgets
               </span>
             ) : null}
             {isSelf ? <span className="text-xs text-zinc-400">(you)</span> : null}
@@ -155,6 +163,27 @@ export function UserRow({
                 : "Turn on notifications"}
             </button>
           </form>
+
+          {/* Super admins already have it, so offering the toggle there
+              would suggest it could be taken away, which it cannot. */}
+          {isSuperAdmin ? null : (
+            <form action={setBudgetAccess}>
+              <input type="hidden" name="user_id" value={userId} />
+              <input
+                type="hidden"
+                name="can_edit_budgets"
+                value={(!canEditBudgets).toString()}
+              />
+              <button
+                type="submit"
+                className="text-blue-600 hover:underline dark:text-blue-400"
+              >
+                {canEditBudgets
+                  ? "Revoke budget editing"
+                  : "Allow budget editing"}
+              </button>
+            </form>
+          )}
 
           <form action={resetAction}>
             <input type="hidden" name="user_id" value={userId} />

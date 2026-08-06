@@ -100,7 +100,7 @@ export default async function AdminPage({
   const { data: profiles } = await supabase
     .from("profiles")
     .select(
-      "id, is_super_admin, full_name, notifications_enabled, position_id, main_dealership_id",
+      "id, is_super_admin, can_edit_budgets, full_name, notifications_enabled, position_id, main_dealership_id",
     );
 
   const { data: settings } = await supabase
@@ -118,6 +118,9 @@ export default async function AdminPage({
 
   const superAdminById = new Map(
     profiles?.map((p) => [p.id, p.is_super_admin]),
+  );
+  const budgetAccessById = new Map(
+    profiles?.map((p) => [p.id, p.can_edit_budgets]),
   );
   const fullNameById = new Map(profiles?.map((p) => [p.id, p.full_name]));
   const notifyById = new Map(
@@ -190,6 +193,7 @@ export default async function AdminPage({
     fullName: fullNameById.get(u.id) ?? null,
     isSelf: u.id === user.id,
     isSuperAdmin: superAdminById.get(u.id) ?? false,
+    canEditBudgets: budgetAccessById.get(u.id) ?? false,
     notificationsEnabled: notifyById.get(u.id) ?? false,
     positionId: positionIdByUser.get(u.id) ?? null,
     mainDealershipId: mainStoreByUser.get(u.id) ?? null,

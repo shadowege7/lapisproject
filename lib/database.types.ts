@@ -54,6 +54,8 @@ export interface Database {
           preferred_name: string | null;
           last_name: string | null;
           is_super_admin: boolean;
+          /** May set monthly unit budgets. Super admins always may. */
+          can_edit_budgets: boolean;
           notifications_enabled: boolean;
           position_id: string | null;
           main_dealership_id: string | null;
@@ -69,6 +71,7 @@ export interface Database {
           preferred_name?: string | null;
           last_name?: string | null;
           is_super_admin?: boolean;
+          can_edit_budgets?: boolean;
           notifications_enabled?: boolean;
           position_id?: string | null;
           main_dealership_id?: string | null;
@@ -84,6 +87,7 @@ export interface Database {
           preferred_name?: string | null;
           last_name?: string | null;
           is_super_admin?: boolean;
+          can_edit_budgets?: boolean;
           notifications_enabled?: boolean;
           position_id?: string | null;
           main_dealership_id?: string | null;
@@ -205,6 +209,39 @@ export interface Database {
           username?: string | null;
           password?: string | null;
           mail_from?: string | null;
+          updated_at?: string;
+          updated_by?: string | null;
+        };
+        Relationships: [];
+      };
+      // Monthly unit goals per store. Units only — no gross. One row per
+      // store per month; see 0018 in the Launchpad repo.
+      store_budgets: {
+        Row: {
+          dealership_id: string;
+          /** Always the first of the month. */
+          month: string;
+          new_units: number;
+          used_units: number;
+          sprinter_units: number;
+          updated_at: string;
+          updated_by: string | null;
+        };
+        Insert: {
+          dealership_id: string;
+          month: string;
+          new_units?: number;
+          used_units?: number;
+          sprinter_units?: number;
+          updated_at?: string;
+          updated_by?: string | null;
+        };
+        Update: {
+          dealership_id?: string;
+          month?: string;
+          new_units?: number;
+          used_units?: number;
+          sprinter_units?: number;
           updated_at?: string;
           updated_by?: string | null;
         };

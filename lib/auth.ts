@@ -10,6 +10,8 @@ export interface CurrentUser {
   /** What to call them: their preferred name, else their first. */
   greetingName: string | null;
   isSuperAdmin: boolean;
+  /** May set monthly unit budgets. Super admins always may. */
+  canEditBudgets: boolean;
   /** Still on the temporary password an admin issued them. */
   mustChangePassword: boolean;
 }
@@ -25,17 +27,22 @@ export async function getCurrentUser(): Promise<CurrentUser | null> {
   const { data: profile } = await supabase
     .from("profiles")
     .select(
-      "full_name, first_name, preferred_name, is_super_admin, must_change_password",
+      "full_name, first_name, preferred_name, is_super_admin, can_edit_budgets, must_change_password",
     )
     .eq("id", user.id)
     .single();
+
+  const isSuperAdmin = profile?.is_super_admin ?? false;
 
   return {
     id: user.id,
     email: user.email ?? "",
     fullName: profile?.full_name ?? null,
     greetingName: profile ? greetingName(profile) : null,
-    isSuperAdmin: profile?.is_super_admin ?? false,
+    isSuperAdmin,
+    // Mirrors public.can_edit_budgets() in the database, which is what
+    // actually enforces this — the flag here only decides what to show.
+    canEditBudgets: isSuperAdmin || (profile?.can_edit_budgets ?? false),
     mustChangePassword: profile?.must_change_password ?? false,
   };
 }

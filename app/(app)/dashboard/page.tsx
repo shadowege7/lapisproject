@@ -42,6 +42,7 @@ export default async function DashboardPage() {
     { data: todayEntries },
     { data: profile },
     { data: settings },
+    { data: budgets },
   ] = await Promise.all([
     supabase
       .from("dealerships")
@@ -68,7 +69,15 @@ export default async function DashboardPage() {
       .from("app_settings")
       .select("key, value")
       .in("key", ["show_leaderboard", "admin_rollup"]),
+    supabase
+      .from("store_budgets")
+      .select("dealership_id, new_units, used_units, sprinter_units")
+      .eq("month", monthStartISODate()),
   ]);
+
+  const budgetByDealership = new Map(
+    (budgets ?? []).map((b) => [b.dealership_id, b]),
+  );
 
   const setting = (key: string) =>
     (settings ?? []).find((s) => s.key === key)?.value;
@@ -355,6 +364,7 @@ export default async function DashboardPage() {
           const projSprinterUnits = Math.round(
             projectMonthEnd(summary?.total_sprinter_units ?? 0),
           );
+          const budget = budgetByDealership.get(dealership.id);
 
           return (
             <div
@@ -450,7 +460,11 @@ export default async function DashboardPage() {
                 </div>
               ) : null}
 
-              <div className="grid grid-cols-3 divide-x divide-zinc-200 border-t border-zinc-100 pt-3 text-center dark:divide-zinc-800 dark:border-zinc-800">
+              {/* Two across on a phone, four in a row from `sm` up — four
+                  columns of this at phone width leaves each about 80px and
+                  the labels wrap. The dividers only make sense in the single
+                  row, so they start at `sm` too. */}
+              <div className="grid grid-cols-2 gap-y-4 divide-zinc-200 border-t border-zinc-100 pt-3 text-center dark:divide-zinc-800 dark:border-zinc-800 sm:grid-cols-4 sm:gap-y-0 sm:divide-x">
                 <GrossStat
                   label="Today"
                   value={todayGross}
@@ -471,16 +485,57 @@ export default async function DashboardPage() {
                     dealership.tracks_sprinters,
                   )}
                 />
+                {/* Units only — a budget is a count of cars, not money. */}
+                <GrossStat
+                  label="Budget"
+                  units
+                  value={
+                    budget
+                      ? budget.new_units +
+                        budget.used_units +
+                        (dealership.tracks_sprinters ? budget.sprinter_units : 0)
+                      : null
+                  }
+                  sub={
+                    budget
+                      ? unitSummary(
+                          budget.new_units,
+                          budget.used_units,
+                          budget.sprinter_units,
+                          dealership.tracks_sprinters,
+                        )
+                      : "Not set"
+                  }
+                />
                 <GrossStat
                   label="Projected"
                   value={projectMonthEnd(mtdGross)}
                   accent
-                  sub={unitSummary(
-                    projNewUnits,
-                    projUsedUnits,
-                    projSprinterUnits,
-                    dealership.tracks_sprinters,
-                  )}
+                  sub={
+                    <>
+                      <PaceUnits
+                        projected={projNewUnits}
+                        budget={budget?.new_units ?? 0}
+                        label="new"
+                      />
+                      {" · "}
+                      <PaceUnits
+                        projected={projUsedUnits}
+                        budget={budget?.used_units ?? 0}
+                        label="used"
+                      />
+                      {dealership.tracks_sprinters ? (
+                        <>
+                          {" · "}
+                          <PaceUnits
+                            projected={projSprinterUnits}
+                            budget={budget?.sprinter_units ?? 0}
+                            label="Sprinter"
+                          />
+                        </>
+                      ) : null}
+                    </>
+                  }
                 />
               </div>
 
@@ -512,12 +567,16 @@ function GrossStat({
   label,
   value,
   accent = false,
+  units = false,
   sub,
 }: {
   label: string;
-  value: number;
+  /** null renders a dash — "no budget set" is not the same as zero. */
+  value: number | null;
   accent?: boolean;
-  sub?: string;
+  /** Show a plain count instead of a currency amount. */
+  units?: boolean;
+  sub?: React.ReactNode;
 }) {
   return (
     <div className="px-2">
@@ -529,7 +588,11 @@ function GrossStat({
           accent ? "text-base" : "text-sm"
         }`}
       >
-        {formatCurrency(value)}
+        {value === null
+          ? "—"
+          : units
+            ? Math.round(value).toLocaleString("en-US")
+            : formatCurrency(value)}
       </div>
       {sub ? (
         <div className="mt-1 text-sm font-semibold text-zinc-600 dark:text-zinc-300">
@@ -537,6 +600,44 @@ function GrossStat({
         </div>
       ) : null}
     </div>
+  );
+}
+
+/**
+ * A projected unit count, coloured against its budget.
+ *
+ * Green when the month-end projection reaches the goal, red when it does not.
+ * With no budget set there is nothing to be on pace for, so the number is left
+ * in the surrounding colour rather than being marked red — an unset goal is
+ * not a missed one.
+ */
+function PaceUnits({
+  projected,
+  budget,
+  label,
+}: {
+  projected: number;
+  budget: number;
+  label: string;
+}) {
+  const tone =
+    budget <= 0
+      ? ""
+      : projected >= budget
+        ? "text-emerald-600 dark:text-emerald-400"
+        : "text-red-600 dark:text-red-400";
+
+  return (
+    <span
+      className={tone}
+      title={
+        budget > 0
+          ? `${projected} projected against a budget of ${budget} ${label}`
+          : undefined
+      }
+    >
+      {projected} {label}
+    </span>
   );
 }
 

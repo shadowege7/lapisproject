@@ -599,6 +599,26 @@ export async function setUserPosition(formData: FormData) {
 
 /** Toggle the dashboard "Leaders" section for everyone at once. */
 /**
+ * Let one person set monthly unit budgets, or stop them.
+ *
+ * Super admins always may, so this is only meaningful for everyone else —
+ * the toggle is hidden on a super admin's row.
+ */
+export async function setBudgetAccess(formData: FormData) {
+  const supabase = await requireSuperAdmin();
+  const userId = String(formData.get("user_id") ?? "");
+  const allowed = String(formData.get("can_edit_budgets") ?? "") === "true";
+  if (!userId) return;
+
+  await supabase
+    .from("profiles")
+    .update({ can_edit_budgets: allowed })
+    .eq("id", userId);
+
+  revalidatePath("/admin");
+}
+
+/**
  * Whether super admins see the all-stores rollup.
  *
  * Only affects admins. A position that has been granted rollup access keeps

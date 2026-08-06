@@ -10,6 +10,7 @@ export interface AdminUser {
   fullName: string | null;
   isSelf: boolean;
   isSuperAdmin: boolean;
+  canEditBudgets: boolean;
   notificationsEnabled: boolean;
   positionId: string | null;
   mainDealershipId: string | null;
@@ -106,6 +107,7 @@ export function UsersPanel({
                   fullName={u.fullName}
                   isSelf={u.isSelf}
                   isSuperAdmin={u.isSuperAdmin}
+                  canEditBudgets={u.canEditBudgets}
                   notificationsEnabled={u.notificationsEnabled}
                   positionId={u.positionId}
                   positions={positions}
