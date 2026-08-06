@@ -255,7 +255,22 @@ nulls last, then by name. So a store nobody has placed lands at the end among
 its alphabetical peers, which is a predictable spot for one that has just been
 created. Zero would have shoved it to the front.
 
-To move a store, change its number:
+**Admin → Dealerships** puts the number in a box in front of each store name.
+Change it and click away — it saves on blur, like the role dropdowns and the
+report checkboxes, so there is no button to forget. Emptying a box unsets the
+number and sends that store to the end.
+
+The admin list is sorted the same way as the dashboard, so the numbers being
+typed line up with the order they produce.
+
+Two deliberate loosenesses: **duplicates are allowed**, because an admin
+renumbering six stores one box at a time would otherwise be blocked halfway
+through by a collision they are about to resolve — two stores sharing a number
+just fall back to alphabetical. And the box **stops clicks from reaching the
+`<summary>` it sits in**, so typing a number does not also open the store's
+panel.
+
+Or from SQL:
 
 ```sql
 update public.dealerships set sort_order = 2 where name = '…';

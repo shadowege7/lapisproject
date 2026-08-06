@@ -44,6 +44,36 @@ export async function createDealership(formData: FormData) {
   revalidatePath("/admin");
 }
 
+/**
+ * Where this store sits among the dashboard cards.
+ *
+ * An empty box clears the number rather than storing zero, which is what puts
+ * an unplaced store at the end of the list instead of the front. Duplicates
+ * are allowed on purpose: an admin renumbering six stores one box at a time
+ * would otherwise be blocked halfway through by a collision they are about to
+ * resolve. Two stores sharing a number simply fall back to alphabetical.
+ */
+export async function setStoreOrder(formData: FormData) {
+  const supabase = await requireSuperAdmin();
+  const dealershipId = String(formData.get("dealership_id") ?? "");
+  const raw = String(formData.get("sort_order") ?? "").trim();
+  if (!dealershipId) return;
+
+  const parsed = Number(raw);
+  const sortOrder =
+    raw === "" || !Number.isFinite(parsed) || parsed < 0
+      ? null
+      : Math.round(parsed);
+
+  await supabase
+    .from("dealerships")
+    .update({ sort_order: sortOrder })
+    .eq("id", dealershipId);
+
+  revalidatePath("/admin");
+  revalidatePath("/dashboard");
+}
+
 export async function inviteAndAssign(
   _prevState: InviteResult,
   formData: FormData,

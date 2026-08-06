@@ -65,7 +65,11 @@ export default async function AdminPage({
     { data: reportRecipients },
     usersResult,
   ] = await Promise.all([
-    supabase.from("dealerships").select("id, name").order("name"),
+    supabase
+      .from("dealerships")
+      .select("id, name, sort_order")
+      .order("sort_order", { ascending: true, nullsFirst: false })
+      .order("name"),
     supabase
       .from("dealership_members")
       .select("id, dealership_id, user_id, role"),
@@ -236,7 +240,7 @@ export default async function AdminPage({
         meta={`${dealershipList.length} ${
           dealershipList.length === 1 ? "store" : "stores"
         }`}
-        hint="Open a store to see and edit who has access, and who gets its daily report by email. Super admins have full access to every store."
+        hint="The number in front of each store is its place on the dashboard — change it and click away to save. Leave it empty to send a store to the end. Open a store to see and edit who has access, and who gets its daily report by email. Super admins have full access to every store."
         defaultOpen
       >
         <div className="flex flex-col gap-2">
@@ -245,6 +249,7 @@ export default async function AdminPage({
               key={d.id}
               dealershipId={d.id}
               name={d.name}
+              sortOrder={d.sort_order}
               members={membersByStore.get(d.id) ?? []}
               allUsers={allUsersLite}
               subscribedIds={recipientsByStore.get(d.id) ?? []}

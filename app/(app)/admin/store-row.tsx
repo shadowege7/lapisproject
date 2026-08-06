@@ -1,7 +1,12 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import { setMembership, setReportRecipient, unassignStore } from "./actions";
+import {
+  setMembership,
+  setReportRecipient,
+  setStoreOrder,
+  unassignStore,
+} from "./actions";
 import type { DealershipRole } from "@/lib/database.types";
 
 const selectClass =
@@ -17,6 +22,7 @@ interface StoreMember {
 export function StoreRow({
   dealershipId,
   name,
+  sortOrder,
   members,
   allUsers,
   subscribedIds,
@@ -24,6 +30,8 @@ export function StoreRow({
 }: {
   dealershipId: string;
   name: string;
+  /** Position among the dashboard cards; null means "not placed". */
+  sortOrder: number | null;
   members: StoreMember[];
   allUsers: { id: string; email: string; fullName: string | null }[];
   /** Who currently gets this store's emailed daily report. */
@@ -36,7 +44,10 @@ export function StoreRow({
   return (
     <details className="group rounded-xl border border-zinc-200 bg-white dark:border-zinc-800 dark:bg-[var(--surface)]">
       <summary className="flex cursor-pointer list-none items-center justify-between gap-3 px-4 py-3 [&::-webkit-details-marker]:hidden">
-        <span className="font-medium">{name}</span>
+        <span className="flex min-w-0 items-center gap-3">
+          <OrderBox dealershipId={dealershipId} sortOrder={sortOrder} />
+          <span className="truncate font-medium">{name}</span>
+        </span>
         <span className="flex items-center gap-2 text-xs text-zinc-500">
           {members.length} with access
           {subscribedIds.length > 0
@@ -133,6 +144,60 @@ export function StoreRow({
         ) : null}
       </div>
     </details>
+  );
+}
+
+/**
+ * The store's position among the dashboard cards.
+ *
+ * Saves on blur and on Enter, so there is no button to forget — the same
+ * pattern as the role dropdowns and the report checkboxes. It sits inside the
+ * <summary>, so every click has to be stopped from reaching it: a click on a
+ * summary toggles the panel open, and typing a number should not do that.
+ *
+ * Leaving the box empty clears the position rather than storing zero, which is
+ * what sends an unplaced store to the end of the dashboard instead of the top.
+ */
+function OrderBox({
+  dealershipId,
+  sortOrder,
+}: {
+  dealershipId: string;
+  sortOrder: number | null;
+}) {
+  const formRef = useRef<HTMLFormElement>(null);
+  const saved = sortOrder === null ? "" : String(sortOrder);
+
+  return (
+    <form
+      ref={formRef}
+      action={setStoreOrder}
+      onClick={(event) => event.stopPropagation()}
+      className="shrink-0"
+    >
+      <input type="hidden" name="dealership_id" value={dealershipId} />
+      <input
+        type="number"
+        name="sort_order"
+        min={1}
+        step={1}
+        defaultValue={saved}
+        aria-label={`Dashboard position for ${dealershipId}`}
+        title="Position on the dashboard. Leave empty to send this store to the end."
+        onKeyDown={(event) => {
+          if (event.key === "Enter") {
+            event.preventDefault();
+            (event.target as HTMLInputElement).blur();
+          }
+        }}
+        onBlur={(event) => {
+          // Only when it actually changed, so opening and closing the panel
+          // does not fire a write per store.
+          if (event.target.value !== saved) formRef.current?.requestSubmit();
+        }}
+        className="w-12 rounded-md border border-zinc-300 bg-transparent px-2 py-1 text-center font-mono text-xs tabular-nums outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-500/30 dark:border-zinc-700"
+      />
+    </form>
   );
 }
 
