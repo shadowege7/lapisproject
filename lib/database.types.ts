@@ -162,18 +162,22 @@ export interface Database {
           name: string;
           /** Whether this store sells Sprinter vans and reports them apart. */
           tracks_sprinters: boolean;
+          /** Hand-set dashboard order. Null sorts last, then by name. */
+          sort_order: number | null;
           created_at: string;
         };
         Insert: {
           id?: string;
           name: string;
           tracks_sprinters?: boolean;
+          sort_order?: number | null;
           created_at?: string;
         };
         Update: {
           id?: string;
           name?: string;
           tracks_sprinters?: boolean;
+          sort_order?: number | null;
           created_at?: string;
         };
         Relationships: [];

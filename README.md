@@ -238,6 +238,29 @@ can grant it to themselves through the ordinary "update my own profile" policy.
 
 See `0018_store_budgets.sql` in the Launchpad repo.
 
+## The order of the store cards
+
+Porsche, Audi, Land Rover, Honda, Ferrari, Mercedes — the order the business
+asked for, which is neither alphabetical nor derivable from anything else in
+the table, so it is stored in `dealerships.sort_order`
+(`0020_dealership_sort_order.sql`).
+
+A column rather than a list of names in the dashboard: hardcoding the order
+would rot the first time a store is renamed, and a new store would silently
+fall off the end of the match. The names appear once, in the migration that
+sets the numbers, and are never read again.
+
+`sort_order` is **nullable**, and the dashboard orders by `sort_order` with
+nulls last, then by name. So a store nobody has placed lands at the end among
+its alphabetical peers, which is a predictable spot for one that has just been
+created. Zero would have shoved it to the front.
+
+To move a store, change its number:
+
+```sql
+update public.dealerships set sort_order = 2 where name = '…';
+```
+
 ## Activity metrics
 
 Two are recorded each day: **sales calls** and **appointments**.

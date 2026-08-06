@@ -66,9 +66,12 @@ export default async function DashboardPage() {
     { data: settings },
     { data: budgets },
   ] = await Promise.all([
+    // Hand-set order, falling back to alphabetical for any store nobody has
+    // placed — see dealerships.sort_order.
     supabase
       .from("dealerships")
-      .select("id, name, tracks_sprinters")
+      .select("id, name, tracks_sprinters, sort_order")
+      .order("sort_order", { ascending: true, nullsFirst: false })
       .order("name"),
     supabase
       .from("dealership_members")
