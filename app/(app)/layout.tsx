@@ -19,7 +19,7 @@ export default async function AppLayout({
       <header className="sticky top-0 z-10 border-b border-blue-100 bg-white/80 backdrop-blur dark:border-blue-950/60 dark:bg-[var(--surface)]/80 print:hidden">
         <div className="mx-auto flex w-full max-w-7xl flex-wrap items-center justify-between gap-3 px-4 py-3">
           <Link href="/dashboard" className="shrink-0">
-            <BrandLogo />
+            <BrandLogo className="h-6" />
           </Link>
           <nav className="flex items-center gap-4 text-sm">
             <Link
@@ -55,7 +55,14 @@ export default async function AppLayout({
           </nav>
         </div>
       </header>
-      <main className="mx-auto w-full max-w-7xl flex-1 px-4 py-8">
+      {/* The mark at full size, once, under the sticky header — the header
+          copy is deliberately small so it does not compete with it. Hidden
+          when printing, where a report's own title carries the branding. */}
+      <div className="flex justify-center px-4 pt-8 pb-2 print:hidden">
+        <BrandLogo className="h-9" />
+      </div>
+
+      <main className="mx-auto w-full max-w-7xl flex-1 px-4 pb-8 pt-4">
         {children}
       </main>
       <footer className="mx-auto w-full max-w-7xl px-4 py-6 text-xs text-zinc-400">
