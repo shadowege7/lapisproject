@@ -332,6 +332,11 @@ Lapis navy, matching the Launchpad. 296 C is lighter than the near-black it
 replaced, so `--surface` moved up with it; card backgrounds now read that token
 rather than a hardcoded hex, so the ramp stays in one place.
 
+The logo is the **LAPIS wordmark alone** — `lapis-wordmark.png`, with
+`lapis-wordmark-white.png` for dark backgrounds. The manufacturer marks were
+cut off the all-brands lockup; they belong on a dealership sign, not in an app
+header. The full lockup stays at `lapis-logo.png` if it is ever wanted.
+
 The bird is **platinum on dark backgrounds, obsidian on light**, matching the
 Launchpad. `Lapis-Platinum-Emblem.png` is a real file, made from the gold one
 by rewriting its palette — the emblem is an indexed PNG, so the compressed

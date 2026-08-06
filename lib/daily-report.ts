@@ -295,7 +295,7 @@ export function buildDailyReport(f: ReportFigures): Omit<Mail, "to"> {
 
         <tr>
           <td align="center" bgcolor="${FOOTER_BG}" style="background:${FOOTER_BG};background-color:${FOOTER_BG};border-top:1px solid #dfe3ea;padding:20px;">
-            <img src="${ASSETS}/lapis-logo.png"
+            <img src="${ASSETS}/lapis-wordmark.png"
                  alt="Lapis Automotive Group"
                  width="150"
                  style="display:block;width:150px;max-width:100%;height:auto;border:0;outline:none;text-decoration:none;">
