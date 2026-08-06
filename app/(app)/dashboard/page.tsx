@@ -4,6 +4,7 @@ import { createAdminClient } from "@/lib/supabase/admin";
 import { getCurrentUser, effectiveRole } from "@/lib/auth";
 import { formatCurrency, monthStartISODate, todayISODate } from "@/lib/format";
 import { projectMonthEnd } from "@/lib/projection";
+import { APP_NAME } from "@/app/brand";
 
 /**
  * "12 new · 9 used · 3 Sprinter".
@@ -216,9 +217,17 @@ export default async function DashboardPage() {
 
   return (
     <div className="flex flex-col gap-5">
-      {/* No heading: the wordmark under the header already says whose page
-          this is, and the cards below name themselves. */}
-      <div className="flex items-center justify-end gap-4">
+      <div className="flex items-center justify-between gap-4">
+        <div className="min-w-0">
+          {/* Greeted by preferred name where they have one — see
+              greetingName(). Falls back to the bare welcome rather than an
+              awkward "Welcome, null" for a profile with no name yet. */}
+          <h1 className="text-xl font-semibold tracking-tight">
+            {user.greetingName
+              ? `Welcome to the ${APP_NAME}, ${user.greetingName}`
+              : `Welcome to the ${APP_NAME}`}
+          </h1>
+        </div>
         {/* Obsidian emblem in light mode, platinum in dark. */}
         {/* eslint-disable-next-line @next/next/no-img-element */}
         <img

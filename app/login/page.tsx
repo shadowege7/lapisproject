@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { login } from "./actions";
 import { BrandLogo } from "@/app/brand-logo";
-import { Copyright } from "@/app/brand";
+import { APP_NAME, Copyright } from "@/app/brand";
 import { ThemeToggle } from "@/app/theme-toggle";
 
 export default async function LoginPage({
@@ -33,7 +33,7 @@ export default async function LoginPage({
             className="hidden h-16 w-auto select-none dark:block"
           />
           <BrandLogo className="h-10" />
-          <p className="text-sm text-zinc-500">Sales Tracker</p>
+          <p className="text-sm text-zinc-500">{APP_NAME}</p>
         </div>
 
         <div className="rounded-2xl border border-blue-100 bg-white p-8 shadow-lg shadow-blue-900/5 dark:border-blue-950/60 dark:bg-[var(--surface)]">

@@ -1,6 +1,18 @@
 /** The customer this deployment belongs to. */
 export const COMPANY_NAME = "Lapis Automotive Group";
 
+/**
+ * What this app is called to the people using it.
+ *
+ * One constant rather than the name typed into each screen, so it cannot end
+ * up saying two different things in two places — which is exactly what
+ * happened when it was "Sales Tracker" everywhere by hand.
+ *
+ * The repository, the Vercel project and the docs still say "sales tracker";
+ * that is the internal name for the thing, not the product name.
+ */
+export const APP_NAME = "Sales Portal";
+
 /** Who owns the software, as distinct from who uses it. */
 export const LEGAL_OWNER = "ShadowEdge LLC";
 

@@ -1,7 +1,7 @@
 import { redirect } from "next/navigation";
 import { getCurrentUser } from "@/lib/auth";
 import { BrandLogo } from "@/app/brand-logo";
-import { Copyright } from "@/app/brand";
+import { APP_NAME, Copyright } from "@/app/brand";
 import { ThemeToggle } from "@/app/theme-toggle";
 import { setPassword } from "./actions";
 
@@ -33,7 +33,7 @@ export default async function SetPasswordPage({
       <div className="w-full max-w-sm">
         <div className="mb-6 flex flex-col items-center gap-3 text-center">
           <BrandLogo className="h-10" />
-          <p className="text-sm text-zinc-500">Sales Tracker</p>
+          <p className="text-sm text-zinc-500">{APP_NAME}</p>
         </div>
 
         <form

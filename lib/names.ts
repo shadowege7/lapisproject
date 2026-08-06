@@ -24,6 +24,19 @@ export interface NameParts {
  * Falls back to whatever `full_name` already held, so rows written before the
  * parts existed keep their name instead of going blank.
  */
+/**
+ * Just the given name, for greeting someone.
+ *
+ * Preferred name wins: someone who goes by Kate should not be greeted as
+ * Katherine every morning.
+ */
+export function greetingName(parts: NameParts): string | null {
+  const given = parts.preferred_name?.trim() || parts.first_name?.trim();
+  if (given) return given;
+  // Older rows only have a whole name; take the first word of it.
+  return parts.full_name?.trim().split(/\s+/)[0] || null;
+}
+
 export function composeFullName(parts: NameParts): string | null {
   const given = parts.preferred_name?.trim() || parts.first_name?.trim() || "";
   const family = parts.last_name?.trim() || "";

@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
+import { APP_NAME, COMPANY_NAME } from "@/app/brand";
 import "./globals.css";
 
 const geistSans = Geist({
@@ -13,7 +14,9 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "Lapis Automotive Group — Sales Tracker",
+  // Built from the same constants as the footer, so the browser tab cannot
+  // name the app something the page does not.
+  title: `${COMPANY_NAME} — ${APP_NAME}`,
   description:
     "Daily, monthly, and annual sales tracking for Lapis Automotive Group",
 };

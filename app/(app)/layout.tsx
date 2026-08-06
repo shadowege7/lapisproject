@@ -2,7 +2,7 @@ import Link from "next/link";
 import { requireUser } from "@/lib/auth";
 import { logout } from "@/app/login/actions";
 import { BrandLogo } from "@/app/brand-logo";
-import { COMPANY_NAME, Copyright } from "@/app/brand";
+import { APP_NAME, COMPANY_NAME, Copyright } from "@/app/brand";
 import { ThemeToggle } from "@/app/theme-toggle";
 
 export default async function AppLayout({
@@ -66,7 +66,9 @@ export default async function AppLayout({
         {children}
       </main>
       <footer className="mx-auto w-full max-w-7xl px-4 py-6 text-xs text-zinc-400">
-        <p>{COMPANY_NAME} · Sales Tracker</p>
+        <p>
+          {COMPANY_NAME} · {APP_NAME}
+        </p>
         <Copyright className="mt-1" />
       </footer>
     </div>

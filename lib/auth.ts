@@ -1,11 +1,14 @@
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
+import { greetingName } from "@/lib/names";
 import type { DealershipRole } from "@/lib/database.types";
 
 export interface CurrentUser {
   id: string;
   email: string;
   fullName: string | null;
+  /** What to call them: their preferred name, else their first. */
+  greetingName: string | null;
   isSuperAdmin: boolean;
   /** Still on the temporary password an admin issued them. */
   mustChangePassword: boolean;
@@ -21,7 +24,9 @@ export async function getCurrentUser(): Promise<CurrentUser | null> {
 
   const { data: profile } = await supabase
     .from("profiles")
-    .select("full_name, is_super_admin, must_change_password")
+    .select(
+      "full_name, first_name, preferred_name, is_super_admin, must_change_password",
+    )
     .eq("id", user.id)
     .single();
 
@@ -29,6 +34,7 @@ export async function getCurrentUser(): Promise<CurrentUser | null> {
     id: user.id,
     email: user.email ?? "",
     fullName: profile?.full_name ?? null,
+    greetingName: profile ? greetingName(profile) : null,
     isSuperAdmin: profile?.is_super_admin ?? false,
     mustChangePassword: profile?.must_change_password ?? false,
   };
