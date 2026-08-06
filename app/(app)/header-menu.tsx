@@ -57,7 +57,13 @@ export function HeaderMenu({ children }: { children: React.ReactNode }) {
         onClick={(event) => {
           if ((event.target as HTMLElement).closest("a")) setOpen(false);
         }}
-        className={`${open ? "flex" : "hidden"} absolute left-0 right-0 top-full flex-col items-start gap-3 border-b border-blue-100 bg-white px-4 py-4 text-sm shadow-lg dark:border-blue-950/60 dark:bg-[var(--surface)] sm:static sm:flex sm:flex-row sm:items-center sm:gap-4 sm:border-0 sm:bg-transparent sm:p-0 sm:shadow-none`}
+        // The panel's own background and border belong to the dropdown, and
+        // must be gone from `sm` up where this is just a row inside the
+        // header. `sm:bg-transparent` alone does not do it: Tailwind emits the
+        // dark variants after the responsive ones, so `dark:bg-…` won at every
+        // width and painted a darker block behind the links. The `sm:dark:`
+        // pair is what actually turns it off.
+        className={`${open ? "flex" : "hidden"} absolute left-0 right-0 top-full flex-col items-start gap-3 border-b border-blue-100 bg-white px-4 py-4 text-sm shadow-lg dark:border-blue-950/60 dark:bg-[var(--surface)] sm:static sm:flex sm:flex-row sm:items-center sm:gap-4 sm:border-0 sm:bg-transparent sm:p-0 sm:shadow-none sm:dark:border-0 sm:dark:bg-transparent`}
       >
         {children}
       </nav>
