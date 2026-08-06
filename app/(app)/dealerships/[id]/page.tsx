@@ -1,3 +1,4 @@
+import { Fragment } from "react";
 import Link from "next/link";
 import { notFound, redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
@@ -90,13 +91,31 @@ export default async function DealershipDetailPage({
    * "12 new · 9 used · 3 Sprinter". Shown whenever this store tracks
    * Sprinters, including at zero — a Sprinter store wants that line the same
    * way it wants its used line.
+   *
+   * Each count and its label sit in one unbreakable span, so a narrow column
+   * never splits "9" from "used".
    */
-  const units = (n: number, used: number, sprinter: number) =>
-    [
-      `${n} new`,
-      `${used} used`,
-      ...(dealership.tracks_sprinters ? [`${sprinter} Sprinter`] : []),
-    ].join(" · ");
+  const units = (n: number, used: number, sprinter: number) => {
+    const parts = [
+      [n, "new"],
+      [used, "used"],
+      ...(dealership.tracks_sprinters ? [[sprinter, "Sprinter"] as const] : []),
+    ] as const;
+
+    return (
+      <>
+        {parts.map(([count, name], i) => (
+          <Fragment key={name}>
+            {/* Outside the span on purpose: the only place a line may break. */}
+            {i > 0 ? " · " : null}
+            <span className="whitespace-nowrap">
+              {count} {name}
+            </span>
+          </Fragment>
+        ))}
+      </>
+    );
+  };
 
   const notesEntries = (recent ?? []).filter((e) => e.notes && e.notes.trim());
 
@@ -323,7 +342,7 @@ function Stat({
 }: {
   label: string;
   value: string;
-  sub?: string;
+  sub?: React.ReactNode;
   accent?: boolean;
 }) {
   return (

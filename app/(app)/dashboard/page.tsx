@@ -1,3 +1,4 @@
+import { Fragment } from "react";
 import Link from "next/link";
 import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
@@ -15,18 +16,37 @@ import { APP_NAME } from "@/app/brand";
  *
  * The all-stores rollup passes true whenever any store tracks them, so the
  * company figure does not silently drop the category on a slow day.
+ *
+ * Each count and its label sit in one unbreakable span, so a narrow tile wraps
+ * between the categories and never between a number and the word it belongs
+ * to: "0 new ·" / "0" / "used" over three lines reads as nothing at all.
  */
 function unitSummary(
   newUnits: number,
   used: number,
   sprinter: number,
   showSprinter: boolean,
-): string {
-  return [
-    `${newUnits} new`,
-    `${used} used`,
-    ...(showSprinter ? [`${sprinter} Sprinter`] : []),
-  ].join(" · ");
+) {
+  const parts = [
+    [newUnits, "new"],
+    [used, "used"],
+    ...(showSprinter ? [[sprinter, "Sprinter"] as const] : []),
+  ] as const;
+
+  return (
+    <>
+      {parts.map(([count, name], i) => (
+        <Fragment key={name}>
+          {/* Outside the span on purpose: this is the only place a line is
+              allowed to break, so it cannot be swallowed by the nowrap. */}
+          {i > 0 ? " · " : null}
+          <span className="whitespace-nowrap">
+            {count} {name}
+          </span>
+        </Fragment>
+      ))}
+    </>
+  );
 }
 
 export default async function DashboardPage() {
@@ -629,7 +649,7 @@ function PaceUnits({
 
   return (
     <span
-      className={tone}
+      className={`whitespace-nowrap ${tone}`}
       title={
         budget > 0
           ? `${projected} projected against a budget of ${budget} ${label}`
