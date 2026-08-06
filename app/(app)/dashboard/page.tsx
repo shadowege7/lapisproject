@@ -37,10 +37,12 @@ function unitSummary(
     <>
       {parts.map(([count, name], i) => (
         <Fragment key={name}>
-          {/* Outside the span on purpose: this is the only place a line is
-              allowed to break, so it cannot be swallowed by the nowrap. */}
-          {i > 0 ? " · " : null}
-          <span className="whitespace-nowrap">
+          {/* A separator only where the figures share a line. From `sm` up the
+              columns are narrow and each figure takes its own line, where a
+              dot would just dangle at the end of the one above. It sits
+              outside the nowrap span so it stays a legal place to break. */}
+          {i > 0 ? <span className="sm:hidden">{" · "}</span> : null}
+          <span className="whitespace-nowrap sm:block">
             {count} {name}
           </span>
         </Fragment>
@@ -538,7 +540,7 @@ export default async function DashboardPage() {
                         budget={budget?.new_units ?? 0}
                         label="new"
                       />
-                      {" · "}
+                      <PaceSeparator />
                       <PaceUnits
                         projected={projUsedUnits}
                         budget={budget?.used_units ?? 0}
@@ -546,7 +548,7 @@ export default async function DashboardPage() {
                       />
                       {dealership.tracks_sprinters ? (
                         <>
-                          {" · "}
+                          <PaceSeparator />
                           <PaceUnits
                             projected={projSprinterUnits}
                             budget={budget?.sprinter_units ?? 0}
@@ -649,7 +651,7 @@ function PaceUnits({
 
   return (
     <span
-      className={`whitespace-nowrap ${tone}`}
+      className={`whitespace-nowrap sm:block ${tone}`}
       title={
         budget > 0
           ? `${projected} projected against a budget of ${budget} ${label}`
@@ -659,6 +661,15 @@ function PaceUnits({
       {projected} {label}
     </span>
   );
+}
+
+/**
+ * Between two projected figures — and only while they share a line. From `sm`
+ * up the column is narrow enough that each takes its own, and the dot would be
+ * left dangling at the end of the one above.
+ */
+function PaceSeparator() {
+  return <span className="sm:hidden">{" · "}</span>;
 }
 
 function ActivityStat({ label, value }: { label: string; value: number }) {

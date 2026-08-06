@@ -106,9 +106,11 @@ export default async function DealershipDetailPage({
       <>
         {parts.map(([count, name], i) => (
           <Fragment key={name}>
-            {/* Outside the span on purpose: the only place a line may break. */}
-            {i > 0 ? " · " : null}
-            <span className="whitespace-nowrap">
+            {/* Only where the figures share a line — from `sm` up each takes
+                its own, and a dot would dangle at the end of the one above.
+                Outside the nowrap span, so it stays a legal place to break. */}
+            {i > 0 ? <span className="sm:hidden">{" · "}</span> : null}
+            <span className="whitespace-nowrap sm:block">
               {count} {name}
             </span>
           </Fragment>
