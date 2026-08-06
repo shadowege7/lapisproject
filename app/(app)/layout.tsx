@@ -60,13 +60,6 @@ export default async function AppLayout({
           </HeaderMenu>
         </div>
       </header>
-      {/* The mark at full size under the sticky header — the header copy is
-          deliberately small so it does not compete with it. Hidden when
-          printing, where a report's own title carries the branding. */}
-      <div className="flex justify-center px-4 pt-8 pb-2 print:hidden">
-        <BrandLogo className="h-9" />
-      </div>
-
       <main className="mx-auto w-full max-w-7xl flex-1 px-4 pb-8 pt-4">
         {children}
       </main>
