@@ -3,6 +3,7 @@
 import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { notifyUser } from "@/lib/push";
+import { APP_NAME, COMPANY_NAME } from "@/app/brand";
 
 export async function sendTestNotification(): Promise<{
   ok: boolean;
@@ -16,7 +17,7 @@ export async function sendTestNotification(): Promise<{
 
   const res = await notifyUser(
     user.id,
-    "Lapis Sales Tracker",
+    `${COMPANY_NAME} ${APP_NAME}`,
     "Test notification — notifications are working on this device.",
   );
   if (res.error) return { ok: false, error: res.error };

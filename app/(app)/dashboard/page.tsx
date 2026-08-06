@@ -224,7 +224,7 @@ export default async function DashboardPage() {
               awkward "Welcome, null" for a profile with no name yet. */}
           <h1 className="text-xl font-semibold tracking-tight">
             {user.greetingName
-              ? `Welcome to the ${APP_NAME}, ${user.greetingName}`
+              ? `Welcome to the ${APP_NAME} ${user.greetingName}`
               : `Welcome to the ${APP_NAME}`}
           </h1>
         </div>

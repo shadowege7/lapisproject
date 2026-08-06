@@ -9,6 +9,7 @@ import { composeFullName } from "@/lib/names";
 import { generateTempPassword } from "@/lib/password";
 import { sendMail } from "@/lib/email";
 import { getSmtpConfig } from "@/lib/smtp-settings";
+import { APP_NAME, COMPANY_NAME } from "@/app/brand";
 import type { DealershipRole } from "@/lib/database.types";
 import type {
   InviteResult,
@@ -257,13 +258,13 @@ export async function sendTestReportEmail(formData: FormData): Promise<void> {
 
   const result = await sendMail({
     to: [to],
-    subject: "Lapis Sales Tracker — test message",
+    subject: `${COMPANY_NAME} ${APP_NAME} — test message`,
     text:
-      "This is a test from the Sales Tracker admin page.\n\n" +
+      `This is a test from the ${APP_NAME} admin page.\n\n` +
       `Sent through ${config.host}:${config.port} as ${config.username}.\n` +
       "If you are reading this, the daily store reports will send.",
     html:
-      `<p>This is a test from the Sales Tracker admin page.</p>` +
+      `<p>This is a test from the ${APP_NAME} admin page.</p>` +
       `<p>Sent through <strong>${config.host}:${config.port}</strong> as ` +
       `<strong>${config.username}</strong>.</p>` +
       `<p>If you are reading this, the daily store reports will send.</p>`,

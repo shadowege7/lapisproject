@@ -151,7 +151,7 @@ export function SmtpForm({
             type="text"
             name="mail_from"
             defaultValue={settings.from}
-            placeholder="Lapis Sales Tracker <reports@lapis.com>"
+            placeholder="Lapis Sales Portal <reports@lapis.com>"
             className={inputClass}
           />
           <span className="text-xs font-normal text-zinc-500">

@@ -1,4 +1,5 @@
 import { formatCurrency } from "@/lib/format";
+import { APP_NAME } from "@/app/brand";
 import type { Mail } from "@/lib/email";
 
 /**
@@ -288,7 +289,7 @@ export function buildDailyReport(f: ReportFigures): Omit<Mail, "to"> {
           <td align="center" style="padding:24px 28px;">
             <a href="${link}"
                style="background:#1d4ed8;color:#ffffff;text-decoration:none;padding:11px 24px;border-radius:6px;font-size:14px;font-weight:bold;display:inline-block;">
-              Open the Sales Tracker
+              Open the ${APP_NAME}
             </a>
           </td>
         </tr>

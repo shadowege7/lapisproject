@@ -18,7 +18,14 @@ export default async function AppLayout({
     <div className="flex min-h-full flex-1 flex-col">
       <header className="sticky top-0 z-10 border-b border-blue-100 bg-white/80 backdrop-blur dark:border-blue-950/60 dark:bg-[var(--surface)]/80 print:hidden">
         <div className="mx-auto flex w-full max-w-7xl flex-wrap items-center justify-between gap-3 px-4 py-3">
-          <Link href="/dashboard" className="shrink-0">
+          {/* Full width on a phone so it centres on its own row, with the nav
+              wrapping beneath; back to a left-aligned item from `sm` up. This
+              is the only mark on a narrow screen — the centred one below is
+              hidden there. */}
+          <Link
+            href="/dashboard"
+            className="flex w-full shrink-0 justify-center sm:w-auto sm:justify-start"
+          >
             <BrandLogo className="h-6" />
           </Link>
           <nav className="flex items-center gap-4 text-sm">
@@ -55,10 +62,12 @@ export default async function AppLayout({
           </nav>
         </div>
       </header>
-      {/* The mark at full size, once, under the sticky header — the header
-          copy is deliberately small so it does not compete with it. Hidden
-          when printing, where a report's own title carries the branding. */}
-      <div className="flex justify-center px-4 pt-8 pb-2 print:hidden">
+      {/* The mark at full size under the sticky header — the header copy is
+          deliberately small so it does not compete with it. Hidden on phones,
+          where the header already carries a centred mark and a second one
+          costs scarce vertical space. Hidden when printing too, where a
+          report's own title carries the branding. */}
+      <div className="hidden justify-center px-4 pt-8 pb-2 sm:flex print:hidden">
         <BrandLogo className="h-9" />
       </div>
 

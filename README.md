@@ -334,14 +334,13 @@ read from. One constant, so it cannot end up saying two things in two places.
 The repository, the Vercel project and these docs still say "sales tracker".
 That is the internal name for the thing, not the product name.
 
-**Three places still say "Sales Tracker" on purpose**, because changing them
-reaches beyond a screen:
+That includes the places the name leaves the app: the web manifest, the daily
+report's button, the admin test email, and push notification titles.
 
-| Where | Why it was left |
-| --- | --- |
-| `app/manifest.ts` | Renames the app already installed on people's home screens. Needs an icon `?v=` bump alongside it. |
-| The daily report email | Its subject and button are in inboxes already; changing them splits threads. |
-| Push notification titles | Appear on lock screens; worth changing deliberately, with the rest. |
+**An installed app keeps the old label.** A phone caches the launcher name from
+when it was added to the home screen, and re-reading the manifest does not
+change it — the `?v=` on the icons does nothing for this. Anyone who installed
+it as "Lapis Sales" keeps that until they remove and re-add it.
 
 ## Colour
 
