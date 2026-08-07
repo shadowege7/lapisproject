@@ -19,62 +19,111 @@ export function InviteForm({
     INITIAL_INVITE_RESULT,
   );
 
+  // The primary store is tracked so it can be dropped from the "also give
+  // access to" list — you don't grant a second membership to the same store.
+  const [primary, setPrimary] = useState(dealerships[0]?.id ?? "");
+  const others = dealerships.filter((d) => d.id !== primary);
+
   return (
     <div className="flex flex-col gap-3">
-      <form action={formAction} className="flex flex-wrap items-end gap-2">
-        <label className="flex flex-col gap-1 text-sm font-medium">
-          Email
-          <input type="email" name="email" required className={inputClass} />
-        </label>
-        <label className="flex flex-col gap-1 text-sm font-medium">
-          First name
-          <input type="text" name="first_name" className={inputClass} />
-        </label>
-        <label className="flex flex-col gap-1 text-sm font-medium">
-          Preferred name
-          <input
-            type="text"
-            name="preferred_name"
-            placeholder="Optional"
-            className={inputClass}
-          />
-        </label>
-        <label className="flex flex-col gap-1 text-sm font-medium">
-          Last name
-          <input type="text" name="last_name" className={inputClass} />
-        </label>
-        <label className="flex flex-col gap-1 text-sm font-medium">
-          Dealership
-          <select name="dealership_id" required className={inputClass}>
-            {dealerships.map((d) => (
-              <option key={d.id} value={d.id}>
-                {d.name}
-              </option>
-            ))}
-          </select>
-        </label>
-        <label className="flex flex-col gap-1 text-sm font-medium">
-          Role
-          <select name="role" defaultValue="viewer" className={inputClass}>
-            <option value="editor">Editor</option>
-            <option value="viewer">Viewer</option>
-          </select>
-        </label>
-        <label className="flex flex-col gap-1 text-sm font-medium">
-          Position
-          <select name="position_id" defaultValue="" className={inputClass}>
-            <option value="">— None —</option>
-            {positions.map((p) => (
-              <option key={p.id} value={p.id}>
-                {p.name}
-              </option>
-            ))}
-          </select>
-        </label>
+      <form action={formAction} className="flex flex-col gap-4">
+        <div className="flex flex-wrap items-end gap-2">
+          <label className="flex flex-col gap-1 text-sm font-medium">
+            Email
+            <input type="email" name="email" required className={inputClass} />
+          </label>
+          <label className="flex flex-col gap-1 text-sm font-medium">
+            First name
+            <input type="text" name="first_name" className={inputClass} />
+          </label>
+          <label className="flex flex-col gap-1 text-sm font-medium">
+            Preferred name
+            <input
+              type="text"
+              name="preferred_name"
+              placeholder="Optional"
+              className={inputClass}
+            />
+          </label>
+          <label className="flex flex-col gap-1 text-sm font-medium">
+            Last name
+            <input type="text" name="last_name" className={inputClass} />
+          </label>
+          <label className="flex flex-col gap-1 text-sm font-medium">
+            Main store
+            <select
+              name="dealership_id"
+              required
+              value={primary}
+              onChange={(e) => setPrimary(e.target.value)}
+              className={inputClass}
+            >
+              {dealerships.map((d) => (
+                <option key={d.id} value={d.id}>
+                  {d.name}
+                </option>
+              ))}
+            </select>
+          </label>
+          <label className="flex flex-col gap-1 text-sm font-medium">
+            Role
+            <select name="role" defaultValue="viewer" className={inputClass}>
+              <option value="editor">Editor</option>
+              <option value="viewer">Viewer</option>
+            </select>
+          </label>
+          <label className="flex flex-col gap-1 text-sm font-medium">
+            Position
+            <select name="position_id" defaultValue="" className={inputClass}>
+              <option value="">— None —</option>
+              {positions.map((p) => (
+                <option key={p.id} value={p.id}>
+                  {p.name}
+                </option>
+              ))}
+            </select>
+          </label>
+        </div>
+
+        {others.length > 0 ? (
+          <fieldset className="rounded-lg border border-zinc-200 p-3 dark:border-zinc-800">
+            <legend className="px-1 text-xs font-medium text-zinc-500">
+              Also give access to (optional)
+            </legend>
+            <div className="mt-1 grid gap-2 sm:grid-cols-2 lg:grid-cols-3">
+              {others.map((d) => (
+                <div
+                  key={d.id}
+                  className="flex items-center gap-2 text-sm"
+                >
+                  <label className="flex flex-1 items-center gap-2">
+                    <input
+                      type="checkbox"
+                      name="extra_dealership_id"
+                      value={d.id}
+                      className="h-4 w-4"
+                    />
+                    <span className="min-w-0 truncate">{d.name}</span>
+                  </label>
+                  <select
+                    name={`extra_role_${d.id}`}
+                    defaultValue="viewer"
+                    aria-label={`Role at ${d.name}`}
+                    className="rounded-md border border-zinc-300 bg-transparent px-1.5 py-1 text-xs outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-500/30 dark:border-zinc-700"
+                  >
+                    <option value="editor">Editor</option>
+                    <option value="viewer">Viewer</option>
+                  </select>
+                </div>
+              ))}
+            </div>
+          </fieldset>
+        ) : null}
+
         <button
           type="submit"
           disabled={pending}
-          className="rounded-md btn-primary px-3 py-2 text-sm font-semibold shadow-sm transition-colors disabled:opacity-60"
+          className="w-fit rounded-md btn-primary px-3 py-2 text-sm font-semibold shadow-sm transition-colors disabled:opacity-60"
         >
           {pending ? "Creating…" : "Create & assign"}
         </button>

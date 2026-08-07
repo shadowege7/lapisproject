@@ -144,15 +144,36 @@ export async function inviteAndAssign(
   }
 
   const supabase = await createClient();
+
+  // The main store, plus any additional stores ticked on the form, each with
+  // its own role. Deduped against the main store, so ticking it there as well
+  // does not create a conflicting second row. One upsert covers all of them.
+  const memberships = new Map<string, DealershipRole>();
+  memberships.set(dealershipId, role);
+  for (const extraId of formData.getAll("extra_dealership_id").map(String)) {
+    if (!extraId || extraId === dealershipId) continue;
+    const extraRole = (String(
+      formData.get(`extra_role_${extraId}`) ?? "viewer",
+    ) === "editor"
+      ? "editor"
+      : "viewer") as DealershipRole;
+    memberships.set(extraId, extraRole);
+  }
+
   const { error: memberError } = await supabase
     .from("dealership_members")
     .upsert(
-      { dealership_id: dealershipId, user_id: userId, role },
+      [...memberships].map(([dealership_id, memberRole]) => ({
+        dealership_id,
+        user_id: userId,
+        role: memberRole,
+      })),
       { onConflict: "dealership_id,user_id" },
     );
   if (memberError) {
     return { status: "error", message: memberError.message };
   }
+  const storeCount = memberships.size;
 
   // The parts are stored alongside the composed name, so the Launchpad can
   // greet someone by the name they actually go by. Only written for accounts
@@ -179,12 +200,14 @@ export async function inviteAndAssign(
 
   revalidatePath("/admin");
 
+  const storesLabel = `${storeCount} ${storeCount === 1 ? "store" : "stores"}`;
+
   if (tempPassword) {
     return { status: "created", email, tempPassword };
   }
   return {
     status: "assigned",
-    message: `${email} already had an account — assigned to the dealership.`,
+    message: `${email} already had an account — assigned to ${storesLabel}.`,
   };
 }
 
