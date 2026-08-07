@@ -96,7 +96,7 @@ export async function importEntries(
       ok: false,
       imported: 0,
       error:
-        "Those rows could not be saved. Check the dates are all YYYY-MM-DD and the numbers are plain figures.",
+        "Those rows could not be saved. Check the dates are all real dates and the numbers are plain figures.",
     };
   }
 

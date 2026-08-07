@@ -536,7 +536,9 @@ export default async function ReportsPage({
         </Card>
       </section>
 
-      {role === "editor" ? <ImportForm dealershipId={dealershipId} /> : null}
+      {role === "editor" ? (
+        <ImportForm dealershipId={dealershipId} tracksSprinters={sprinters} />
+      ) : null}
     </div>
   );
 }
