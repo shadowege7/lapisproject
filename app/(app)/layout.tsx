@@ -17,6 +17,12 @@ export default async function AppLayout({
 
   return (
     <div className="flex min-h-full flex-1 flex-col">
+      <a
+        href="#main"
+        className="sr-only focus:not-sr-only focus:absolute focus:left-4 focus:top-4 focus:z-20 focus:rounded-md focus:bg-blue-600 focus:px-3 focus:py-2 focus:text-sm focus:font-semibold focus:text-white"
+      >
+        Skip to content
+      </a>
       <header className="sticky top-0 z-10 border-b border-blue-100 bg-white/80 backdrop-blur dark:border-blue-950/60 dark:bg-[var(--surface)]/80 print:hidden">
         <div className="mx-auto flex w-full max-w-7xl flex-wrap items-center justify-between gap-3 px-4 py-3">
           <Link href="/dashboard" className="shrink-0">
@@ -60,7 +66,7 @@ export default async function AppLayout({
           </HeaderMenu>
         </div>
       </header>
-      <main className="mx-auto w-full max-w-7xl flex-1 px-4 pb-8 pt-4">
+      <main id="main" className="mx-auto w-full max-w-7xl flex-1 px-4 pb-8 pt-4">
         {children}
       </main>
       <footer className="mx-auto w-full max-w-7xl px-4 py-6 text-xs text-zinc-400">

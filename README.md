@@ -90,11 +90,13 @@ sending is a safe no‑op.
 
 ### 2. Database migrations
 
-Apply the SQL files in [`supabase/migrations/`](supabase/migrations/) **in
-order** (`0001` → `0005`) via the Supabase SQL editor, the Supabase CLI, or the
-Supabase MCP server. In order they: create the schema, RLS policies, and
-rollup views; split gross by new/used; keep entries when a user is deleted; add
-activity metrics; and add daily notes.
+**The migrations live in the Launchpad repo, not here.** The two apps share one
+Supabase project, so there is one migration history, kept in
+`lapis-launchpad/supabase/migrations/` (`0001` … onward). Apply those in order
+against the shared project. This repo no longer carries its own copy — the old
+pre-consolidation set was removed because applying it would collide with the
+shared schema (and this repo ships an `.mcp.json`, which made an accidental
+`apply_migration` from here one command away).
 
 ### 3. Run
 
