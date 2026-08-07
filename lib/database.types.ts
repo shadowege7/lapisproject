@@ -428,6 +428,29 @@ export interface Database {
         Args: { target_dealership: string };
         Returns: DealershipRole | null;
       };
+      get_dashboard_rollup: {
+        Args: { p_month: string; p_today: string };
+        // Returns { rollup: {...totals}, leaderboard: [...] } or null when the
+        // caller is not entitled. Shaped by the page, so typed loosely here.
+        Returns: {
+          rollup: {
+            todayGross: number;
+            mtdGross: number;
+            todayNew: number;
+            todayUsed: number;
+            todaySprinter: number;
+            mtdNew: number;
+            mtdUsed: number;
+            mtdSprinter: number;
+          };
+          leaderboard: {
+            name: string;
+            gross: number;
+            newUnits: number;
+            usedUnits: number;
+          }[];
+        } | null;
+      };
     };
     Enums: {
       dealership_role: DealershipRole;

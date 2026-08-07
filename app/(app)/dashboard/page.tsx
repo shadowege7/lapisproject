@@ -1,7 +1,6 @@
 import { Fragment } from "react";
 import Link from "next/link";
 import { createClient } from "@/lib/supabase/server";
-import { createAdminClient } from "@/lib/supabase/admin";
 import { getCurrentUser, effectiveRole } from "@/lib/auth";
 import { formatCurrency, monthStartISODate, todayISODate } from "@/lib/format";
 import { projectMonthEnd } from "@/lib/projection";
@@ -108,25 +107,11 @@ export default async function DashboardPage() {
     (settings ?? []).find((s) => s.key === key)?.value;
 
   const mainDealershipId = profile?.main_dealership_id ?? null;
-  // Both default to on, so a missing row behaves the way it did before the
-  // setting existed.
+  // Defaults to on, so a missing row behaves the way it did before the setting
+  // existed. (The admin_rollup switch is now checked inside the rollup RPC.)
   const showLeaderboard = setting("show_leaderboard") !== false;
-  const adminRollup = setting("admin_rollup") !== false;
 
-  // Group-wide rollup: super admins see it unless an admin has switched it
-  // off for them, and anyone whose position has been granted rollup access
-  // sees it regardless of that switch — the switch is about admins.
-  let canViewRollup = user.isSuperAdmin && adminRollup;
-  if (!canViewRollup && profile?.position_id) {
-    const { data: pos } = await supabase
-      .from("positions")
-      .select("can_view_rollup")
-      .eq("id", profile.position_id)
-      .maybeSingle();
-    canViewRollup = pos?.can_view_rollup ?? false;
-  }
-
-  let rollup: {
+  type RollupTotals = {
     todayGross: number;
     mtdGross: number;
     todayNew: number;
@@ -135,74 +120,34 @@ export default async function DashboardPage() {
     mtdNew: number;
     mtdUsed: number;
     mtdSprinter: number;
-  } | null = null;
-  let leaderboard: {
+  };
+
+  // The whole "who may see group totals, and the totals themselves" now lives
+  // in one SECURITY DEFINER function (0023), called with the caller's own
+  // client. It returns null to anyone not entitled — so the boundary is in the
+  // database, not a TypeScript `if`, and the service-role client is gone from
+  // this render.
+  const { data: rollupData } = await supabase.rpc("get_dashboard_rollup", {
+    p_month: monthStartISODate(),
+    p_today: todayISODate(),
+  });
+
+  const rollup: RollupTotals | null =
+    (rollupData as { rollup?: RollupTotals } | null)?.rollup ?? null;
+  const canViewRollup = rollup !== null;
+  const leaderboard: {
     name: string;
     gross: number;
     newUnits: number;
     usedUnits: number;
-  }[] = [];
-  if (canViewRollup) {
-    // Sum across ALL stores via the service-role client (bypasses RLS) — safe
-    // because access is gated by canViewRollup above.
-    const admin = createAdminClient();
-    const [{ data: allMonthly }, { data: allToday }, { data: allStores }] =
-      await Promise.all([
-        admin
-          .from("monthly_summary")
-          .select(
-            "dealership_id, total_gross, total_new_units, total_used_units, total_sprinter_units",
-          )
-          .eq("month", monthStartISODate()),
-        admin
-          .from("daily_entries")
-          .select(
-            "new_front_end_gross, new_back_end_gross, used_front_end_gross, used_back_end_gross, sprinter_front_end_gross, sprinter_back_end_gross, new_units, used_units, sprinter_units",
-          )
-          .eq("entry_date", todayISODate()),
-        admin.from("dealerships").select("id, name").order("name"),
-      ]);
-
-    rollup = {
-      // total_gross comes from the view, which already folds Sprinters in.
-      mtdGross: (allMonthly ?? []).reduce((s, r) => s + r.total_gross, 0),
-      mtdNew: (allMonthly ?? []).reduce((s, r) => s + r.total_new_units, 0),
-      mtdUsed: (allMonthly ?? []).reduce((s, r) => s + r.total_used_units, 0),
-      mtdSprinter: (allMonthly ?? []).reduce(
-        (s, r) => s + r.total_sprinter_units,
-        0,
-      ),
-      todayGross: (allToday ?? []).reduce(
-        (s, e) =>
-          s +
-          e.new_front_end_gross +
-          e.new_back_end_gross +
-          e.used_front_end_gross +
-          e.used_back_end_gross +
-          e.sprinter_front_end_gross +
-          e.sprinter_back_end_gross,
-        0,
-      ),
-      todayNew: (allToday ?? []).reduce((s, e) => s + e.new_units, 0),
-      todayUsed: (allToday ?? []).reduce((s, e) => s + e.used_units, 0),
-      todaySprinter: (allToday ?? []).reduce((s, e) => s + e.sprinter_units, 0),
-    };
-
-    const mtdByStore = new Map(
-      (allMonthly ?? []).map((r) => [r.dealership_id, r]),
-    );
-    leaderboard = (allStores ?? [])
-      .map((d) => {
-        const m = mtdByStore.get(d.id);
-        return {
-          name: d.name,
-          gross: m?.total_gross ?? 0,
-          newUnits: m?.total_new_units ?? 0,
-          usedUnits: m?.total_used_units ?? 0,
-        };
-      })
-      .sort((a, b) => b.gross - a.gross);
-  }
+  }[] = ((rollupData as { leaderboard?: unknown } | null)?.leaderboard ??
+    []) as {
+    name: string;
+    gross: number;
+    newUnits: number;
+    usedUnits: number;
+  }[];
+  leaderboard.sort((a, b) => b.gross - a.gross);
 
   // The rollup covers every store, so it shows the Sprinter line whenever any
   // store sells them — not only on days one was sold.
