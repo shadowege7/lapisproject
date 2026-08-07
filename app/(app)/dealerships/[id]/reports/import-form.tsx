@@ -113,8 +113,10 @@ export function ImportForm({ dealershipId }: { dealershipId: string }) {
       }
       setMsg(
         `Imported ${res.imported} row${res.imported === 1 ? "" : "s"}${
-          skipped ? `, skipped ${skipped}` : ""
-        }. Reload to see them.`,
+          res.collapsed
+            ? `, merged ${res.collapsed} duplicate date${res.collapsed === 1 ? "" : "s"}`
+            : ""
+        }${skipped ? `, skipped ${skipped}` : ""}. Reload to see them.`,
       );
       setText("");
     } catch {

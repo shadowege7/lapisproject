@@ -29,6 +29,15 @@ export async function saveEntry(formData: FormData) {
   const appointments = Number(formData.get("appointments") ?? 0);
   const notes = String(formData.get("notes") ?? "").trim();
 
+  // A day cannot be logged before it has happened. The form caps the picker at
+  // today, but that is a client control; re-checked here so a crafted post
+  // cannot park numbers on a future date. An empty date is rejected too.
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(entryDate) || entryDate > todayISODate()) {
+    redirect(
+      `/dealerships/${dealershipId}/entry?error=${encodeURIComponent("Pick a valid date no later than today.")}`,
+    );
+  }
+
   const supabase = await createClient();
   const {
     data: { user },

@@ -28,7 +28,12 @@ export interface ImportRow {
 export async function importEntries(
   dealershipId: string,
   rows: ImportRow[],
-): Promise<{ ok: boolean; imported: number; error?: string }> {
+): Promise<{
+  ok: boolean;
+  imported: number;
+  collapsed?: number;
+  error?: string;
+}> {
   const supabase = await createClient();
   const {
     data: { user },
@@ -39,18 +44,38 @@ export async function importEntries(
   if (rows.length > 2000)
     return { ok: false, imported: 0, error: "Too many rows (max 2000)." };
 
-  const payload = rows.map((r) => ({
+  // Whether this store keeps a Sprinter line. A CSV exported from a Mercedes
+  // store carries Sprinter columns; pasted into another store's box those must
+  // not create Sprinter units and gross out of nowhere, so they are zeroed for
+  // any store that does not track them.
+  const { data: store } = await supabase
+    .from("dealerships")
+    .select("tracks_sprinters")
+    .eq("id", dealershipId)
+    .single();
+  const tracksSprinters = store?.tracks_sprinters ?? false;
+
+  // One (store, date) can appear only once in an upsert, or Postgres rejects
+  // the whole statement with "ON CONFLICT DO UPDATE command cannot affect row
+  // a second time" — one repeated date otherwise loses every good row with it.
+  // Last occurrence wins, matching how a person reads a spreadsheet top-down.
+  const byDate = new Map<string, ImportRow>();
+  for (const r of rows) byDate.set(r.entry_date, r);
+  const deduped = [...byDate.values()];
+  const collapsed = rows.length - deduped.length;
+
+  const payload = deduped.map((r) => ({
     dealership_id: dealershipId,
     entry_date: r.entry_date,
     new_units: r.new_units,
     used_units: r.used_units,
-    sprinter_units: r.sprinter_units,
+    sprinter_units: tracksSprinters ? r.sprinter_units : 0,
     new_front_end_gross: r.new_front_end_gross,
     new_back_end_gross: r.new_back_end_gross,
     used_front_end_gross: r.used_front_end_gross,
     used_back_end_gross: r.used_back_end_gross,
-    sprinter_front_end_gross: r.sprinter_front_end_gross,
-    sprinter_back_end_gross: r.sprinter_back_end_gross,
+    sprinter_front_end_gross: tracksSprinters ? r.sprinter_front_end_gross : 0,
+    sprinter_back_end_gross: tracksSprinters ? r.sprinter_back_end_gross : 0,
     sales_calls: r.sales_calls,
     appointments: r.appointments,
     notes: r.notes && r.notes.length ? r.notes : null,
@@ -60,11 +85,24 @@ export async function importEntries(
   const { error, count } = await supabase
     .from("daily_entries")
     .upsert(payload, { onConflict: "dealership_id,entry_date", count: "exact" });
-  if (error) return { ok: false, imported: 0, error: error.message };
+  if (error) {
+    // Postgres messages here are opaque to a sales manager; keep the detail in
+    // the log and hand back something they can act on.
+    console.error("[import] daily_entries upsert failed", {
+      dealershipId,
+      message: error.message,
+    });
+    return {
+      ok: false,
+      imported: 0,
+      error:
+        "Those rows could not be saved. Check the dates are all YYYY-MM-DD and the numbers are plain figures.",
+    };
+  }
 
   revalidatePath(`/dealerships/${dealershipId}/reports`);
   revalidatePath("/dashboard");
-  return { ok: true, imported: count ?? payload.length };
+  return { ok: true, imported: count ?? payload.length, collapsed };
 }
 
 /** Delete a daily entry. Super-admin only (also enforced by RLS). */

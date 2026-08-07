@@ -88,17 +88,32 @@ export default async function EntryPage({
       <form action={saveEntry} className="flex flex-col gap-5">
         <input type="hidden" name="dealership_id" value={dealershipId} />
 
-        <label className="flex flex-col gap-1 text-sm font-medium">
-          Date
-          <input
-            type="date"
-            name="entry_date"
-            defaultValue={entryDate}
-            required
-            max={todayISODate()}
-            className="w-fit rounded-md border border-zinc-300 bg-transparent px-3 py-2 text-sm font-normal outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-500/30 dark:border-zinc-700"
-          />
-        </label>
+        {existing ? (
+          // Editing an existing day: the date is fixed. Leaving it editable let
+          // someone change it to another day that already had numbers and
+          // overwrite them on save, silently. To move an entry, delete it and
+          // enter the correct day. Submitted as a hidden field so saveEntry
+          // still gets it.
+          <div className="flex flex-col gap-1 text-sm font-medium">
+            <span>Date</span>
+            <input type="hidden" name="entry_date" value={entryDate} />
+            <span className="w-fit rounded-md border border-zinc-200 bg-zinc-50 px-3 py-2 text-sm font-normal text-zinc-600 dark:border-zinc-800 dark:bg-zinc-900/40 dark:text-zinc-300">
+              {entryDate}
+            </span>
+          </div>
+        ) : (
+          <label className="flex flex-col gap-1 text-sm font-medium">
+            Date
+            <input
+              type="date"
+              name="entry_date"
+              defaultValue={entryDate}
+              required
+              max={todayISODate()}
+              className="w-fit rounded-md border border-zinc-300 bg-transparent px-3 py-2 text-sm font-normal outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-500/30 dark:border-zinc-700"
+            />
+          </label>
+        )}
 
         <VehicleFieldset
           title="New vehicles"
