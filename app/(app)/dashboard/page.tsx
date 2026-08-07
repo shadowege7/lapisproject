@@ -364,11 +364,15 @@ export default async function DashboardPage() {
                 <p className="mb-1.5 text-xs font-medium uppercase tracking-wide text-zinc-500">
                   Today
                 </p>
-                {/* Three across wherever Sprinters are tracked, at every
-                    width — they belong beside New and Used, not on a row of
-                    their own. Safe at phone widths because the tile head
-                    stacks its label above the count, so nothing has to fit
-                    label and figure on one line. */}
+                {/* A store with no entry yet says so, rather than showing a
+                    wall of $0 that reads identically to "sold nothing". That
+                    distinction is the difference between chasing the manager
+                    and it being a slow morning. */}
+                {!todayEntry ? (
+                  <div className="rounded-lg border border-dashed border-zinc-200 bg-zinc-50/60 px-4 py-6 text-center text-sm text-zinc-500 dark:border-zinc-800 dark:bg-white/[0.02]">
+                    No numbers entered for today yet.
+                  </div>
+                ) : (
                 <div
                   className={`grid gap-px overflow-hidden rounded-lg border border-zinc-100 bg-zinc-100 dark:border-zinc-800 dark:bg-zinc-800 ${
                     dealership.tracks_sprinters ? "grid-cols-3" : "grid-cols-2"
@@ -398,17 +402,20 @@ export default async function DashboardPage() {
                     />
                   ) : null}
                 </div>
+                )}
 
-                <div className="mt-2 grid grid-cols-2 gap-2">
-                  <ActivityStat
-                    label="Sales calls"
-                    value={todayEntry?.sales_calls ?? 0}
-                  />
-                  <ActivityStat
-                    label="Appointments"
-                    value={todayEntry?.appointments ?? 0}
-                  />
-                </div>
+                {todayEntry ? (
+                  <div className="mt-2 grid grid-cols-2 gap-2">
+                    <ActivityStat
+                      label="Sales calls"
+                      value={todayEntry.sales_calls ?? 0}
+                    />
+                    <ActivityStat
+                      label="Appointments"
+                      value={todayEntry.appointments ?? 0}
+                    />
+                  </div>
+                ) : null}
               </div>
 
               {todayEntry?.notes ? (
