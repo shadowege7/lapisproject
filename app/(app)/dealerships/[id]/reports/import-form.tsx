@@ -137,7 +137,12 @@ export function ImportForm({
       "",
       "Example row — delete before importing",
     ];
+    // A leading note the importer ignores (lines starting with # are skipped).
+    const note =
+      "# Sales calls, Appointments, and Notes are optional — leave a cell blank. Dates are MM-DD-YYYY. Lines starting with # are ignored.";
     const csv =
+      note +
+      "\n" +
       templateColumns.join(",") +
       "\n" +
       example.map(csvCell).join(",") +
@@ -157,7 +162,12 @@ export function ImportForm({
     setBusy(true);
     setMsg(null);
     try {
-      const grid = parseCsv(text.trim());
+      // Drop comment lines (Date cell starting with #) so notes on the
+      // template don't count as data — they're ignored everywhere, including
+      // ahead of the header row.
+      const grid = parseCsv(text.trim()).filter(
+        (r) => !(r[0] ?? "").trim().startsWith("#"),
+      );
       if (grid.length < 2) {
         setMsg("No rows found — paste a CSV with a header row.");
         return;
@@ -231,12 +241,12 @@ export function ImportForm({
       <div className="flex flex-col gap-3 border-t border-zinc-100 p-4 dark:border-zinc-800">
         <p className="text-xs text-zinc-500">
           Upload or paste a CSV with a header row. A <strong>Date</strong>{" "}
-          column (MM-DD-YYYY) is required; New/Used units and front/back gross
-          are read, and Notes. <strong>Sales calls</strong> and{" "}
-          <strong>Appointments</strong> are optional — leave them blank and
-          they&apos;re recorded as zero. The derived gross columns are ignored,
-          and rows with an existing date are overwritten. Start from the
-          template so the columns line up.
+          column (MM-DD-YYYY) is required, along with New/Used units and
+          front/back gross. <strong>Sales calls</strong>,{" "}
+          <strong>Appointments</strong>, and <strong>Notes</strong> are
+          optional — leave a cell blank and the counts record as zero. The
+          derived gross columns are ignored, and rows with an existing date are
+          overwritten. Start from the template so the columns line up.
         </p>
         <div className="flex flex-wrap items-center gap-3">
           <input
