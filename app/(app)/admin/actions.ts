@@ -554,11 +554,16 @@ export async function setSuperAdmin(formData: FormData) {
   const isSuperAdmin = formData.get("is_super_admin") === "true";
   if (!userId) return;
 
-  await supabase
+  // Granting admin is consequential — and it now moves the Launchpad's flag
+  // too, via the sync trigger. A failed write must not look like it worked, so
+  // it surfaces through the error boundary rather than being swallowed.
+  const { error } = await supabase
     .from("profiles")
     .update({ is_super_admin: isSuperAdmin })
     .eq("id", userId);
+  if (error) throw error;
   revalidatePath("/admin");
+  revalidatePath("/dashboard");
 }
 
 export async function setNotifications(formData: FormData) {
