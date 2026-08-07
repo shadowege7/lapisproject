@@ -301,14 +301,24 @@ export function UserRow({
             >
               <input type="hidden" name="user_id" value={userId} />
               <span className="text-xs text-zinc-500">Add to store:</span>
-              <select name="dealership_id" required className={selectClass}>
+              <select
+                name="dealership_id"
+                required
+                aria-label="Store to add this person to"
+                className={selectClass}
+              >
                 {available.map((d) => (
                   <option key={d.id} value={d.id}>
                     {d.name}
                   </option>
                 ))}
               </select>
-              <select name="role" defaultValue="viewer" className={selectClass}>
+              <select
+                name="role"
+                defaultValue="viewer"
+                aria-label="Their role at that store"
+                className={selectClass}
+              >
                 <option value="editor">Editor</option>
                 <option value="viewer">Viewer</option>
               </select>

@@ -265,6 +265,7 @@ export default async function AdminPage({
             type="text"
             name="name"
             placeholder="New dealership name"
+            aria-label="New dealership name"
             required
             className="rounded-md border border-zinc-300 bg-transparent px-3 py-2 text-sm dark:border-zinc-700"
           />
@@ -331,6 +332,7 @@ export default async function AdminPage({
             type="text"
             name="name"
             placeholder="New position"
+            aria-label="New position name"
             required
             className="rounded-md border border-zinc-300 bg-transparent px-3 py-2 text-sm dark:border-zinc-700"
           />

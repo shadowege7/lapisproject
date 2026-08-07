@@ -123,14 +123,14 @@ export function StoreRow({
           >
             <input type="hidden" name="dealership_id" value={dealershipId} />
             <span className="text-xs text-zinc-500">Add user:</span>
-            <select name="user_id" required className={selectClass}>
+            <select name="user_id" required aria-label={`Add a user to ${name}`} className={selectClass}>
               {available.map((u) => (
                 <option key={u.id} value={u.id}>
                   {u.fullName ? `${u.fullName} — ${u.email}` : u.email}
                 </option>
               ))}
             </select>
-            <select name="role" defaultValue="viewer" className={selectClass}>
+            <select name="role" defaultValue="viewer" aria-label={`Role for the new member of ${name}`} className={selectClass}>
               <option value="editor">Editor</option>
               <option value="viewer">Viewer</option>
             </select>
@@ -323,7 +323,7 @@ function StoreRoleSelect({
           formRef.current?.requestSubmit();
         }}
         className={selectClass}
-        aria-label="Role"
+        aria-label="Member role"
       >
         <option value="editor">Editor</option>
         <option value="viewer">Viewer</option>
