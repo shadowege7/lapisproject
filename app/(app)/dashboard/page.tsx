@@ -477,8 +477,10 @@ export default async function DashboardPage() {
                   }
                 />
                 {/* Total units, to sit alongside Budget as like-for-like — a
-                    projected car count against a budgeted one. The gross
-                    figure still leads the Today and This-month columns. */}
+                    projected car count against a budgeted one. No accent, so
+                    its number matches Budget's size and the new/used rows
+                    below line up across all four columns. The gross figure
+                    still leads the Today and This-month columns. */}
                 <GrossStat
                   label="Projected"
                   units
@@ -487,7 +489,6 @@ export default async function DashboardPage() {
                     projUsedUnits +
                     (dealership.tracks_sprinters ? projSprinterUnits : 0)
                   }
-                  accent
                   sub={
                     <>
                       <PaceUnits
