@@ -5,6 +5,7 @@ import { getCurrentUser, effectiveRole } from "@/lib/auth";
 import { todayISODate } from "@/lib/format";
 import { saveEntry } from "./actions";
 import { EntrySanityWarnings } from "./sanity-warnings";
+import { SaveEntryButton } from "./save-entry-button";
 
 export default async function EntryPage({
   params,
@@ -22,26 +23,38 @@ export default async function EntryPage({
 
   const supabase = await createClient();
 
-  const [{ data: dealership }, { data: membership }, { data: existing }] =
-    await Promise.all([
-      supabase
-        .from("dealerships")
-        .select("id, name, tracks_sprinters")
-        .eq("id", dealershipId)
-        .single(),
-      supabase
-        .from("dealership_members")
-        .select("role")
-        .eq("dealership_id", dealershipId)
-        .eq("user_id", user.id)
-        .maybeSingle(),
-      supabase
-        .from("daily_entries")
-        .select("*")
-        .eq("dealership_id", dealershipId)
-        .eq("entry_date", entryDate)
-        .maybeSingle(),
-    ]);
+  const [
+    { data: dealership },
+    { data: membership },
+    { data: existing },
+    { data: savedDates },
+  ] = await Promise.all([
+    supabase
+      .from("dealerships")
+      .select("id, name, tracks_sprinters")
+      .eq("id", dealershipId)
+      .single(),
+    supabase
+      .from("dealership_members")
+      .select("role")
+      .eq("dealership_id", dealershipId)
+      .eq("user_id", user.id)
+      .maybeSingle(),
+    supabase
+      .from("daily_entries")
+      .select("*")
+      .eq("dealership_id", dealershipId)
+      .eq("entry_date", entryDate)
+      .maybeSingle(),
+    // Every day that already has numbers, so the submit button can warn before
+    // overwriting whichever date the picker lands on.
+    supabase
+      .from("daily_entries")
+      .select("entry_date")
+      .eq("dealership_id", dealershipId),
+  ]);
+
+  const existingDates = (savedDates ?? []).map((r) => r.entry_date);
 
   if (!dealership) notFound();
 
@@ -168,12 +181,11 @@ export default async function EntryPage({
 
         <EntrySanityWarnings />
 
-        <button
-          type="submit"
+        <SaveEntryButton
+          existingDates={existingDates}
+          label={existing ? "Update entry" : "Save entry"}
           className="mt-1 w-fit rounded-md btn-primary px-4 py-2 text-sm font-semibold shadow-sm transition-colors focus:outline-none focus:ring-2 focus:ring-blue-500/50"
-        >
-          {existing ? "Update entry" : "Save entry"}
-        </button>
+        />
       </form>
     </div>
   );
