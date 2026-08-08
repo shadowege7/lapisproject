@@ -38,6 +38,11 @@ export async function saveEntry(formData: FormData) {
     );
   }
 
+  // Only numbers entered for today trigger a push and an emailed report.
+  // Backfilling or correcting a prior day saves silently — nobody wants a
+  // phone buzz or an inbox note for last week's figures.
+  const isToday = entryDate === todayISODate();
+
   const supabase = await createClient();
   const {
     data: { user },
@@ -81,67 +86,65 @@ export async function saveEntry(formData: FormData) {
     );
   }
 
-  const { data: dealership } = await supabase
-    .from("dealerships")
-    .select("name, tracks_sprinters")
-    .eq("id", dealershipId)
-    .single();
+  if (isToday) {
+    const { data: dealership } = await supabase
+      .from("dealerships")
+      .select("name, tracks_sprinters")
+      .eq("id", dealershipId)
+      .single();
 
-  const totalGross =
-    newFrontEndGross +
-    newBackEndGross +
-    usedFrontEndGross +
-    usedBackEndGross +
-    sprinterFrontEndGross +
-    sprinterBackEndGross;
-  const when =
-    entryDate === todayISODate()
-      ? "Today's numbers are in"
-      : `Numbers updated for ${entryDate}`;
+    const totalGross =
+      newFrontEndGross +
+      newBackEndGross +
+      usedFrontEndGross +
+      usedBackEndGross +
+      sprinterFrontEndGross +
+      sprinterBackEndGross;
 
-  // Mentioned wherever the store tracks them, including at zero — that is a
-  // real fact about the day for a Sprinter store. Stores that never sell one
-  // keep the shorter notification.
-  const counts = [
-    `${newUnits} new`,
-    `${usedUnits} used`,
-    ...(dealership?.tracks_sprinters ? [`${sprinterUnits} Sprinter`] : []),
-  ].join(" · ");
+    // Mentioned wherever the store tracks them, including at zero — that is a
+    // real fact about the day for a Sprinter store. Stores that never sell one
+    // keep the shorter notification.
+    const counts = [
+      `${newUnits} new`,
+      `${usedUnits} used`,
+      ...(dealership?.tracks_sprinters ? [`${sprinterUnits} Sprinter`] : []),
+    ].join(" · ");
 
-  await notifyStoreEntry({
-    dealershipId,
-    title: dealership?.name ?? "Store update",
-    body: `${when}: ${counts} · ${formatCurrency(totalGross)} gross`,
-    excludeUserId: user.id,
-  });
+    await notifyStoreEntry({
+      dealershipId,
+      title: dealership?.name ?? "Store update",
+      body: `Today's numbers are in: ${counts} · ${formatCurrency(totalGross)} gross`,
+      excludeUserId: user.id,
+    });
 
-  // The emailed report goes to whoever an admin subscribed to this store.
-  // Deliberately awaited rather than left dangling: a serverless function can
-  // be frozen the moment its response is sent, and an unawaited send would be
-  // killed part-way often enough to look like flaky delivery. It never throws.
-  const { data: me } = await supabase
-    .from("profiles")
-    .select("full_name")
-    .eq("id", user.id)
-    .single();
+    // The emailed report goes to whoever an admin subscribed to this store.
+    // Deliberately awaited rather than left dangling: a serverless function can
+    // be frozen the moment its response is sent, and an unawaited send would be
+    // killed part-way often enough to look like flaky delivery. It never throws.
+    const { data: me } = await supabase
+      .from("profiles")
+      .select("full_name")
+      .eq("id", user.id)
+      .single();
 
-  await sendDailyReport(dealershipId, {
-    entryDate,
-    isNew: !previous,
-    newUnits,
-    newFront: newFrontEndGross,
-    newBack: newBackEndGross,
-    usedUnits,
-    usedFront: usedFrontEndGross,
-    usedBack: usedBackEndGross,
-    sprinterUnits,
-    sprinterFront: sprinterFrontEndGross,
-    sprinterBack: sprinterBackEndGross,
-    salesCalls,
-    appointments,
-    notes: notes.length ? notes : null,
-    enteredBy: me?.full_name ?? null,
-  });
+    await sendDailyReport(dealershipId, {
+      entryDate,
+      isNew: !previous,
+      newUnits,
+      newFront: newFrontEndGross,
+      newBack: newBackEndGross,
+      usedUnits,
+      usedFront: usedFrontEndGross,
+      usedBack: usedBackEndGross,
+      sprinterUnits,
+      sprinterFront: sprinterFrontEndGross,
+      sprinterBack: sprinterBackEndGross,
+      salesCalls,
+      appointments,
+      notes: notes.length ? notes : null,
+      enteredBy: me?.full_name ?? null,
+    });
+  }
 
   revalidatePath(`/dealerships/${dealershipId}/reports`);
   revalidatePath("/dashboard");
