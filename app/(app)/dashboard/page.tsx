@@ -476,9 +476,17 @@ export default async function DashboardPage() {
                       : "Not set"
                   }
                 />
+                {/* Total units, to sit alongside Budget as like-for-like — a
+                    projected car count against a budgeted one. The gross
+                    figure still leads the Today and This-month columns. */}
                 <GrossStat
                   label="Projected"
-                  value={projectMonthEnd(mtdGross)}
+                  units
+                  value={
+                    projNewUnits +
+                    projUsedUnits +
+                    (dealership.tracks_sprinters ? projSprinterUnits : 0)
+                  }
                   accent
                   sub={
                     <>
