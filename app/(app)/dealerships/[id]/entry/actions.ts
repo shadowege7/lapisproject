@@ -6,6 +6,7 @@ import { createClient } from "@/lib/supabase/server";
 import { formatCurrency, todayISODate } from "@/lib/format";
 import { notifyStoreEntry } from "@/lib/push";
 import { sendDailyReport } from "@/lib/send-daily-report";
+import { entryChanged, type EntryValues } from "@/lib/entry-diff";
 
 export async function saveEntry(formData: FormData) {
   const dealershipId = String(formData.get("dealership_id") ?? "");
@@ -50,14 +51,33 @@ export async function saveEntry(formData: FormData) {
   if (!user) redirect("/login");
 
   // Asked before the upsert, so the email can say "numbers for" rather than
-  // "updated numbers for" on the first save of a day. Afterwards there is no
-  // way to tell the two apart.
+  // "updated numbers for" on the first save of a day, and so a save that
+  // changes nothing can be told from one that does — an identical re-save
+  // (double-click, stuck client) must not fire another notification.
   const { data: previous } = await supabase
     .from("daily_entries")
-    .select("id")
+    .select(
+      "new_units, used_units, new_front_end_gross, new_back_end_gross, used_front_end_gross, used_back_end_gross, sprinter_units, sprinter_front_end_gross, sprinter_back_end_gross, sales_calls, appointments, notes",
+    )
     .eq("dealership_id", dealershipId)
     .eq("entry_date", entryDate)
     .maybeSingle();
+
+  const nextValues: EntryValues = {
+    new_units: newUnits,
+    used_units: usedUnits,
+    new_front_end_gross: newFrontEndGross,
+    new_back_end_gross: newBackEndGross,
+    used_front_end_gross: usedFrontEndGross,
+    used_back_end_gross: usedBackEndGross,
+    sprinter_units: sprinterUnits,
+    sprinter_front_end_gross: sprinterFrontEndGross,
+    sprinter_back_end_gross: sprinterBackEndGross,
+    sales_calls: salesCalls,
+    appointments: appointments,
+    notes: notes.length ? notes : null,
+  };
+  const changed = entryChanged(previous as EntryValues | null, nextValues);
 
   const { error } = await supabase.from("daily_entries").upsert(
     {
@@ -86,7 +106,10 @@ export async function saveEntry(formData: FormData) {
     );
   }
 
-  if (isToday) {
+  // Only when the numbers are for today AND this save changed something. A
+  // no-op re-save stays silent, so a resubmit loop can't blast the recipient
+  // list — the root of the "23 emails in 2 minutes" report.
+  if (isToday && changed) {
     const { data: dealership } = await supabase
       .from("dealerships")
       .select("name, tracks_sprinters")
