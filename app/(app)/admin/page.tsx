@@ -104,7 +104,7 @@ export default async function AdminPage({
   const { data: profiles } = await supabase
     .from("profiles")
     .select(
-      "id, is_super_admin, can_edit_budgets, full_name, notifications_enabled, position_id, main_dealership_id",
+      "id, is_super_admin, can_edit_budgets, full_name, notifications_enabled, position_id, main_dealership_id, is_active",
     );
 
   const { data: settings } = await supabase
@@ -136,6 +136,9 @@ export default async function AdminPage({
   const mainStoreByUser = new Map(
     profiles?.map((p) => [p.id, p.main_dealership_id]),
   );
+  // The Launchpad's "has this person left" flag. Missing row (or null) means
+  // nobody has ever offboarded them, so treat them as active.
+  const activeById = new Map(profiles?.map((p) => [p.id, p.is_active]));
   const emailById = new Map(authUsers.map((u) => [u.id, u.email ?? ""]));
   const dealershipById = new Map(dealerships?.map((d) => [d.id, d.name]));
   const dealershipList = dealerships ?? [];
@@ -203,7 +206,11 @@ export default async function AdminPage({
     mainDealershipId: mainStoreByUser.get(u.id) ?? null,
     lastSignInLabel: formatSignIn(u.lastSignInAt),
     memberships: membershipsByUser.get(u.id) ?? [],
+    isActive: activeById.get(u.id) ?? true,
   }));
+
+  const offboardedCount = usersData.filter((u) => !u.isActive).length;
+  const activeCount = usersData.length - offboardedCount;
 
   return (
     // Tighter than it was: the sections are cards now, so the border does the
@@ -445,10 +452,12 @@ export default async function AdminPage({
 
       <AdminSection
         title="Users & access"
-        meta={`${usersData.length} ${
-          usersData.length === 1 ? "user" : "users"
-        }`}
-        hint="Search, or open a domain group and then a user, to set their position, per-store editor/viewer access, notifications, or password."
+        meta={
+          offboardedCount > 0
+            ? `${activeCount} active · ${offboardedCount} offboarded`
+            : `${usersData.length} ${usersData.length === 1 ? "user" : "users"}`
+        }
+        hint="Search, or open a domain group and then a user, to set their position, per-store editor/viewer access, notifications, or password. People offboarded in the Launchpad are listed separately at the bottom."
         defaultOpen
       >
         {authUsersError ? (

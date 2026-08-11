@@ -43,6 +43,7 @@ export function UserRow({
   lastSignInLabel,
   memberships,
   dealerships,
+  offboarded = false,
 }: {
   userId: string;
   email: string;
@@ -57,6 +58,12 @@ export function UserRow({
   lastSignInLabel: string;
   memberships: StoreMembership[];
   dealerships: { id: string; name: string }[];
+  /**
+   * The person has been offboarded in the Launchpad (`is_active = false`):
+   * their sign-in is disabled. Marks the row as inactive and hides the
+   * actions that only make sense for someone who can still sign in.
+   */
+  offboarded?: boolean;
 }) {
   const [resetState, resetAction] = useActionState(
     resetUserPassword,
@@ -82,6 +89,24 @@ export function UserRow({
             </span>
           </span>
           <span className="mt-0.5 flex flex-wrap items-center gap-1.5">
+            {offboarded ? (
+              <span className="inline-flex items-center gap-1 rounded-full bg-zinc-200 px-2 py-0.5 text-xs font-medium text-zinc-600 dark:bg-zinc-800 dark:text-zinc-300">
+                <svg
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  strokeWidth={2}
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  className="h-3 w-3"
+                  aria-hidden
+                >
+                  <path d="M18.36 6.64A9 9 0 1 1 5.64 6.64" />
+                  <line x1="12" y1="2" x2="12" y2="12" />
+                </svg>
+                Offboarded
+              </span>
+            ) : null}
             {positionName ? (
               <span className="rounded-full bg-zinc-100 px-2 py-0.5 text-xs font-medium text-zinc-600 dark:bg-zinc-800 dark:text-zinc-300">
                 {positionName}
@@ -147,22 +172,26 @@ export function UserRow({
             </button>
           </form>
 
-          <form action={setNotifications}>
-            <input type="hidden" name="user_id" value={userId} />
-            <input
-              type="hidden"
-              name="notifications_enabled"
-              value={(!notificationsEnabled).toString()}
-            />
-            <button
-              type="submit"
-              className="text-blue-600 hover:underline dark:text-blue-400"
-            >
-              {notificationsEnabled
-                ? "Turn off notifications"
-                : "Turn on notifications"}
-            </button>
-          </form>
+          {/* A banned account receives no report emails regardless, so the
+              toggle would be a no-op for an offboarded person. */}
+          {offboarded ? null : (
+            <form action={setNotifications}>
+              <input type="hidden" name="user_id" value={userId} />
+              <input
+                type="hidden"
+                name="notifications_enabled"
+                value={(!notificationsEnabled).toString()}
+              />
+              <button
+                type="submit"
+                className="text-blue-600 hover:underline dark:text-blue-400"
+              >
+                {notificationsEnabled
+                  ? "Turn off notifications"
+                  : "Turn on notifications"}
+              </button>
+            </form>
+          )}
 
           {/* Super admins already have it, so offering the toggle there
               would suggest it could be taken away, which it cannot. */}
@@ -185,15 +214,20 @@ export function UserRow({
             </form>
           )}
 
-          <form action={resetAction}>
-            <input type="hidden" name="user_id" value={userId} />
-            <button
-              type="submit"
-              className="text-blue-600 hover:underline dark:text-blue-400"
-            >
-              Reset password
-            </button>
-          </form>
+          {/* Resetting a password is pointless while their sign-in is
+              disabled — they can't use it until they're re-activated in the
+              Launchpad. */}
+          {offboarded ? null : (
+            <form action={resetAction}>
+              <input type="hidden" name="user_id" value={userId} />
+              <button
+                type="submit"
+                className="text-blue-600 hover:underline dark:text-blue-400"
+              >
+                Reset password
+              </button>
+            </form>
+          )}
 
           {isSelf ? null : (
             <form action={deleteUser}>
@@ -217,7 +251,9 @@ export function UserRow({
           />
         </div>
 
-        <EmailField userId={userId} email={email} />
+        {/* Changing the sign-in address is moot for someone who can't sign
+            in; hidden until they're re-activated in the Launchpad. */}
+        {offboarded ? null : <EmailField userId={userId} email={email} />}
 
         {resetState.status === "reset" ? (
           <TempPassword password={resetState.tempPassword} email={email} />
