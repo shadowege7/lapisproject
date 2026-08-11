@@ -534,7 +534,7 @@ export default async function DashboardPage() {
                 />
               </div>
 
-              <div className="flex gap-4 text-sm">
+              <div className="flex flex-wrap gap-3">
                 {/* The card's main action, so it takes the strongest tone
                     available. In this palette the accent is *quieter* than the
                     body colour, and leaving it on the accent made the primary
@@ -542,14 +542,14 @@ export default async function DashboardPage() {
                 {role === "editor" ? (
                   <Link
                     href={`/dealerships/${dealership.id}/entry`}
-                    className="font-semibold text-zinc-900 underline decoration-1 underline-offset-4 transition-all duration-200 hover:text-blue-700 hover:decoration-2 hover:underline-offset-2 dark:text-zinc-50 dark:hover:text-blue-400"
+                    className="inline-flex items-center justify-center rounded-full btn-primary px-4 py-2 text-sm font-semibold shadow-sm transition-colors"
                   >
                     Enter today&apos;s numbers
                   </Link>
                 ) : null}
                 <Link
                   href={`/dealerships/${dealership.id}/reports`}
-                  className="font-medium text-zinc-600 underline decoration-1 decoration-zinc-300 underline-offset-4 transition-all duration-200 hover:text-blue-700 hover:decoration-2 hover:underline-offset-2 dark:text-zinc-300 dark:decoration-zinc-600 dark:hover:text-blue-400"
+                  className="inline-flex items-center justify-center rounded-full border border-zinc-300 px-4 py-2 text-sm font-medium text-zinc-600 transition-colors hover:border-blue-400 hover:text-blue-700 dark:border-zinc-700 dark:text-zinc-300 dark:hover:border-blue-800 dark:hover:text-blue-400"
                 >
                   View reports
                 </Link>
