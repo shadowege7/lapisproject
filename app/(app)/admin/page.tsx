@@ -457,7 +457,7 @@ export default async function AdminPage({
             ? `${activeCount} active · ${offboardedCount} offboarded`
             : `${usersData.length} ${usersData.length === 1 ? "user" : "users"}`
         }
-        hint="Search, or open a domain group and then a user, to set their position, per-store editor/viewer access, notifications, or password. People offboarded in the Launchpad are listed separately at the bottom."
+        hint="Search, or open a store group and then a user, to set their position, per-store editor/viewer access, notifications, or password. People are grouped by their main store; anyone without one is under Corporate. People offboarded in the Launchpad are listed separately at the bottom."
         defaultOpen
       >
         {authUsersError ? (

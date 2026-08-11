@@ -20,10 +20,8 @@ export interface AdminUser {
   isActive: boolean;
 }
 
-function domainOf(email: string): string {
-  const at = email.lastIndexOf("@");
-  return at >= 0 ? email.slice(at + 1).toLowerCase() : "(no domain)";
-}
+// Users with no main store are grouped here.
+const CORPORATE = "Corporate";
 
 export function UsersPanel({
   users,
@@ -44,30 +42,40 @@ export function UsersPanel({
         )
       : users;
 
-    // Active employees keep the domain-grouped view; offboarded ones are
-    // pulled out into their own flat list so they can't be mistaken for
-    // people who still sign in.
+    // Active employees are grouped by their main store; anyone without one is
+    // Corporate. Offboarded people are pulled into their own flat list so they
+    // can't be mistaken for someone who still signs in.
     const activeUsers = filtered.filter((u) => u.isActive);
     const offboardedUsers = filtered
       .filter((u) => !u.isActive)
       .sort((a, b) => a.email.localeCompare(b.email));
 
+    const nameById = new Map(dealerships.map((d) => [d.id, d.name]));
     const map = new Map<string, AdminUser[]>();
     for (const u of activeUsers) {
-      const d = domainOf(u.email);
-      const arr = map.get(d) ?? [];
+      const store =
+        (u.mainDealershipId && nameById.get(u.mainDealershipId)) || CORPORATE;
+      const arr = map.get(store) ?? [];
       arr.push(u);
-      map.set(d, arr);
+      map.set(store, arr);
     }
+
+    // Store groups follow the configured dealership order (the prop is already
+    // sorted by sort_order); Corporate sits last.
+    const order = dealerships.map((d) => d.name);
     const groups = [...map.entries()]
-      .map(([domain, list]) => ({
-        domain,
+      .map(([store, list]) => ({
+        store,
         list: [...list].sort((a, b) => a.email.localeCompare(b.email)),
       }))
-      .sort((a, b) => a.domain.localeCompare(b.domain));
+      .sort((a, b) => {
+        if (a.store === CORPORATE) return 1;
+        if (b.store === CORPORATE) return -1;
+        return order.indexOf(a.store) - order.indexOf(b.store);
+      });
 
     return { groups, offboarded: offboardedUsers };
-  }, [users, query]);
+  }, [users, query, dealerships]);
 
   const activeShown = groups.reduce((n, g) => n + g.list.length, 0);
   const totalShown = activeShown + offboarded.length;
@@ -89,14 +97,14 @@ export function UsersPanel({
         </p>
       ) : (
         <>
-          {groups.map(({ domain, list }) => (
+          {groups.map(({ store, list }) => (
             <details
-              key={domain}
+              key={store}
               open={query ? true : undefined}
               className="group rounded-xl border border-zinc-200 bg-white dark:border-zinc-800 dark:bg-[var(--surface)]"
             >
               <summary className="flex cursor-pointer list-none items-center justify-between gap-3 px-4 py-3 [&::-webkit-details-marker]:hidden">
-                <span className="font-medium">{domain}</span>
+                <span className="font-medium">{store}</span>
                 <span className="flex items-center gap-2 text-xs text-zinc-500">
                   {list.length} user{list.length === 1 ? "" : "s"}
                   <svg
