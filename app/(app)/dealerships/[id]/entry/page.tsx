@@ -70,10 +70,10 @@ export default async function EntryPage({
             where Chambray reaches only 2.51. The underline carries the "this
             is a link" job that the colour was doing. */}
         <Link
-          href={`/dealerships/${dealershipId}/reports`}
+          href="/dashboard"
           className="text-xs font-medium text-zinc-500 underline underline-offset-2 hover:text-zinc-900 dark:hover:text-white"
         >
-          ← Back to reports
+          ← Back to dashboard
         </Link>
         <h1 className="mt-1 text-xl font-semibold tracking-tight">
           {dealership.name}
