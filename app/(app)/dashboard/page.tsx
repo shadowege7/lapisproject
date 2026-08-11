@@ -542,14 +542,14 @@ export default async function DashboardPage() {
                 {role === "editor" ? (
                   <Link
                     href={`/dealerships/${dealership.id}/entry`}
-                    className="font-semibold text-zinc-900 underline underline-offset-4 dark:text-zinc-50"
+                    className="font-semibold text-zinc-900 underline decoration-1 underline-offset-4 transition-all duration-200 hover:text-blue-700 hover:decoration-2 hover:underline-offset-2 dark:text-zinc-50 dark:hover:text-blue-400"
                   >
                     Enter today&apos;s numbers
                   </Link>
                 ) : null}
                 <Link
                   href={`/dealerships/${dealership.id}/reports`}
-                  className="font-medium text-zinc-500 hover:text-blue-700 hover:underline dark:text-zinc-400 dark:hover:text-blue-400"
+                  className="font-medium text-zinc-600 underline decoration-1 decoration-zinc-300 underline-offset-4 transition-all duration-200 hover:text-blue-700 hover:decoration-2 hover:underline-offset-2 dark:text-zinc-300 dark:decoration-zinc-600 dark:hover:text-blue-400"
                 >
                   View reports
                 </Link>
