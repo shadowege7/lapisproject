@@ -210,12 +210,12 @@ export default async function DashboardPage() {
 
   return (
     <div className="flex flex-col gap-5">
-      {/* Marble veining behind the whole dashboard — fixed so it stays put as
+      {/* Woven lattice behind the whole dashboard — fixed so it stays put as
           the grid scrolls, and -z-10 so it sits over the page ground but under
           every card. Scoped to this route: it unmounts on other pages. */}
       <div
         aria-hidden
-        className="dash-marble pointer-events-none fixed inset-0 -z-10"
+        className="dash-lattice pointer-events-none fixed inset-0 -z-10"
       />
       <div className="flex items-center justify-between gap-4">
         <div className="min-w-0">
