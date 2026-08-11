@@ -12,12 +12,20 @@ export function monthProgress(now: Date = new Date()) {
 /**
  * Projects a month-to-date running total to end of month, assuming the current
  * daily pace holds for the rest of the month.
+ *
+ * The pace is the running total spread over the days that have actually
+ * elapsed. `todayLogged` says whether today's numbers are in yet: until they
+ * are, today is an in-progress day with no entry, so counting it in the divisor
+ * would divide the month-to-date (which stops at yesterday) across one day too
+ * many and understate the projection. Once today is entered, it counts.
  */
 export function projectMonthEnd(
   monthToDate: number,
+  todayLogged: boolean,
   now: Date = new Date(),
 ): number {
   const { dayOfMonth, daysInMonth } = monthProgress(now);
-  if (dayOfMonth <= 0) return monthToDate;
-  return (monthToDate / dayOfMonth) * daysInMonth;
+  const daysElapsed = dayOfMonth - (todayLogged ? 0 : 1);
+  if (daysElapsed <= 0) return monthToDate;
+  return (monthToDate / daysElapsed) * daysInMonth;
 }

@@ -172,7 +172,7 @@ export default async function DealershipDetailPage({
           />
           <Stat
             label="Projected gross"
-            value={formatCurrency(projectMonthEnd(mtdGross))}
+            value={formatCurrency(projectMonthEnd(mtdGross, !!todayEntry))}
             accent
             sub="at current pace"
           />

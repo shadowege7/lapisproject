@@ -135,6 +135,14 @@ export default async function DashboardPage() {
   const rollup: RollupTotals | null =
     (rollupData as { rollup?: RollupTotals } | null)?.rollup ?? null;
   const canViewRollup = rollup !== null;
+  // For the run-rate divisor: today counts once any store has entered today's
+  // numbers. Until then today is in-progress and would drag the projection down.
+  const rollupTodayLogged = rollup
+    ? rollup.todayNew > 0 ||
+      rollup.todayUsed > 0 ||
+      rollup.todaySprinter > 0 ||
+      rollup.todayGross !== 0
+    : false;
   const leaderboard: {
     name: string;
     gross: number;
@@ -257,12 +265,14 @@ export default async function DashboardPage() {
             />
             <GrossStat
               label="Projected"
-              value={projectMonthEnd(rollup.mtdGross)}
+              value={projectMonthEnd(rollup.mtdGross, rollupTodayLogged)}
               accent
               sub={unitSummary(
-                Math.round(projectMonthEnd(rollup.mtdNew)),
-                Math.round(projectMonthEnd(rollup.mtdUsed)),
-                Math.round(projectMonthEnd(rollup.mtdSprinter)),
+                Math.round(projectMonthEnd(rollup.mtdNew, rollupTodayLogged)),
+                Math.round(projectMonthEnd(rollup.mtdUsed, rollupTodayLogged)),
+                Math.round(
+                  projectMonthEnd(rollup.mtdSprinter, rollupTodayLogged),
+                ),
                 anyStoreTracksSprinters,
               )}
             />
@@ -326,13 +336,13 @@ export default async function DashboardPage() {
 
           const mtdGross = summary?.total_gross ?? 0;
           const projNewUnits = Math.round(
-            projectMonthEnd(summary?.total_new_units ?? 0),
+            projectMonthEnd(summary?.total_new_units ?? 0, !!todayEntry),
           );
           const projUsedUnits = Math.round(
-            projectMonthEnd(summary?.total_used_units ?? 0),
+            projectMonthEnd(summary?.total_used_units ?? 0, !!todayEntry),
           );
           const projSprinterUnits = Math.round(
-            projectMonthEnd(summary?.total_sprinter_units ?? 0),
+            projectMonthEnd(summary?.total_sprinter_units ?? 0, !!todayEntry),
           );
           const budget = budgetByDealership.get(dealership.id);
 

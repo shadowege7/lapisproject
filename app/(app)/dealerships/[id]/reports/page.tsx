@@ -350,7 +350,10 @@ export default async function ReportsPage({
                     {formatMetric(mtdVal, isCurrency)}
                   </td>
                   <td className="py-2.5 pr-4 font-semibold text-blue-700 dark:text-blue-400">
-                    {formatMetric(projectMonthEnd(mtdVal), isCurrency)}
+                    {formatMetric(
+                      projectMonthEnd(mtdVal, !!todayEntry),
+                      isCurrency,
+                    )}
                   </td>
                 </tr>
               ))}
