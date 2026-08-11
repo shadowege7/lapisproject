@@ -210,6 +210,13 @@ export default async function DashboardPage() {
 
   return (
     <div className="flex flex-col gap-5">
+      {/* Marble veining behind the whole dashboard — fixed so it stays put as
+          the grid scrolls, and -z-10 so it sits over the page ground but under
+          every card. Scoped to this route: it unmounts on other pages. */}
+      <div
+        aria-hidden
+        className="dash-marble pointer-events-none fixed inset-0 -z-10"
+      />
       <div className="flex items-center justify-between gap-4">
         <div className="min-w-0">
           {/* Greeted by preferred name where they have one — see
@@ -238,7 +245,7 @@ export default async function DashboardPage() {
         />
       </div>
       {rollup ? (
-        <div className="rounded-xl border border-blue-200 bg-white p-4 shadow-sm dark:border-blue-900/50 dark:bg-[var(--surface)]">
+        <div className="rounded-xl border border-blue-200 bg-white p-4 tile-float dark:border-blue-900/50 dark:bg-[var(--surface)]">
           <p className="mb-3 text-xs font-medium uppercase tracking-wide text-zinc-500">
             All stores
           </p>
@@ -285,7 +292,7 @@ export default async function DashboardPage() {
             Leaders · this month
           </p>
           <div className="grid gap-4 sm:grid-cols-2">
-            <div className="rounded-xl border border-blue-200 bg-white p-4 shadow-sm dark:border-blue-900/50 dark:bg-[var(--surface)]">
+            <div className="rounded-xl border border-blue-200 bg-white p-4 tile-float dark:border-blue-900/50 dark:bg-[var(--surface)]">
               <p className="text-xs font-medium uppercase tracking-wide text-zinc-500">
                 Gross leader
               </p>
@@ -296,7 +303,7 @@ export default async function DashboardPage() {
                 {formatCurrency(grossLeader.gross)} gross
               </p>
             </div>
-            <div className="rounded-xl border border-blue-200 bg-white p-4 shadow-sm dark:border-blue-900/50 dark:bg-[var(--surface)]">
+            <div className="rounded-xl border border-blue-200 bg-white p-4 tile-float dark:border-blue-900/50 dark:bg-[var(--surface)]">
               <p className="text-xs font-medium uppercase tracking-wide text-zinc-500">
                 Unit leader
               </p>
@@ -349,7 +356,7 @@ export default async function DashboardPage() {
           return (
             <div
               key={dealership.id}
-              className="flex flex-col gap-4 rounded-xl border border-zinc-200 bg-white p-5 shadow-sm transition-shadow hover:border-blue-200 hover:shadow-md dark:border-zinc-800 dark:bg-[var(--surface)] dark:hover:border-blue-900"
+              className="flex flex-col gap-4 rounded-xl border border-zinc-200 bg-white p-5 tile-float transition hover:border-blue-200 dark:border-zinc-800 dark:bg-[var(--surface)] dark:hover:border-blue-900"
             >
               <div className="flex items-center justify-between gap-2">
                 <h2 className="flex items-center gap-2 font-semibold tracking-tight">
