@@ -57,8 +57,7 @@ export function BudgetForm({
 
       <p className="mt-1 text-xs text-zinc-500">
         The unit goal for the month. The dashboard turns each projected figure
-        green when it is on pace to reach this, red when it is not. Units only —
-        no gross.
+        green when it is on pace to reach this, red when it is not.
       </p>
 
       {saved ? (
