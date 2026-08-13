@@ -156,7 +156,48 @@ export function UserRow({
       </summary>
 
       <div className="flex flex-col gap-3 border-t border-zinc-100 p-4 dark:border-zinc-800">
-        <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-sm">
+        {offboarded ? (
+          <>
+            {/* Offboarded: nothing here is editable. Just a compact read-only
+                note of their old position and stores, and the one action that
+                still makes sense — removing them. */}
+            <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-sm">
+              <span>
+                <span className="text-zinc-400">Position:</span>{" "}
+                <span className="text-zinc-700 dark:text-zinc-300">
+                  {positionName ?? "None"}
+                </span>
+              </span>
+              <span>
+                <span className="text-zinc-400">
+                  {memberships.length === 1 ? "Store:" : "Stores:"}
+                </span>{" "}
+                <span className="text-zinc-700 dark:text-zinc-300">
+                  {memberships.length
+                    ? memberships
+                        .map(
+                          (m) => nameById.get(m.dealershipId) ?? m.dealershipId,
+                        )
+                        .join(", ")
+                    : "None"}
+                </span>
+              </span>
+            </div>
+            {isSelf ? null : (
+              <form action={deleteUser}>
+                <input type="hidden" name="user_id" value={userId} />
+                <ConfirmButton
+                  message={`Permanently delete ${email}? This removes their account and all dealership access. This cannot be undone.`}
+                  className="self-start text-red-600 hover:underline dark:text-red-400"
+                >
+                  Remove user
+                </ConfirmButton>
+              </form>
+            )}
+          </>
+        ) : (
+          <>
+            <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-sm">
           <form action={setSuperAdmin}>
             <input type="hidden" name="user_id" value={userId} />
             <input
@@ -368,7 +409,9 @@ export function UserRow({
           ) : (
             <p className="mt-2 text-xs text-zinc-400">Assigned to all stores.</p>
           )}
-        </div>
+            </div>
+          </>
+        )}
       </div>
     </details>
   );
