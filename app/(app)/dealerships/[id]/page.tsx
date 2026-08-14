@@ -7,6 +7,7 @@ import { createAdminClient, listAllUsers } from "@/lib/supabase/admin";
 import {
   formatCurrency,
   formatMonth,
+  formatShortDay,
   monthStartISODate,
   todayISODate,
 } from "@/lib/format";
@@ -72,13 +73,19 @@ export default async function DealershipDetailPage({
 
   const today = todayISODate();
   const todayEntry = (recent ?? []).find((e) => e.entry_date === today);
-  const todayGross = todayEntry
-    ? todayEntry.new_front_end_gross +
-      todayEntry.new_back_end_gross +
-      todayEntry.used_front_end_gross +
-      todayEntry.used_back_end_gross +
-      todayEntry.sprinter_front_end_gross +
-      todayEntry.sprinter_back_end_gross
+  // Display-only stand-in for the Today card. `todayEntry` is left untouched —
+  // it, and only it, keys the projection below. `recent` is entry_date desc, so
+  // the first row older than today is the most recent prior day.
+  const previousEntry = (recent ?? []).find((e) => e.entry_date < today);
+  const displayEntry = todayEntry ?? previousEntry;
+  const isStandIn = !todayEntry && !!previousEntry;
+  const displayGross = displayEntry
+    ? displayEntry.new_front_end_gross +
+      displayEntry.new_back_end_gross +
+      displayEntry.used_front_end_gross +
+      displayEntry.used_back_end_gross +
+      displayEntry.sprinter_front_end_gross +
+      displayEntry.sprinter_back_end_gross
     : 0;
 
   const mtdUnits =
@@ -187,15 +194,20 @@ export default async function DealershipDetailPage({
           />
           <Stat
             label="Today"
-            value={formatCurrency(todayGross)}
+            value={formatCurrency(displayGross)}
             sub={
-              todayEntry
+              displayEntry
                 ? units(
-                    todayEntry.new_units,
-                    todayEntry.used_units,
-                    todayEntry.sprinter_units,
+                    displayEntry.new_units,
+                    displayEntry.used_units,
+                    displayEntry.sprinter_units,
                   )
                 : "No entry yet"
+            }
+            standInDate={
+              isStandIn && displayEntry
+                ? formatShortDay(displayEntry.entry_date)
+                : undefined
             }
           />
         </div>
@@ -341,17 +353,38 @@ function Stat({
   value,
   sub,
   accent = false,
+  standInDate,
 }: {
   label: string;
   value: string;
   sub?: React.ReactNode;
   accent?: boolean;
+  /**
+   * Set only when this tile is showing a previous day as a stand-in for a
+   * still-empty today. Switches the tile to the not-today treatment — dashed
+   * amber border, reduced opacity, an "Awaiting today" badge and the date — so
+   * it can never be mistaken for real today numbers.
+   */
+  standInDate?: string;
 }) {
   return (
-    <div className="rounded-xl border border-zinc-200 bg-white p-4 dark:border-zinc-800 dark:bg-[var(--surface)]">
-      <p className="text-xs font-medium uppercase tracking-wide text-zinc-500">
-        {label}
-      </p>
+    <div
+      className={`rounded-xl border bg-white p-4 dark:bg-[var(--surface)] ${
+        standInDate
+          ? "border-dashed border-amber-300 opacity-75 dark:border-amber-800/60"
+          : "border-zinc-200 dark:border-zinc-800"
+      }`}
+    >
+      <div className="flex items-center justify-between gap-2">
+        <p className="text-xs font-medium uppercase tracking-wide text-zinc-500">
+          {label}
+        </p>
+        {standInDate ? (
+          <span className="rounded-full bg-amber-50 px-1.5 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-amber-700 dark:bg-amber-950/30 dark:text-amber-400">
+            Awaiting today
+          </span>
+        ) : null}
+      </div>
       <p
         className={`mt-1 font-mono text-xl font-semibold tabular-nums ${
           accent ? "text-blue-700 dark:text-blue-400" : ""
@@ -360,6 +393,11 @@ function Stat({
         {value}
       </p>
       {sub ? <p className="mt-0.5 text-xs text-zinc-400">{sub}</p> : null}
+      {standInDate ? (
+        <p className="mt-0.5 text-[11px] text-zinc-500">
+          Yesterday&apos;s numbers · {standInDate}
+        </p>
+      ) : null}
     </div>
   );
 }

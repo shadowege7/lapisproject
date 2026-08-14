@@ -2,7 +2,12 @@ import { Fragment } from "react";
 import Link from "next/link";
 import { createClient } from "@/lib/supabase/server";
 import { getCurrentUser, effectiveRole } from "@/lib/auth";
-import { formatCurrency, monthStartISODate, todayISODate } from "@/lib/format";
+import {
+  formatCurrency,
+  formatShortDay,
+  monthStartISODate,
+  todayISODate,
+} from "@/lib/format";
 import { projectMonthEnd } from "@/lib/projection";
 import { APP_NAME } from "@/app/brand";
 
@@ -56,6 +61,14 @@ export default async function DashboardPage() {
 
   const supabase = await createClient();
 
+  // Lower bound for the stand-in lookback: ~14 days before today, so a store
+  // idle over a long weekend still shows its last real day. Built from the PT
+  // date parts (never `new Date("…")`) so it can't drift a day west of UTC.
+  const priorWindowStart = (() => {
+    const [y, m, d] = todayISODate().split("-").map(Number);
+    return new Date(Date.UTC(y, m - 1, d - 14)).toISOString().slice(0, 10);
+  })();
+
   const [
     { data: dealerships },
     { data: memberships },
@@ -64,6 +77,7 @@ export default async function DashboardPage() {
     { data: profile },
     { data: settings },
     { data: budgets },
+    { data: priorEntries },
   ] = await Promise.all([
     // Hand-set order, falling back to alphabetical for any store nobody has
     // placed — see dealerships.sort_order.
@@ -97,6 +111,15 @@ export default async function DashboardPage() {
       .from("store_budgets")
       .select("dealership_id, new_units, used_units, sprinter_units")
       .eq("month", monthStartISODate()),
+    // Most recent prior day per store, for the stand-in shown when today has no
+    // row yet. RLS scopes this exactly like the today query above — no access
+    // change. Ordered desc so the first row seen per store is the newest.
+    supabase
+      .from("daily_entries")
+      .select("*")
+      .gte("entry_date", priorWindowStart)
+      .lt("entry_date", todayISODate())
+      .order("entry_date", { ascending: false }),
   ]);
 
   const budgetByDealership = new Map(
@@ -172,6 +195,17 @@ export default async function DashboardPage() {
   const todayByDealership = new Map(
     todayEntries?.map((e) => [e.dealership_id, e]),
   );
+  // Rows arrive newest-first, so the first one kept per store is its most
+  // recent prior day — the "previous day" stand-in when today is still blank.
+  const previousByDealership = new Map<
+    string,
+    NonNullable<typeof priorEntries>[number]
+  >();
+  for (const e of priorEntries ?? []) {
+    if (!previousByDealership.has(e.dealership_id)) {
+      previousByDealership.set(e.dealership_id, e);
+    }
+  }
 
   if (!dealerships || dealerships.length === 0) {
     return (
@@ -329,17 +363,25 @@ export default async function DashboardPage() {
           if (!role) return null;
 
           const todayEntry = todayByDealership.get(dealership.id);
-          const todayNewGross =
-            (todayEntry?.new_front_end_gross ?? 0) +
-            (todayEntry?.new_back_end_gross ?? 0);
-          const todayUsedGross =
-            (todayEntry?.used_front_end_gross ?? 0) +
-            (todayEntry?.used_back_end_gross ?? 0);
-          const todaySprinterGross =
-            (todayEntry?.sprinter_front_end_gross ?? 0) +
-            (todayEntry?.sprinter_back_end_gross ?? 0);
-          const todayGross =
-            todayNewGross + todayUsedGross + todaySprinterGross;
+          // Display-only stand-in. `todayEntry` stays exactly as read above and
+          // is the ONLY thing projections/MTD key on — never reassigned. When
+          // today has no row, fall back to the most recent prior day purely for
+          // what the tiles show; `isStandIn` marks that case for the UI.
+          const previousEntry = previousByDealership.get(dealership.id);
+          const displayEntry = todayEntry ?? previousEntry;
+          const isStandIn = !todayEntry && !!previousEntry;
+
+          const displayNewGross =
+            (displayEntry?.new_front_end_gross ?? 0) +
+            (displayEntry?.new_back_end_gross ?? 0);
+          const displayUsedGross =
+            (displayEntry?.used_front_end_gross ?? 0) +
+            (displayEntry?.used_back_end_gross ?? 0);
+          const displaySprinterGross =
+            (displayEntry?.sprinter_front_end_gross ?? 0) +
+            (displayEntry?.sprinter_back_end_gross ?? 0);
+          const displayGross =
+            displayNewGross + displayUsedGross + displaySprinterGross;
 
           const mtdGross = summary?.total_gross ?? 0;
           const projNewUnits = Math.round(
@@ -385,54 +427,74 @@ export default async function DashboardPage() {
                     wall of $0 that reads identically to "sold nothing". That
                     distinction is the difference between chasing the manager
                     and it being a slow morning. */}
-                {!todayEntry ? (
+                {/* Show the original empty state only when there is neither a
+                    today row NOR any prior day to stand in. Otherwise the tiles
+                    render from displayEntry, wrapped in the stand-in treatment
+                    when they are yesterday's numbers. */}
+                {!displayEntry ? (
                   <div className="rounded-lg border border-dashed border-zinc-200 bg-zinc-50/60 px-4 py-6 text-center text-sm text-zinc-500 dark:border-zinc-800 dark:bg-white/[0.02]">
                     No numbers entered for today yet.
                   </div>
                 ) : (
                 <div
-                  className={`grid gap-px overflow-hidden rounded-lg border border-zinc-100 bg-zinc-100 dark:border-zinc-800 dark:bg-zinc-800 ${
-                    dealership.tracks_sprinters ? "grid-cols-3" : "grid-cols-2"
-                  }`}
+                  className={
+                    isStandIn
+                      ? "rounded-lg border border-dashed border-amber-300 p-2.5 opacity-75 dark:border-amber-800/60"
+                      : undefined
+                  }
                 >
-                  <VehicleStat
-                    label="New"
-                    units={todayEntry?.new_units ?? 0}
-                    front={todayEntry?.new_front_end_gross ?? 0}
-                    back={todayEntry?.new_back_end_gross ?? 0}
-                    gross={todayNewGross}
-                  />
-                  <VehicleStat
-                    label="Used"
-                    units={todayEntry?.used_units ?? 0}
-                    front={todayEntry?.used_front_end_gross ?? 0}
-                    back={todayEntry?.used_back_end_gross ?? 0}
-                    gross={todayUsedGross}
-                  />
-                  {dealership.tracks_sprinters ? (
-                    <VehicleStat
-                      label="Sprinter"
-                      units={todayEntry?.sprinter_units ?? 0}
-                      front={todayEntry?.sprinter_front_end_gross ?? 0}
-                      back={todayEntry?.sprinter_back_end_gross ?? 0}
-                      gross={todaySprinterGross}
-                    />
+                  {isStandIn ? (
+                    <div className="mb-2 flex flex-wrap items-center justify-between gap-2">
+                      <span className="text-[11px] font-medium text-zinc-500">
+                        Yesterday&apos;s numbers ·{" "}
+                        {formatShortDay(displayEntry.entry_date)}
+                      </span>
+                      <span className="rounded-full bg-amber-50 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-amber-700 dark:bg-amber-950/30 dark:text-amber-400">
+                        Awaiting today
+                      </span>
+                    </div>
                   ) : null}
-                </div>
-                )}
-
-                {todayEntry ? (
+                  <div
+                    className={`grid gap-px overflow-hidden rounded-lg border border-zinc-100 bg-zinc-100 dark:border-zinc-800 dark:bg-zinc-800 ${
+                      dealership.tracks_sprinters ? "grid-cols-3" : "grid-cols-2"
+                    }`}
+                  >
+                    <VehicleStat
+                      label="New"
+                      units={displayEntry.new_units ?? 0}
+                      front={displayEntry.new_front_end_gross ?? 0}
+                      back={displayEntry.new_back_end_gross ?? 0}
+                      gross={displayNewGross}
+                    />
+                    <VehicleStat
+                      label="Used"
+                      units={displayEntry.used_units ?? 0}
+                      front={displayEntry.used_front_end_gross ?? 0}
+                      back={displayEntry.used_back_end_gross ?? 0}
+                      gross={displayUsedGross}
+                    />
+                    {dealership.tracks_sprinters ? (
+                      <VehicleStat
+                        label="Sprinter"
+                        units={displayEntry.sprinter_units ?? 0}
+                        front={displayEntry.sprinter_front_end_gross ?? 0}
+                        back={displayEntry.sprinter_back_end_gross ?? 0}
+                        gross={displaySprinterGross}
+                      />
+                    ) : null}
+                  </div>
                   <div className="mt-2 grid grid-cols-2 gap-2">
                     <ActivityStat
                       label="Sales calls"
-                      value={todayEntry.sales_calls ?? 0}
+                      value={displayEntry.sales_calls ?? 0}
                     />
                     <ActivityStat
                       label="Appointments"
-                      value={todayEntry.appointments ?? 0}
+                      value={displayEntry.appointments ?? 0}
                     />
                   </div>
-                ) : null}
+                </div>
+                )}
               </div>
 
               {todayEntry?.notes ? (
@@ -453,13 +515,18 @@ export default async function DashboardPage() {
               <div className="grid grid-cols-2 gap-y-4 divide-zinc-200 border-t border-zinc-100 pt-3 text-center dark:divide-zinc-800 dark:border-zinc-800 sm:grid-cols-4 sm:gap-y-0 sm:divide-x">
                 <GrossStat
                   label="Today"
-                  value={todayGross}
+                  value={displayGross}
                   sub={unitSummary(
-                    todayEntry?.new_units ?? 0,
-                    todayEntry?.used_units ?? 0,
-                    todayEntry?.sprinter_units ?? 0,
+                    displayEntry?.new_units ?? 0,
+                    displayEntry?.used_units ?? 0,
+                    displayEntry?.sprinter_units ?? 0,
                     dealership.tracks_sprinters,
                   )}
+                  note={
+                    isStandIn && displayEntry
+                      ? formatShortDay(displayEntry.entry_date)
+                      : undefined
+                  }
                 />
                 <GrossStat
                   label="This month"
@@ -568,6 +635,7 @@ function GrossStat({
   accent = false,
   units = false,
   sub,
+  note,
 }: {
   label: string;
   /** null renders a dash — "no budget set" is not the same as zero. */
@@ -576,6 +644,8 @@ function GrossStat({
   /** Show a plain count instead of a currency amount. */
   units?: boolean;
   sub?: React.ReactNode;
+  /** Muted line under the figure — used to mark a stand-in day's date. */
+  note?: React.ReactNode;
 }) {
   return (
     <div className="px-2">
@@ -597,6 +667,9 @@ function GrossStat({
         <div className="mt-1 text-sm font-semibold text-zinc-600 dark:text-zinc-300">
           {sub}
         </div>
+      ) : null}
+      {note ? (
+        <div className="mt-1 text-[11px] text-zinc-500">{note}</div>
       ) : null}
     </div>
   );

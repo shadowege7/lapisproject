@@ -19,6 +19,24 @@ export function formatYear(dateString: string): string {
   return new Date(`${dateString}T00:00:00`).getFullYear().toString();
 }
 
+/**
+ * A date-only ISO string ("2026-08-13") as a short day label ("Aug 13").
+ *
+ * `entry_date` is already the store's PT business day, so this is a pure
+ * formatting of the parts — never a timezone conversion. It builds the Date
+ * from the numeric parts at UTC midnight and formats it back in UTC, so the
+ * label can never drift a day the way `new Date("2026-08-13")` would when the
+ * server sits west of UTC.
+ */
+export function formatShortDay(dateString: string): string {
+  const [year, month, day] = dateString.split("-").map(Number);
+  return new Intl.DateTimeFormat("en-US", {
+    timeZone: "UTC",
+    month: "short",
+    day: "numeric",
+  }).format(new Date(Date.UTC(year, month - 1, day)));
+}
+
 // The dealership group operates on Pacific time; deriving "today" and month/
 // year boundaries in this zone (rather than the server's UTC) keeps the
 // business day aligned with the stores. America/Los_Angeles auto-handles
