@@ -421,7 +421,7 @@ export default async function DashboardPage() {
 
               <div>
                 <p className="mb-1.5 text-xs font-medium uppercase tracking-wide text-zinc-500">
-                  Today
+                  {isStandIn ? "Yesterday" : "Today"}
                 </p>
                 {/* A store with no entry yet says so, rather than showing a
                     wall of $0 that reads identically to "sold nothing". That
@@ -446,7 +446,6 @@ export default async function DashboardPage() {
                   {isStandIn ? (
                     <div className="mb-2 flex flex-wrap items-center justify-between gap-2">
                       <span className="text-[11px] font-medium text-zinc-500">
-                        Yesterday&apos;s numbers ·{" "}
                         {formatShortDay(displayEntry.entry_date)}
                       </span>
                       <span className="rounded-full bg-amber-50 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-amber-700 dark:bg-amber-950/30 dark:text-amber-400">
@@ -514,7 +513,7 @@ export default async function DashboardPage() {
                   row, so they start at `sm` too. */}
               <div className="grid grid-cols-2 gap-y-4 divide-zinc-200 border-t border-zinc-100 pt-3 text-center dark:divide-zinc-800 dark:border-zinc-800 sm:grid-cols-4 sm:gap-y-0 sm:divide-x">
                 <GrossStat
-                  label="Today"
+                  label={isStandIn ? "Yesterday" : "Today"}
                   value={displayGross}
                   sub={unitSummary(
                     displayEntry?.new_units ?? 0,

@@ -193,7 +193,7 @@ export default async function DealershipDetailPage({
             )}
           />
           <Stat
-            label="Today"
+            label={isStandIn ? "Yesterday" : "Today"}
             value={formatCurrency(displayGross)}
             sub={
               displayEntry
