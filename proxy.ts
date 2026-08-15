@@ -2,8 +2,11 @@ import { createServerClient } from "@supabase/ssr";
 import { NextResponse, type NextRequest } from "next/server";
 import { sharedCookieOptions } from "@/lib/supabase/cookie-options";
 
-// Reachable without a session.
-const PUBLIC_PATHS = ["/login", "/forgot-password"];
+// Reachable without a session. `/api/push` is here so the service worker's
+// background re-subscribe POST reaches the route handler and gets a JSON 401 to
+// swallow, instead of a 302 redirect to /login (an SW fetch would follow that
+// and receive an HTML page). The route authenticates itself.
+const PUBLIC_PATHS = ["/login", "/forgot-password", "/api/push"];
 
 // Pointless once you are signed in, so signed-in visitors get sent to the
 // dashboard. Kept separate from PUBLIC_PATHS: the two lists happen to match

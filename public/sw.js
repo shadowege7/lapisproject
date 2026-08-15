@@ -13,7 +13,7 @@ self.addEventListener("push", function (event) {
   let data = {};
   try {
     data = event.data ? event.data.json() : {};
-  } catch (e) {
+  } catch {
     data = {};
   }
 
@@ -27,6 +27,51 @@ self.addEventListener("push", function (event) {
   };
 
   event.waitUntil(self.registration.showNotification(title, options));
+});
+
+// The browser can rotate a push subscription in the background (iOS especially,
+// also Android/FCM). When it does, the old endpoint stops working. Re-subscribe
+// and tell the server the new endpoint so notifications keep arriving without
+// the user reopening the app. Errors are swallowed; the app-open self-heal
+// recovers anything missed here.
+self.addEventListener("pushsubscriptionchange", function (event) {
+  event.waitUntil(
+    (async function () {
+      try {
+        let sub = event.newSubscription;
+        if (!sub) {
+          // Reuse the old subscription's application server key so this worker
+          // needs no embedded VAPID key. If it isn't available, bail — the
+          // self-heal on next app open will re-establish the subscription.
+          const applicationServerKey =
+            event.oldSubscription &&
+            event.oldSubscription.options &&
+            event.oldSubscription.options.applicationServerKey;
+          if (!applicationServerKey) return;
+          sub = await self.registration.pushManager.subscribe({
+            userVisibleOnly: true,
+            applicationServerKey: applicationServerKey,
+          });
+        }
+        if (!sub) return;
+
+        const json = sub.toJSON();
+        await fetch("/api/push/subscribe", {
+          method: "POST",
+          credentials: "include",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            endpoint: sub.endpoint,
+            p256dh: (json.keys && json.keys.p256dh) || "",
+            auth: (json.keys && json.keys.auth) || "",
+            oldEndpoint: event.oldSubscription && event.oldSubscription.endpoint,
+          }),
+        });
+      } catch {
+        // Best-effort — swallow.
+      }
+    })(),
+  );
 });
 
 self.addEventListener("notificationclick", function (event) {

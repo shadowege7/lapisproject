@@ -5,6 +5,7 @@ import { BrandLogo } from "@/app/brand-logo";
 import { APP_NAME, COMPANY_NAME, Copyright } from "@/app/brand";
 import { ThemeToggle } from "@/app/theme-toggle";
 import { HeaderMenu } from "./header-menu";
+import { PushRefresh } from "./push-refresh";
 
 export default async function AppLayout({
   children,
@@ -17,6 +18,9 @@ export default async function AppLayout({
 
   return (
     <div className="flex min-h-full flex-1 flex-col">
+      {/* Silently re-establishes a lost/rotated push subscription on every app
+          open, but only for users who already granted notifications. */}
+      <PushRefresh />
       <a
         href="#main"
         className="sr-only focus:not-sr-only focus:absolute focus:left-4 focus:top-4 focus:z-20 focus:rounded-md focus:bg-blue-600 focus:px-3 focus:py-2 focus:text-sm focus:font-semibold focus:text-white"
