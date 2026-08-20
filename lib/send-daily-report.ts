@@ -2,7 +2,13 @@ import "server-only";
 
 import { createAdminClient } from "@/lib/supabase/admin";
 import { sendMail, isMailConfigured, type MailResult } from "@/lib/email";
-import { buildDailyReport, type ReportFigures } from "@/lib/daily-report";
+import {
+  buildDailyReport,
+  type MonthlyFigures,
+  type ReportFigures,
+} from "@/lib/daily-report";
+import { projectMonthEnd } from "@/lib/projection";
+import { monthStartISODate, todayISODate } from "@/lib/format";
 
 /**
  * Emails a store's daily numbers to whoever an admin subscribed.
@@ -17,7 +23,10 @@ import { buildDailyReport, type ReportFigures } from "@/lib/daily-report";
  */
 export async function sendDailyReport(
   dealershipId: string,
-  figures: Omit<ReportFigures, "storeName" | "tracksSprinters" | "appUrl">,
+  figures: Omit<
+    ReportFigures,
+    "storeName" | "tracksSprinters" | "appUrl" | "monthly"
+  >,
 ): Promise<MailResult> {
   try {
     if (!(await isMailConfigured())) {
@@ -25,8 +34,15 @@ export async function sendDailyReport(
     }
 
     const admin = createAdminClient();
+    const month = monthStartISODate();
 
-    const [{ data: store }, { data: subscriptions }] = await Promise.all([
+    const [
+      { data: store },
+      { data: subscriptions },
+      { data: summary },
+      { data: budget },
+      { data: todayRow },
+    ] = await Promise.all([
       admin
         .from("dealerships")
         .select("name, tracks_sprinters")
@@ -36,10 +52,59 @@ export async function sendDailyReport(
         .from("daily_report_recipients")
         .select("profile_id")
         .eq("dealership_id", dealershipId),
+      // Month-to-date rollup for the This month figures — includes the entry
+      // just saved, since it's a view over daily_entries.
+      admin
+        .from("monthly_summary")
+        .select(
+          "total_new_units, total_used_units, total_sprinter_units, total_gross",
+        )
+        .eq("dealership_id", dealershipId)
+        .eq("month", month)
+        .maybeSingle(),
+      admin
+        .from("store_budgets")
+        .select("new_units, used_units, sprinter_units")
+        .eq("dealership_id", dealershipId)
+        .eq("month", month)
+        .maybeSingle(),
+      // Whether today's (PT) entry is in — the projection divisor, exactly as
+      // the dashboard computes it. Independent of which day this report is for.
+      admin
+        .from("daily_entries")
+        .select("dealership_id")
+        .eq("dealership_id", dealershipId)
+        .eq("entry_date", todayISODate())
+        .maybeSingle(),
     ]);
 
     if (!store) return { sent: false, reason: "store not found" };
     if (!subscriptions?.length) return { sent: false, reason: "no recipients" };
+
+    // The This month / Budget / Projected block that mirrors the dashboard tile.
+    const todayLogged = !!todayRow;
+    const monthly: MonthlyFigures = {
+      mtdGross: summary?.total_gross ?? 0,
+      mtdNewUnits: summary?.total_new_units ?? 0,
+      mtdUsedUnits: summary?.total_used_units ?? 0,
+      mtdSprinterUnits: summary?.total_sprinter_units ?? 0,
+      budget: budget
+        ? {
+            newUnits: budget.new_units,
+            usedUnits: budget.used_units,
+            sprinterUnits: budget.sprinter_units,
+          }
+        : null,
+      projNewUnits: Math.round(
+        projectMonthEnd(summary?.total_new_units ?? 0, todayLogged),
+      ),
+      projUsedUnits: Math.round(
+        projectMonthEnd(summary?.total_used_units ?? 0, todayLogged),
+      ),
+      projSprinterUnits: Math.round(
+        projectMonthEnd(summary?.total_sprinter_units ?? 0, todayLogged),
+      ),
+    };
 
     const { data: people } = await admin
       .from("profiles")
@@ -62,6 +127,7 @@ export async function sendDailyReport(
       ...figures,
       storeName: store.name,
       tracksSprinters: store.tracks_sprinters,
+      monthly,
       appUrl: appUrl(),
     });
 

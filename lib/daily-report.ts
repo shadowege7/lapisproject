@@ -14,6 +14,25 @@ import type { Mail } from "@/lib/email";
  * is worse than no report.
  */
 
+/**
+ * The month-to-date context that mirrors the dashboard tile's This month /
+ * Budget / Projected columns. Computed at send time (see send-daily-report).
+ * Gross figures lead Today and This month; Budget and Projected are unit counts,
+ * exactly as on the dashboard.
+ */
+export interface MonthlyFigures {
+  mtdGross: number;
+  mtdNewUnits: number;
+  mtdUsedUnits: number;
+  mtdSprinterUnits: number;
+  /** Budgeted unit counts for the month, or null when no budget is set. */
+  budget: { newUnits: number; usedUnits: number; sprinterUnits: number } | null;
+  /** Month-end projection of each unit count at the current pace. */
+  projNewUnits: number;
+  projUsedUnits: number;
+  projSprinterUnits: number;
+}
+
 export interface ReportFigures {
   storeName: string;
   entryDate: string;
@@ -32,6 +51,9 @@ export interface ReportFigures {
   appointments: number;
   notes: string | null;
   enteredBy: string | null;
+  /** This-month context mirroring the dashboard tile. Null when it could not be
+   *  computed, so the email still sends with just the day's numbers. */
+  monthly: MonthlyFigures | null;
   /** Absolute base for the images and the link back into the app. */
   appUrl: string;
 }
@@ -133,6 +155,27 @@ export function buildDailyReport(f: ReportFigures): Omit<Mail, "to"> {
     totalUnits === 1 ? "unit" : "units"
   }, ${formatCurrency(totalGross)} gross`;
 
+  // The dashboard tile's This month / Budget / Projected context. Gross leads
+  // Today and This month; Budget and Projected are unit counts — same as the
+  // tile. Rendered only when it could be computed (f.monthly non-null).
+  const m = f.monthly;
+  const unitsLine = (n: number, used: number, sprinter: number) =>
+    [`${n} new`, `${used} used`, ...(f.tracksSprinters ? [`${sprinter} Sprinter`] : [])].join(
+      " · ",
+    );
+  const budgetUnits = m?.budget
+    ? m.budget.newUnits +
+      m.budget.usedUnits +
+      (f.tracksSprinters ? m.budget.sprinterUnits : 0)
+    : 0;
+  const projUnits = m
+    ? m.projNewUnits + m.projUsedUnits + (f.tracksSprinters ? m.projSprinterUnits : 0)
+    : 0;
+  const monthLabel = `${MONTHS[Number(f.entryDate.slice(5, 7)) - 1] ?? ""} ${f.entryDate.slice(
+    0,
+    4,
+  )}`.trim();
+
   const text = [
     `${f.storeName}`,
     `${f.isNew ? "Numbers for" : "Updated numbers for"} ${day}`,
@@ -148,6 +191,31 @@ export function buildDailyReport(f: ReportFigures): Omit<Mail, "to"> {
     "",
     `Sales calls: ${f.salesCalls}`,
     `Appointments: ${f.appointments}`,
+    ...(m
+      ? [
+          "",
+          `This month (${monthLabel})`,
+          `This month: ${
+            m.mtdNewUnits + m.mtdUsedUnits + m.mtdSprinterUnits
+          } units · ${formatCurrency(m.mtdGross)} gross · ${unitsLine(
+            m.mtdNewUnits,
+            m.mtdUsedUnits,
+            m.mtdSprinterUnits,
+          )}`,
+          m.budget
+            ? `Budget: ${budgetUnits} units · ${unitsLine(
+                m.budget.newUnits,
+                m.budget.usedUnits,
+                m.budget.sprinterUnits,
+              )}`
+            : "Budget: not set",
+          `Projected: ${projUnits} units · ${unitsLine(
+            m.projNewUnits,
+            m.projUsedUnits,
+            m.projSprinterUnits,
+          )}`,
+        ]
+      : []),
     ...(f.notes ? ["", `Notes: ${f.notes}`] : []),
     ...(f.enteredBy ? ["", `Entered by ${f.enteredBy}`] : []),
     "",
@@ -187,6 +255,75 @@ export function buildDailyReport(f: ReportFigures): Omit<Mail, "to"> {
         </td>`,
     )
     .join("");
+
+  const statCell = (label: string, value: string, sub: string) => `
+        <td width="50%" valign="top" style="padding:12px 14px;border:1px solid #e2e8f0;">
+          <div style="font-size:11px;text-transform:uppercase;letter-spacing:.06em;color:#64748b;">${label}</div>
+          <div style="margin-top:2px;font-size:18px;font-weight:bold;color:#0f172a;">${value}</div>
+          <div style="margin-top:2px;font-size:12px;color:#64748b;">${sub || "&nbsp;"}</div>
+        </td>`;
+
+  // Colour each projected count against its budget, exactly as the dashboard's
+  // PaceUnits does: green when it's on pace to meet or beat the budget, red when
+  // it's behind, neutral when that category has no budget. Inline colour so it
+  // survives every mail client. Only the projected breakdown is coloured; the
+  // big total stays neutral, matching the tile.
+  const paceColor = (projected: number, budget: number) =>
+    budget > 0
+      ? projected >= budget
+        ? "color:#047857;font-weight:bold;"
+        : "color:#dc2626;font-weight:bold;"
+      : "";
+  const pacedCount = (projected: number, budget: number, name: string) =>
+    `<span style="white-space:nowrap;${paceColor(projected, budget)}">${projected} ${name}</span>`;
+  const pacedProjLine = m
+    ? [
+        pacedCount(m.projNewUnits, m.budget?.newUnits ?? 0, "new"),
+        pacedCount(m.projUsedUnits, m.budget?.usedUnits ?? 0, "used"),
+        ...(f.tracksSprinters
+          ? [pacedCount(m.projSprinterUnits, m.budget?.sprinterUnits ?? 0, "Sprinter")]
+          : []),
+      ].join(" · ")
+    : "";
+
+  const monthlyHtml = m
+    ? `
+        <tr>
+          <td style="padding:20px 28px 0;">
+            <div style="font-size:11px;text-transform:uppercase;letter-spacing:.06em;color:#64748b;margin:0 0 8px;">This month · ${escape(
+              monthLabel,
+            )}</div>
+            <table width="100%" cellpadding="0" cellspacing="0" border="0" style="border-collapse:collapse;">
+              <tr>
+                ${statCell(
+                  "Today",
+                  formatCurrency(totalGross),
+                  unitsLine(f.newUnits, f.usedUnits, f.sprinterUnits),
+                )}
+                ${statCell(
+                  "This month",
+                  formatCurrency(m.mtdGross),
+                  unitsLine(m.mtdNewUnits, m.mtdUsedUnits, m.mtdSprinterUnits),
+                )}
+              </tr>
+              <tr>
+                ${statCell(
+                  "Budget",
+                  m.budget ? `${budgetUnits} units` : "Not set",
+                  m.budget
+                    ? unitsLine(
+                        m.budget.newUnits,
+                        m.budget.usedUnits,
+                        m.budget.sprinterUnits,
+                      )
+                    : "",
+                )}
+                ${statCell("Projected", `${projUnits} units`, pacedProjLine)}
+              </tr>
+            </table>
+          </td>
+        </tr>`
+    : "";
 
   // A whole document rather than a fragment, so the colour-scheme hints below
   // can live in <head>. Without them a mail client in dark mode inverts the
@@ -262,6 +399,8 @@ export function buildDailyReport(f: ReportFigures): Omit<Mail, "to"> {
             </table>
           </td>
         </tr>
+
+        ${monthlyHtml}
 
         ${
           f.notes
