@@ -13,6 +13,7 @@ import { PrintButton } from "./print-button";
 import { ImportForm } from "./import-form";
 import { MonthPanel } from "./month-panel";
 import { DailyTable } from "./daily-table";
+import { ExpandForPrint } from "./expand-for-print";
 import { SummarySection, type SummaryRow } from "./summary-section";
 
 export default async function ReportsPage({
@@ -213,6 +214,7 @@ export default async function ReportsPage({
         sprinters={sprinters}
       />
 
+      <ExpandForPrint />
       <DailyTable
         entries={dailyEntries ?? []}
         sprinters={sprinters}

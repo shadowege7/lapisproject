@@ -37,6 +37,10 @@ export function DailyTable({
   const columnCount = 10 + (sprinters ? 4 : 0);
   const cols = columnCount + (canEdit ? 1 : 0);
 
+  // Shown on the summary line: a collapsed section is only an improvement if
+  // you can still tell what is in it without opening it.
+  const entryCount = entries.length;
+
   // The Date column stays put while the rest scrolls under it, so a row is
   // still identifiable at 360px. It needs an opaque background of its own,
   // because a table cell paints over its row's background: hence the explicit
@@ -48,13 +52,38 @@ export function DailyTable({
 
   return (
     <section>
-      <h2 className="mb-3 text-sm font-semibold">
-        Daily
-        <span className="ml-2 font-normal text-zinc-400">
-          most recent 31 entries
-        </span>
-      </h2>
-      <Card flush>
+      {/* Collapsed by default: it is the longest thing on the page and the one
+          people scroll past to reach the import form. A <details> rather than
+          client state, matching the admin sections — no JavaScript, keyboard
+          operable for free, and nothing remembered between loads.
+
+          `data-print-expand` is read by ExpandForPrint, because a closed
+          <details> prints as its summary and nothing else, and what lands on
+          paper should not depend on what someone left open. */}
+      <details data-print-expand className="group">
+        <summary className="mb-3 flex cursor-pointer list-none items-center gap-2 [&::-webkit-details-marker]:hidden">
+          <svg
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            strokeWidth={2}
+            strokeLinecap="round"
+            strokeLinejoin="round"
+            className="h-4 w-4 shrink-0 text-zinc-400 transition-transform group-open:rotate-90 print:hidden"
+            aria-hidden
+          >
+            <path d="M9 6l6 6-6 6" />
+          </svg>
+          <h2 className="text-sm font-semibold">
+            Daily
+            <span className="ml-2 font-normal text-zinc-400">
+              {entryCount === 0
+                ? "no entries yet"
+                : `most recent ${entryCount} ${entryCount === 1 ? "entry" : "entries"}`}
+            </span>
+          </h2>
+        </summary>
+        <Card flush>
         <table className="w-full text-sm">
           <thead>
             <tr className="text-left text-[11px] uppercase tracking-wide text-zinc-500">
@@ -297,9 +326,10 @@ export function DailyTable({
                 </td>
               </tr>
             ) : null}
-          </tbody>
-        </table>
-      </Card>
+            </tbody>
+          </table>
+        </Card>
+      </details>
     </section>
   );
 }

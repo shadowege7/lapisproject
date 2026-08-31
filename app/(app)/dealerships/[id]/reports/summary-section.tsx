@@ -14,6 +14,12 @@ export interface SummaryRow {
   total_sprinter_front_end_gross: number;
   total_sprinter_back_end_gross: number;
   total_gross: number;
+  /**
+   * No longer a column — it counted rows in `daily_entries`, which is entry
+   * discipline rather than a sales figure, and it sat beside money reading as
+   * one. Still carried here because the CSV keeps it: the export's headers are
+   * fixed and there are workbooks keyed to them.
+   */
   days_logged: number;
 }
 
@@ -136,7 +142,6 @@ export function SummarySection({
                   >
                     Total
                   </th>
-                  <th className="pb-1 pr-4 pt-2.5" />
                 </tr>
               )}
               <tr className="border-b border-zinc-200 text-left text-xs uppercase tracking-wide text-zinc-500 dark:border-zinc-800">
@@ -210,9 +215,6 @@ export function SummarySection({
                 >
                   {compact ? "Total gross" : "Gross"}
                 </th>
-                <th scope="col" className="py-2.5 pr-4 font-medium">
-                  Days
-                </th>
               </tr>
             </thead>
             <tbody>
@@ -284,7 +286,6 @@ export function SummarySection({
                   >
                     {formatCurrency(r.total_gross)}
                   </td>
-                  <td className={figure}>{r.days_logged}</td>
                 </tr>
               ))}
             </tbody>

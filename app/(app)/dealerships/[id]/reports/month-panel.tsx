@@ -266,7 +266,7 @@ function FigureRow({
       <dd className={`${emphasis} ${strong} text-right`}>
         <span className="sr-only">{label} month to date </span>
         <span className="font-mono tabular-nums">{formatCurrency(mtd)}</span>
-        <span className="mt-1 block text-[11px] font-normal leading-none text-zinc-400">
+        <span className="mt-1 block text-[11px] font-normal leading-none text-[var(--figure-muted)]">
           {average === null ? (
             <>
               avg <span aria-hidden="true">—</span>

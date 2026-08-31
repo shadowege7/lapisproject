@@ -107,6 +107,15 @@
      muddies a Marble ground. */
   --wash: var(--chambray);
 
+  /* Secondary figures sitting under a primary one inside a card — the per-unit
+     averages on the reports page. It cannot come from the neutral ramp: in dark
+     every text tone there collapses to Marble, which is also --foreground, so
+     the average came out the *same colour* as the amount above it and only
+     size and weight told them apart. Chambray is the second tone the palette
+     has, and it works only on a card: 7.47 on Obsidian, but 2.19 on white, so
+     light keeps Slate at 5.51. */
+  --figure-muted: var(--slate);
+
   /* The primary action. Its label has to move with its fill — see the note in
      the dark block for why one fixed pair cannot serve both themes. */
   --btn: var(--obsidian);
@@ -156,6 +165,11 @@
   --brand: var(--chambray);
   --brand-strong: var(--marble);
   --wash: var(--marble);
+
+  /* See the light block. Chambray reaches 7.47 on an Obsidian card, which is
+     where every average sits — this must not be used on the page itself, where
+     a Slate ground would drop it to 2.51. */
+  --figure-muted: var(--chambray);
 
   /*
    * A Slate button on a Slate page is invisible, and an Obsidian one vanishes
