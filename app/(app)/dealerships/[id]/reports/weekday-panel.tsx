@@ -109,6 +109,13 @@ export function WeekdayPanel({
   });
 
   const best = ranked[0]?.average ?? 0;
+  // Bounds for the colour scale. Taken from the values rather than from the
+  // row order, so two days on the same average always land on the same hue —
+  // ranking by position would give tied days different colours.
+  const averages = stats
+    .map((d) => d.average)
+    .filter((a): a is number => a !== null);
+  const worst = averages.length ? Math.min(...averages) : 0;
   // Only decides between the table and the empty state; the count of missed
   // entries it used to caption now lives beside the store name.
   const totalDays = occurrences.reduce((sum, n) => sum + n, 0);
@@ -159,7 +166,7 @@ export function WeekdayPanel({
                     {day.name}
                   </td>
                   <td className="w-1/3 py-2 pr-4">
-                    <Bar value={day.average} max={best} />
+                    <Bar value={day.average} max={best} min={worst} />
                   </td>
                   <td className="py-2 pr-4 text-right font-mono tabular-nums font-medium">
                     {day.average === null ? (
@@ -187,25 +194,58 @@ export function WeekdayPanel({
   );
 }
 
+/** Red at 0, amber through the middle, green at 140. */
+const HUE_RANGE = 140;
+
 /**
- * The proportional bar beside each average.
+ * The proportional bar beside each average, red at the worst day through to
+ * green at the best.
  *
- * Outlined rather than solid: the print block in `app/globals.css` forces
- * `background: transparent` on every element, so a filled bar is simply gone
- * on paper, while a border is only recoloured. The number beside it carries
- * the value regardless — the bar is there to make the ranking scannable, and
- * nothing depends on it alone.
+ * The hue comes from where the *value* sits between the worst and best
+ * averages, not from the row's position in the ranking — so days that tie get
+ * the same colour, and a day only slightly off the pace is only slightly off
+ * the colour. Ranking by position would spread a full red-to-green sweep
+ * across seven near-identical averages and invent a difference that is not
+ * there.
+ *
+ * Outlined as well as filled: the print block in `app/globals.css` forces
+ * `background: transparent` on every element, so on paper the fill is gone and
+ * every border flattens to one grey. Length still ranks the days there, and
+ * the average is printed beside every bar — the colour is a shortcut for
+ * scanning, never the only place a value is stated. That matters on screen
+ * too, since red and green are the pair most often indistinguishable to
+ * colour-blind readers.
  */
-function Bar({ value, max }: { value: number | null; max: number }) {
+function Bar({
+  value,
+  max,
+  min,
+}: {
+  value: number | null;
+  max: number;
+  min: number;
+}) {
   if (value === null || max <= 0) return null;
+
+  // Every day tied: each one is simultaneously the best and the worst, so
+  // there is no scale to place them on and they all take the top of it.
+  const span = max - min;
+  const position = span > 0 ? (value - min) / span : 1;
+
   // A weekday that sells but rounds to nothing still gets a visible sliver,
   // so "logged but slow" cannot be mistaken for "never logged".
   const width = Math.max((value / max) * 100, value > 0 ? 2 : 0);
+
   return (
     <span
       aria-hidden="true"
-      className="block h-2 rounded-sm border border-blue-700 bg-blue-100 dark:border-blue-400 dark:bg-blue-900/40"
-      style={{ width: `${width}%` }}
+      className="weekday-bar block h-2 rounded-sm border"
+      style={
+        {
+          width: `${width}%`,
+          "--bar-h": Math.round(position * HUE_RANGE),
+        } as React.CSSProperties
+      }
     />
   );
 }

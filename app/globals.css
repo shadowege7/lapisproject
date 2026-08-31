@@ -324,6 +324,28 @@ option {
 /* Print: ink-friendly. Force black text on white, drop dark backgrounds and
    shadows, and repeat table headers across pages. Elements marked print:hidden
    (nav, buttons, watermarks) are removed by Tailwind's print variant. */
+/*
+ * The weekday ranking's bars. The hue is set per bar as `--bar-h` (0 red to
+ * 140 green, by where that day's average falls between the worst and the
+ * best); only the lightness and saturation live here, so each theme can pick a
+ * pair that reads on its own ground without the component knowing which theme
+ * it is in.
+ *
+ * Outside the brand's four colours on purpose — this is a value scale, not
+ * brand furniture, and there is no green or red in the palette to build one
+ * from. It carries no information on its own: the average is printed beside
+ * every bar, which is also what makes it survive the print reset below,
+ * where every fill is dropped and every border flattened to one grey.
+ */
+.weekday-bar {
+  border-color: hsl(var(--bar-h) 60% 38%);
+  background-color: hsl(var(--bar-h) 70% 86%);
+}
+.dark .weekday-bar {
+  border-color: hsl(var(--bar-h) 55% 62%);
+  background-color: hsl(var(--bar-h) 45% 26%);
+}
+
 @media print {
   body {
     background: #fff !important;
