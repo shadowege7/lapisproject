@@ -76,3 +76,27 @@ export function yearStartISODate(): string {
   const { year } = datePartsInAppTZ();
   return `${year}-01-01`;
 }
+
+/** The ISO date `days` before today, in the app's time zone. */
+export function daysAgoISODate(days: number): string {
+  const { year, month, day } = datePartsInAppTZ();
+  // Date.UTC normalises an out-of-range day, so `day - 365` rolls back through
+  // months and years without any arithmetic here.
+  const shifted = new Date(Date.UTC(year, month - 1, day - days));
+  return `${shifted.getUTCFullYear()}-${pad2(shifted.getUTCMonth() + 1)}-${pad2(
+    shifted.getUTCDate(),
+  )}`;
+}
+
+/**
+ * Day of the week of an `entry_date`, 0 = Sunday through 6 = Saturday.
+ *
+ * Built from the numeric parts at UTC midnight and read back in UTC, for the
+ * reason `formatShortDay` gives: `new Date("2026-08-13").getDay()` on a server
+ * west of UTC lands on the 12th, which would file every entry under the wrong
+ * weekday — and silently, since the result is still a valid day name.
+ */
+export function weekdayIndex(dateString: string): number {
+  const [year, month, day] = dateString.split("-").map(Number);
+  return new Date(Date.UTC(year, month - 1, day)).getUTCDay();
+}

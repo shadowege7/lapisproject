@@ -3,6 +3,7 @@ import { notFound, redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { getCurrentUser, effectiveRole } from "@/lib/auth";
 import {
+  daysAgoISODate,
   formatMonth,
   formatYear,
   monthStartISODate,
@@ -14,7 +15,17 @@ import { ImportForm } from "./import-form";
 import { MonthPanel } from "./month-panel";
 import { DailyTable } from "./daily-table";
 import { ExpandForPrint } from "./expand-for-print";
+import { WeekdayPanel, type WeekdayEntry } from "./weekday-panel";
 import { SummarySection, type SummaryRow } from "./summary-section";
+
+/**
+ * How far back the weekday ranking looks. A year gives roughly fifty samples
+ * per weekday, enough that one exceptional Saturday cannot decide the order,
+ * and it is recent enough to describe how the store sells now. The 31 rows the
+ * Daily table fetches would be about four samples a day, which is not a
+ * ranking so much as a coincidence — hence the separate, narrower query.
+ */
+const WEEKDAY_WINDOW_DAYS = 365;
 
 export default async function ReportsPage({
   params,
@@ -33,6 +44,7 @@ export default async function ReportsPage({
     { data: dailyEntries },
     { data: monthly },
     { data: annual },
+    { data: weekdayEntries },
   ] = await Promise.all([
     supabase
       .from("dealerships")
@@ -62,6 +74,14 @@ export default async function ReportsPage({
       .select("*")
       .eq("dealership_id", dealershipId)
       .order("year", { ascending: false }),
+    // Only the four columns the ranking needs, over a year rather than the
+    // Daily table's 31 rows.
+    supabase
+      .from("daily_entries")
+      .select("entry_date, new_units, used_units, sprinter_units")
+      .eq("dealership_id", dealershipId)
+      .gte("entry_date", daysAgoISODate(WEEKDAY_WINDOW_DAYS))
+      .order("entry_date", { ascending: false }),
   ]);
 
   if (!dealership) notFound();
@@ -198,6 +218,11 @@ export default async function ReportsPage({
         sprinters={sprinters}
         dealershipId={dealershipId}
         canEdit={role === "editor"}
+      />
+
+      <WeekdayPanel
+        entries={(weekdayEntries ?? []) as WeekdayEntry[]}
+        today={today}
       />
 
       <SummarySection
