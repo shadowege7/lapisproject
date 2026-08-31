@@ -282,8 +282,27 @@ html {
 }
 
 body {
+  /* One glow, at the top of the document, and no more.
+
+     With no background on <html>, the body's background propagates to the
+     canvas: it is sized from the root element's box but painted across the
+     whole canvas, so on a page taller than that box the gradient tiles and the
+     glow shows up again further down. Long pages — reports, the daily log —
+     are where it was visible. The Launchpad hit the same thing and carries the
+     same fix.
+
+     `no-repeat` rides inside the layer rather than on a `background-repeat`
+     line of its own. `background` is shorthand and resets repeat on every
+     layer it sets, so a separate line only works while it stays *after* every
+     such shorthand — true today, and quietly untrue the first time someone
+     adds another `background:` below it. */
   background:
-    radial-gradient(60rem 60rem at 100% -10%, color-mix(in srgb, var(--wash) 22%, transparent), transparent 60%),
+    radial-gradient(
+        60rem 60rem at 100% -10%,
+        color-mix(in srgb, var(--wash) 22%, transparent),
+        transparent 60%
+      )
+      no-repeat,
     var(--background);
   color: var(--foreground);
   font-family: var(--font-sans);
