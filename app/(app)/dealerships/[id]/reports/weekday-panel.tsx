@@ -22,7 +22,11 @@ const DAY_NAMES = [
 
 type DayStat = {
   name: string;
-  /** How many times this weekday has occurred in the span — the divisor. */
+  /**
+   * How many times this weekday has occurred in the span. No longer a column,
+   * but still what `average` is divided by — deleting it would change the
+   * numbers, not just the layout.
+   */
   occurrences: number;
   totalUnits: number;
   /** null only where the span is too short to contain this weekday at all. */
@@ -112,7 +116,7 @@ export function WeekdayPanel({
   return (
     <section>
       <h2 className="mb-3 text-sm font-semibold">
-        Dealership weekly sales analysis
+        Dealership Weekday Sales Analysis
       </h2>
 
       {totalDays === 0 ? (
@@ -137,11 +141,8 @@ export function WeekdayPanel({
                 <th scope="col" className="py-2.5 pr-4 text-right font-medium">
                   Avg units
                 </th>
-                <th scope="col" className="py-2.5 pr-4 text-right font-medium">
-                  Total units
-                </th>
                 <th scope="col" className="py-2.5 text-right font-medium">
-                  Days
+                  Total units
                 </th>
               </tr>
             </thead>
@@ -172,11 +173,8 @@ export function WeekdayPanel({
                       day.average.toFixed(1)
                     )}
                   </td>
-                  <td className="py-2 pr-4 text-right font-mono tabular-nums text-[var(--figure-muted)]">
-                    {day.totalUnits}
-                  </td>
                   <td className="py-2 text-right font-mono tabular-nums text-[var(--figure-muted)]">
-                    {day.occurrences}
+                    {day.totalUnits}
                   </td>
                 </tr>
               ))}
