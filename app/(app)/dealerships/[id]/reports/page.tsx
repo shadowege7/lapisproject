@@ -16,6 +16,7 @@ import { MonthPanel } from "./month-panel";
 import { DailyTable } from "./daily-table";
 import { ExpandForPrint } from "./expand-for-print";
 import { WeekdayPanel, type WeekdayEntry } from "./weekday-panel";
+import { MissedEntries } from "./missed-entries";
 import { SummarySection, type SummaryRow } from "./summary-section";
 
 /**
@@ -189,9 +190,15 @@ export default async function ReportsPage({
           <p className="text-xs font-medium uppercase tracking-wide text-zinc-500">
             Reports
           </p>
-          <h1 className="text-xl font-semibold tracking-tight">
-            {dealership.name}
-          </h1>
+          <div className="flex flex-wrap items-center gap-2">
+            <h1 className="text-xl font-semibold tracking-tight">
+              {dealership.name}
+            </h1>
+            <MissedEntries
+              daysLogged={thisMonth?.days_logged ?? 0}
+              todayLogged={!!todayEntry}
+            />
+          </div>
         </div>
         <div className="flex flex-wrap items-center gap-2 print:hidden">
           <PrintButton />

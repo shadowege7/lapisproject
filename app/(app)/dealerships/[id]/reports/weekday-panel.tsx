@@ -1,4 +1,4 @@
-import { formatShortDay, weekdayIndex } from "@/lib/format";
+import { weekdayIndex } from "@/lib/format";
 import { Card } from "./table-chrome";
 
 /** Just the columns this panel needs — see the query in `page.tsx`. */
@@ -105,21 +105,14 @@ export function WeekdayPanel({
   });
 
   const best = ranked[0]?.average ?? 0;
+  // Only decides between the table and the empty state; the count of missed
+  // entries it used to caption now lives beside the store name.
   const totalDays = occurrences.reduce((sum, n) => sum + n, 0);
-  // Days in the span with nothing entered. They count as zero, which is the
-  // point of averaging over calendar weeks — but it is worth saying so, since
-  // a store that simply stopped logging looks like one that stopped selling.
-  const gaps = totalDays - entries.length;
 
   return (
     <section>
       <h2 className="mb-3 text-sm font-semibold">
-        Best days to sell
-        <span className="ml-2 font-normal text-zinc-400">
-          {totalDays === 0 || !firstEntry
-            ? "no history yet"
-            : `averaged over calendar weeks since ${formatShortDay(firstEntry)}`}
-        </span>
+        Dealership weekly sales analysis
       </h2>
 
       {totalDays === 0 ? (
@@ -192,12 +185,6 @@ export function WeekdayPanel({
         </Card>
       )}
 
-      {gaps > 0 ? (
-        <p className="mt-2 text-xs text-zinc-500">
-          {gaps} of these {totalDays} days {gaps === 1 ? "has" : "have"} no
-          entry and {gaps === 1 ? "counts" : "count"} as zero.
-        </p>
-      ) : null}
     </section>
   );
 }

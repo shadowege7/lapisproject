@@ -89,22 +89,18 @@ export function MonthPanel({
             <HeadlineStat
               label="Total gross"
               value={formatCurrency(month.total_gross)}
-              sub={`Month to date · ${plural(month.days_logged, "day")} logged`}
             />
             <HeadlineStat
               label="Projected month-end"
               value={formatCurrency(projected(month.total_gross))}
-              sub="At the current daily pace"
               accent
             />
+            {/* `sub` survives only for the zero case: without it that tile is
+                a bare dash with nothing saying why. */}
             <HeadlineStat
               label="Average gross per unit"
               value={formatAverage(perUnit(month.total_gross, totalUnits))}
-              sub={
-                totalUnits > 0
-                  ? `Month to date, across ${plural(totalUnits, "unit")} sold`
-                  : "No units sold yet this month"
-              }
+              sub={totalUnits > 0 ? undefined : "No units sold yet this month"}
             />
           </div>
 
@@ -301,7 +297,8 @@ function HeadlineStat({
 }: {
   label: string;
   value: string;
-  sub: string;
+  /** Only where the figure needs explaining — see the average tile. */
+  sub?: string;
   accent?: boolean;
 }) {
   return (
@@ -316,7 +313,7 @@ function HeadlineStat({
       >
         {value}
       </p>
-      <p className="mt-0.5 text-xs text-zinc-400">{sub}</p>
+      {sub ? <p className="mt-0.5 text-xs text-zinc-400">{sub}</p> : null}
     </div>
   );
 }
@@ -343,6 +340,3 @@ function formatCount(value: number): string {
   return Math.round(value).toLocaleString("en-US");
 }
 
-function plural(count: number, noun: string): string {
-  return `${formatCount(count)} ${noun}${count === 1 ? "" : "s"}`;
-}
