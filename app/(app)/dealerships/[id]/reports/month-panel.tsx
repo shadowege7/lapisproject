@@ -124,13 +124,6 @@ export function MonthPanel({
               />
             ))}
           </div>
-
-          <p className="mt-2 text-xs text-zinc-400">
-            Month to date, alongside month-end projected from the current daily
-            pace. The smaller figure under each amount is its average per unit
-            sold. Today&apos;s own figures are on the dashboard and in the Daily
-            table below.
-          </p>
         </>
       ) : (
         <div className="rounded-xl border border-dashed border-zinc-300 px-4 py-8 text-center dark:border-zinc-700">
@@ -211,7 +204,7 @@ function CategoryCard({
         </span>
       </div>
 
-      <dl className={`mt-1 ${FIGURE_GRID} gap-y-1 text-xs`}>
+      <dl className={`mt-1 ${FIGURE_GRID} gap-y-3 text-xs`}>
         <FigureRow
           label="Front"
           mtd={front}
@@ -246,6 +239,11 @@ function CategoryCard({
  * The average hangs under the month-to-date amount rather than taking a column
  * of its own. MTD and Projected are two points in time; an average is not, and
  * a third column beside them would read as one.
+ *
+ * That makes each row two lines deep in one column and one in the others, so
+ * the grid's row gap has to separate *rows*, not just lines: at a tight gap the
+ * average sat as close to the next row's amount as to its own, and the column
+ * read as six loose numbers instead of three labelled pairs.
  */
 function FigureRow({
   label,
@@ -268,7 +266,7 @@ function FigureRow({
       <dd className={`${emphasis} ${strong} text-right`}>
         <span className="sr-only">{label} month to date </span>
         <span className="font-mono tabular-nums">{formatCurrency(mtd)}</span>
-        <span className="block text-[11px] font-normal text-zinc-400">
+        <span className="mt-1 block text-[11px] font-normal leading-none text-zinc-400">
           {average === null ? (
             <>
               avg <span aria-hidden="true">—</span>
