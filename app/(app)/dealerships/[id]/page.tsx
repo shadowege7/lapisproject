@@ -159,7 +159,7 @@ export default async function DealershipDetailPage({
             href={`/dealerships/${dealershipId}/reports`}
             className="rounded-md border border-zinc-300 px-4 py-2 text-sm font-semibold text-zinc-700 transition-colors hover:border-blue-400 hover:text-blue-700 dark:border-zinc-700 dark:text-zinc-200 dark:hover:text-blue-400"
           >
-            View reports
+            Dealership Insights
           </Link>
         </div>
       </div>

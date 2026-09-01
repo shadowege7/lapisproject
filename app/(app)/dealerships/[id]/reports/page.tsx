@@ -17,6 +17,7 @@ import { DailyTable } from "./daily-table";
 import { ExpandForPrint } from "./expand-for-print";
 import { WeekdayPanel, type WeekdayEntry } from "./weekday-panel";
 import { MissedEntries } from "./missed-entries";
+import { StoreSwitcher } from "./store-switcher";
 import { SummarySection, type SummaryRow } from "./summary-section";
 
 /**
@@ -46,6 +47,7 @@ export default async function ReportsPage({
     { data: monthly },
     { data: annual },
     { data: weekdayEntries },
+    { data: switchableStores },
   ] = await Promise.all([
     supabase
       .from("dealerships")
@@ -83,6 +85,14 @@ export default async function ReportsPage({
       .eq("dealership_id", dealershipId)
       .gte("entry_date", daysAgoISODate(WEEKDAY_WINDOW_DAYS))
       .order("entry_date", { ascending: false }),
+    // Every store this user may open, for the switcher. No filter here on
+    // purpose: `dealerships_select` already narrows this to super admins and
+    // active members, so the scoping is the database's rather than ours.
+    supabase
+      .from("dealerships")
+      .select("id, name")
+      .order("sort_order", { ascending: true, nullsFirst: false })
+      .order("name"),
   ]);
 
   if (!dealership) notFound();
@@ -188,7 +198,7 @@ export default async function ReportsPage({
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div>
           <p className="text-xs font-medium uppercase tracking-wide text-zinc-500">
-            Reports
+            Dealership Insights
           </p>
           <div className="flex flex-wrap items-center gap-2">
             <h1 className="text-xl font-semibold tracking-tight">
@@ -201,6 +211,10 @@ export default async function ReportsPage({
           </div>
         </div>
         <div className="flex flex-wrap items-center gap-2 print:hidden">
+          <StoreSwitcher
+            stores={switchableStores ?? []}
+            currentId={dealershipId}
+          />
           <PrintButton />
           <ExportCsvButton
             filename={`${slug}-daily.csv`}

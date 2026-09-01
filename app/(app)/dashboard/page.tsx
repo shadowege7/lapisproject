@@ -601,10 +601,11 @@ export default async function DashboardPage() {
               </div>
 
               <div className="flex flex-wrap gap-3">
-                {/* The card's main action, so it takes the strongest tone
-                    available. In this palette the accent is *quieter* than the
-                    body colour, and leaving it on the accent made the primary
-                    action read as the lesser of the two links. */}
+                {/* Both take the filled tone. In this palette the accent is
+                    *quieter* than the body colour, so an outlined second link
+                    read as the lesser of the two — which was right while one
+                    was the card's single main action, and is not what is
+                    wanted now that both are. */}
                 {role === "editor" ? (
                   <Link
                     href={`/dealerships/${dealership.id}/entry`}
@@ -615,9 +616,9 @@ export default async function DashboardPage() {
                 ) : null}
                 <Link
                   href={`/dealerships/${dealership.id}/reports`}
-                  className="inline-flex items-center justify-center rounded-full border border-zinc-300 px-4 py-2 text-sm font-medium text-zinc-600 transition-colors hover:border-blue-400 hover:text-blue-700 dark:border-zinc-700 dark:text-zinc-300 dark:hover:border-blue-800 dark:hover:text-blue-400"
+                  className="inline-flex items-center justify-center rounded-full btn-primary px-4 py-2 text-sm font-semibold shadow-sm transition-colors"
                 >
-                  View reports
+                  Dealership Insights
                 </Link>
               </div>
             </div>
