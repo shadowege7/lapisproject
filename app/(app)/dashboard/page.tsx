@@ -400,24 +400,24 @@ export default async function DashboardPage() {
               key={dealership.id}
               className="flex flex-col gap-4 rounded-xl border border-zinc-200 bg-white p-5 tile-float transition hover:border-blue-200 dark:border-zinc-800 dark:bg-[var(--surface)] dark:hover:border-blue-900"
             >
-              <div className="flex items-center justify-between gap-2">
-                <h2 className="flex items-center gap-2 font-semibold tracking-tight">
-                  <Link
-                    href={`/dealerships/${dealership.id}`}
-                    className="hover:text-blue-700 hover:underline dark:hover:text-blue-400"
-                  >
-                    {dealership.name}
-                  </Link>
-                  {dealership.id === mainDealershipId ? (
-                    <span className="rounded-full btn-primary px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide">
-                      Main
-                    </span>
-                  ) : null}
-                </h2>
-                <span className="rounded-full bg-blue-50 px-2.5 py-0.5 text-xs font-medium text-blue-700 dark:bg-blue-950/60 dark:text-blue-300">
-                  {role}
-                </span>
-              </div>
+              {/* No role badge. `role` still decides what the tile *offers* —
+                  the entry link below — which is the useful form of the fact;
+                  spelling out "viewer" on every card told people something
+                  they cannot act on. The row wrapper went with it: with the
+                  badge gone its justify-between had one child to space. */}
+              <h2 className="flex items-center gap-2 font-semibold tracking-tight">
+                <Link
+                  href={`/dealerships/${dealership.id}`}
+                  className="hover:text-blue-700 hover:underline dark:hover:text-blue-400"
+                >
+                  {dealership.name}
+                </Link>
+                {dealership.id === mainDealershipId ? (
+                  <span className="rounded-full btn-primary px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide">
+                    Main
+                  </span>
+                ) : null}
+              </h2>
 
               <div>
                 <p className="mb-1.5 text-xs font-medium uppercase tracking-wide text-zinc-500">
