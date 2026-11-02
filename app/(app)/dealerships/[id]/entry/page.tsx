@@ -41,7 +41,7 @@ export default async function EntryPage({
   ] = await Promise.all([
     supabase
       .from("dealerships")
-      .select("id, name, tracks_sprinters, tracks_salespeople")
+      .select("id, name, tracks_sprinters, tracks_salespeople, archived_at")
       .eq("id", dealershipId)
       .single(),
     supabase
@@ -69,7 +69,8 @@ export default async function EntryPage({
   if (!dealership) notFound();
 
   const role = effectiveRole(user, membership?.role);
-  if (role !== "editor") {
+  // An archived store is closed: its numbers can be read, not added to.
+  if (role !== "editor" || dealership.archived_at) {
     redirect(`/dealerships/${dealershipId}/reports`);
   }
 

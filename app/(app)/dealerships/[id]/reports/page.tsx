@@ -21,6 +21,7 @@ import { StoreSwitcher } from "./store-switcher";
 import { SummarySection, type SummaryRow } from "./summary-section";
 import { SalespeopleSection } from "./salespeople-section";
 import { parsePeriod, parseRank } from "@/lib/salespeople";
+import { StoreStateBanner } from "../store-state-banner";
 
 /**
  * How far back the weekday ranking looks. A year gives roughly fifty samples
@@ -62,7 +63,7 @@ export default async function ReportsPage({
   ] = await Promise.all([
     supabase
       .from("dealerships")
-      .select("id, name, tracks_sprinters, tracks_salespeople, salespeople_tracked_since")
+      .select("id, name, tracks_sprinters, tracks_salespeople, salespeople_tracked_since, super_admin_only, archived_at")
       .eq("id", dealershipId)
       .single(),
     supabase
@@ -102,6 +103,7 @@ export default async function ReportsPage({
     supabase
       .from("dealerships")
       .select("id, name")
+      .is("archived_at", null)
       .order("sort_order", { ascending: true, nullsFirst: false })
       .order("name"),
   ]);
@@ -233,7 +235,7 @@ export default async function ReportsPage({
             rows={dailyCsvRows}
             label="Export daily"
           />
-          {role === "editor" ? (
+          {role === "editor" && !dealership.archived_at ? (
             <Link
               href={`/dealerships/${dealershipId}/entry`}
               className="rounded-md btn-primary px-4 py-2 text-sm font-semibold shadow-sm transition-colors"
@@ -244,12 +246,17 @@ export default async function ReportsPage({
         </div>
       </div>
 
+      <StoreStateBanner
+        archivedAt={dealership.archived_at}
+        superAdminOnly={dealership.super_admin_only}
+      />
+
       <MonthPanel
         month={thisMonth}
         todayLogged={!!todayEntry}
         sprinters={sprinters}
         dealershipId={dealershipId}
-        canEdit={role === "editor"}
+        canEdit={role === "editor" && !dealership.archived_at}
       />
 
       {/* Only for stores an admin has switched on. */}
@@ -260,8 +267,8 @@ export default async function ReportsPage({
           trackedSince={dealership.salespeople_tracked_since}
           period={parsePeriod(query.sp)}
           rank={parseRank(query.rank)}
-          canEdit={role === "editor"}
-          manageOpen={role === "editor" && query.manage === "1"}
+          canEdit={role === "editor" && !dealership.archived_at}
+          manageOpen={role === "editor" && !dealership.archived_at && query.manage === "1"}
           error={query.sp_error}
           done={query.sp_done}
         />
@@ -291,11 +298,11 @@ export default async function ReportsPage({
         entries={dailyEntries ?? []}
         sprinters={sprinters}
         dealershipId={dealershipId}
-        canEdit={role === "editor"}
+        canEdit={role === "editor" && !dealership.archived_at}
         canDelete={user.isSuperAdmin}
       />
 
-      {role === "editor" ? (
+      {role === "editor" && !dealership.archived_at ? (
         <ImportForm dealershipId={dealershipId} tracksSprinters={sprinters} />
       ) : null}
     </div>

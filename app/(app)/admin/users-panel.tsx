@@ -29,7 +29,7 @@ export function UsersPanel({
   positions,
 }: {
   users: AdminUser[];
-  dealerships: { id: string; name: string }[];
+  dealerships: { id: string; name: string; archived_at?: string | null }[];
   positions: { id: string; name: string }[];
 }) {
   const [q, setQ] = useState("");

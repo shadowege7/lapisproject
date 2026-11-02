@@ -178,6 +178,11 @@ export interface Database {
           tracks_salespeople: boolean;
           /** First day tracking was on; stamped by trigger, never cleared. */
           salespeople_tracked_since: string | null;
+          /** Only super admins can see it (a test store, or one not yet open). */
+          super_admin_only: boolean;
+          /** Closed or sold: hidden from daily views, data kept. Null = active. */
+          archived_at: string | null;
+          archived_by: string | null;
           created_at: string;
         };
         Insert: {
@@ -187,6 +192,9 @@ export interface Database {
           sort_order?: number | null;
           tracks_salespeople?: boolean;
           salespeople_tracked_since?: string | null;
+          super_admin_only?: boolean;
+          archived_at?: string | null;
+          archived_by?: string | null;
           created_at?: string;
         };
         Update: {
@@ -196,6 +204,9 @@ export interface Database {
           sort_order?: number | null;
           tracks_salespeople?: boolean;
           salespeople_tracked_since?: string | null;
+          super_admin_only?: boolean;
+          archived_at?: string | null;
+          archived_by?: string | null;
           created_at?: string;
         };
         Relationships: [];

@@ -57,7 +57,7 @@ export function UserRow({
   mainDealershipId: string | null;
   lastSignInLabel: string;
   memberships: StoreMembership[];
-  dealerships: { id: string; name: string }[];
+  dealerships: { id: string; name: string; archived_at?: string | null }[];
   /**
    * The person has been offboarded in the Launchpad (`is_active = false`):
    * their sign-in is disabled. Marks the row as inactive and hides the
@@ -72,7 +72,8 @@ export function UserRow({
 
   const nameById = new Map(dealerships.map((d) => [d.id, d.name]));
   const assignedIds = new Set(memberships.map((m) => m.dealershipId));
-  const available = dealerships.filter((d) => !assignedIds.has(d.id));
+  // Archived stores keep their names above but are not offered for new access.
+  const available = dealerships.filter((d) => !assignedIds.has(d.id) && !d.archived_at);
   const positionName = positions.find((p) => p.id === positionId)?.name ?? null;
   const hasAllStores =
     isSuperAdmin ||
@@ -547,7 +548,7 @@ function MainStoreSelect({
 }: {
   userId: string;
   mainDealershipId: string | null;
-  dealerships: { id: string; name: string }[];
+  dealerships: { id: string; name: string; archived_at?: string | null }[];
 }) {
   const formRef = useRef<HTMLFormElement>(null);
   const [value, setValue] = useState(mainDealershipId ?? "");
@@ -566,11 +567,14 @@ function MainStoreSelect({
         aria-label="Main store"
       >
         <option value="">— None —</option>
-        {dealerships.map((d) => (
-          <option key={d.id} value={d.id}>
-            {d.name}
-          </option>
-        ))}
+        {dealerships
+          .filter((d) => !d.archived_at || d.id === value)
+          .map((d) => (
+            <option key={d.id} value={d.id}>
+              {d.name}
+              {d.archived_at ? " (archived)" : ""}
+            </option>
+          ))}
       </select>
     </form>
   );

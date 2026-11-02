@@ -289,6 +289,31 @@ see its board; only its active editors and super admins can change the roster
 or the numbers, and only while the switch is on. See
 `0040_salesperson_tracking.sql` in the Launchpad repo.
 
+## Archiving, deleting and hiding stores
+
+All on **Admin → Dealerships**, super admins only:
+
+- **Super admins only** (a switch in the store's panel) — for a test store,
+  or one that isn't open yet. It works normally for super admins and is
+  invisible to everyone else: its members get no access, and push
+  notifications and the daily email go to super admins only. Its numbers stay
+  out of the company rollup and the store leaderboard.
+- **Archive** (bottom of the store's panel) — for a store that has closed or
+  been sold. It disappears from the dashboard, entry, Insights and the store
+  switcher for everyone, and its members lose access. Every number is kept;
+  super admins can still read them from **Archived stores**, and **Restore**
+  puts it back exactly as it was.
+- **Delete** — permanent, and takes everything the store logged with it. The
+  button stays disabled until the store's name is typed exactly, and the
+  server checks the same thing.
+
+Both states are enforced in the database, not just hidden in the UI:
+`dealership_role()` — which every member-facing policy goes through —
+returns nothing for a super-admins-only or archived store, so a member's
+direct API call gets no rows. See `0041_store_archive_and_visibility.sql` in
+the Launchpad repo, which also made two policies that had been `FOR ALL` by
+accident (`dealerships_select`, `report_recipients_select`) select-only.
+
 ## The order of the store cards
 
 Porsche, Audi, Land Rover, Honda, Ferrari, Mercedes — the order the business

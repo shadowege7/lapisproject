@@ -83,7 +83,10 @@ export default async function DashboardPage() {
     // placed — see dealerships.sort_order.
     supabase
       .from("dealerships")
-      .select("id, name, tracks_sprinters, sort_order")
+      .select("id, name, tracks_sprinters, sort_order, super_admin_only")
+      // Archived stores are closed or sold: off the dashboard for everyone,
+      // super admins included. Their numbers stay reachable from Admin.
+      .is("archived_at", null)
       .order("sort_order", { ascending: true, nullsFirst: false })
       .order("name"),
     supabase
@@ -412,6 +415,14 @@ export default async function DashboardPage() {
                 >
                   {dealership.name}
                 </Link>
+                {dealership.super_admin_only ? (
+                  <span
+                    title="Only super admins can see this store"
+                    className="rounded-full bg-amber-50 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-amber-800 dark:bg-amber-950/30 dark:text-amber-300"
+                  >
+                    Super admins only
+                  </span>
+                ) : null}
                 {dealership.id === mainDealershipId ? (
                   <span className="rounded-full btn-primary px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide">
                     Main
