@@ -4,6 +4,7 @@ import { useEffect, useRef, useState } from "react";
 import {
   setMembership,
   setReportRecipient,
+  setSalespersonTracking,
   setStoreOrder,
   unassignStore,
 } from "./actions";
@@ -23,6 +24,7 @@ export function StoreRow({
   dealershipId,
   name,
   sortOrder,
+  tracksSalespeople,
   members,
   allUsers,
   subscribedIds,
@@ -32,6 +34,8 @@ export function StoreRow({
   name: string;
   /** Position among the dashboard cards; null means "not placed". */
   sortOrder: number | null;
+  /** Editors here enter numbers per salesperson. */
+  tracksSalespeople: boolean;
   members: StoreMember[];
   allUsers: { id: string; email: string; fullName: string | null }[];
   /** Who currently gets this store's emailed daily report. */
@@ -49,6 +53,11 @@ export function StoreRow({
           <span className="truncate font-medium">{name}</span>
         </span>
         <span className="flex items-center gap-2 text-xs text-zinc-500">
+          {tracksSalespeople ? (
+            <span className="rounded-full bg-zinc-100 px-2 py-0.5 font-medium text-zinc-600 dark:bg-zinc-800 dark:text-zinc-300">
+              Salespeople
+            </span>
+          ) : null}
           {members.length} with access
           {subscribedIds.length > 0
             ? ` · ${subscribedIds.length} emailed`
@@ -108,6 +117,12 @@ export function StoreRow({
             ))}
           </ul>
         )}
+
+        <SalespersonTracking
+          dealershipId={dealershipId}
+          name={name}
+          enabled={tracksSalespeople}
+        />
 
         <ReportRecipients
           dealershipId={dealershipId}
@@ -328,6 +343,61 @@ function StoreRoleSelect({
         <option value="editor">Editor</option>
         <option value="viewer">Viewer</option>
       </select>
+    </form>
+  );
+}
+
+/**
+ * The per-store switch for salesperson tracking. Saves on click, like the
+ * report checkboxes — the button submits the opposite of the current state.
+ */
+function SalespersonTracking({
+  dealershipId,
+  name,
+  enabled,
+}: {
+  dealershipId: string;
+  name: string;
+  enabled: boolean;
+}) {
+  return (
+    <form
+      action={setSalespersonTracking}
+      className="mt-3 flex items-start justify-between gap-4 border-t border-zinc-100 pt-3 dark:border-zinc-800"
+    >
+      <input type="hidden" name="dealership_id" value={dealershipId} />
+      <input type="hidden" name="tracks_salespeople" value={(!enabled).toString()} />
+      <div className="min-w-0">
+        <p id={`sp-switch-${dealershipId}`} className="text-sm font-medium">
+          Track individual salespeople
+        </p>
+        <p className="mt-0.5 text-xs text-zinc-500">
+          {enabled
+            ? "On. This store's editors enter numbers per salesperson and manage the roster from Dealership Insights. Turning it off hides it; nothing is deleted."
+            : "Off. Turn on to let this store's editors enter numbers per salesperson. Viewers see the results on Dealership Insights."}
+        </p>
+      </div>
+      <button
+        type="submit"
+        role="switch"
+        aria-checked={enabled}
+        aria-labelledby={`sp-switch-${dealershipId}`}
+        title={`${enabled ? "Turn off" : "Turn on"} salesperson tracking for ${name}`}
+        className={`relative mt-0.5 inline-flex h-6 w-11 shrink-0 items-center rounded-full border transition-colors ${
+          enabled
+            ? "btn-primary border-transparent"
+            : "border-zinc-300 bg-transparent dark:border-zinc-600"
+        }`}
+      >
+        <span
+          aria-hidden
+          className={`inline-block h-4 w-4 rounded-full transition-transform ${
+            enabled
+              ? "translate-x-6 bg-white dark:bg-[var(--surface)]"
+              : "translate-x-1 bg-zinc-400"
+          }`}
+        />
+      </button>
     </form>
   );
 }

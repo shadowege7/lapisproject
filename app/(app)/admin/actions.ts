@@ -45,6 +45,29 @@ export async function createDealership(formData: FormData) {
 }
 
 /**
+ * Per-store switch for salesperson tracking. On: the store's editors enter
+ * numbers per salesperson and manage the roster from Dealership Insights. Off:
+ * all of that is hidden, and nothing is deleted — turning it back on brings
+ * the roster and every number back. The first day it was on is stamped by a
+ * database trigger (0040), not here, so it is right however the flag is set.
+ */
+export async function setSalespersonTracking(formData: FormData) {
+  const supabase = await requireSuperAdmin();
+  const dealershipId = String(formData.get("dealership_id") ?? "");
+  const enabled = String(formData.get("tracks_salespeople") ?? "") === "true";
+  if (!dealershipId) return;
+
+  await supabase
+    .from("dealerships")
+    .update({ tracks_salespeople: enabled })
+    .eq("id", dealershipId);
+
+  revalidatePath("/admin");
+  revalidatePath(`/dealerships/${dealershipId}/entry`);
+  revalidatePath(`/dealerships/${dealershipId}/reports`);
+}
+
+/**
  * Where this store sits among the dashboard cards.
  *
  * An empty box clears the number rather than storing zero, which is what puts

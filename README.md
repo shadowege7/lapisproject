@@ -30,6 +30,9 @@ Security), deployed on Vercel.
 - **Budgets** — a monthly unit goal per store, shown on the dashboard tile and
   used to colour the projection green or red. Editable by admins and by anyone
   an admin permits.
+- **Salespeople** — optional, per store: managers enter each salesperson's
+  units and gross with the day's numbers, and Dealership Insights ranks them.
+  See [Salespeople](#salespeople).
 - **Admin** — create stores, onboard users, assign per‑store editor/viewer
   access, reset passwords, and grant/revoke super admin.
 - **Account** — every user can change their own password, and opt each device
@@ -239,6 +242,52 @@ the store can see its goal.
 can grant it to themselves through the ordinary "update my own profile" policy.
 
 See `0018_store_budgets.sql` in the Launchpad repo.
+
+## Salespeople
+
+Stores can track **who sold what**, switched on store by store under **Admin →
+Dealerships → *(open a store)* → Track individual salespeople**. It is off for
+every store until an admin turns it on, and a store with it off looks exactly
+as it did before.
+
+With it on:
+
+- **Daily entry** gets a *Salespeople* section under the store totals: new,
+  used (and Sprinter, where tracked) units plus front and back gross per
+  person. A live check underneath compares the team with the store and shows
+  anything **unassigned**. It is advisory — the numbers do not have to balance
+  to save; leftovers are house deals, fleet, a manager's own deal. On a phone
+  each person is a card that opens on tap.
+- **Dealership Insights** gets a *Salespeople* board for Today / Month / Year,
+  ranked by units or gross, with an *Unassigned* line and the store total.
+  Editors get **Manage salespeople** there to add, remove and restore people.
+
+Rules worth knowing:
+
+- **The store's numbers stay the official ones.** Salesperson numbers live in
+  their own table and nothing that reads `daily_entries` — summaries, the
+  dashboard, budgets, the CSV export and import, the daily email — sees them.
+- **Half units are for people, not stores.** A split deal is 0.5 to each
+  salesperson; the store's units stay whole (`daily_entries` is integer).
+- **Removing someone keeps their numbers**, so month and year totals do not
+  move. They drop off the entry form and stay on the board for any period
+  they sold in. There is no hard delete.
+- **One save, one transaction.** Stores with the feature on save through
+  `save_daily_entry_with_salespeople()`, so the day and its salesperson rows
+  land together or not at all. Its column list mirrors the upsert in
+  `entry/actions.ts` — **a new `daily_entries` column has to be added to
+  both**. Stores with it off keep the plain upsert.
+- **Turning it off deletes nothing.** The feature hides, saves skip the
+  salesperson part, and turning it back on brings everything back.
+- **Unassigned counts from the day tracking started**
+  (`dealerships.salespeople_tracked_since`, stamped by trigger), so a store
+  that turns this on mid-year does not show months of sales as unassigned.
+- **Deleting a day deletes its salesperson rows** (foreign key, cascade).
+
+Who can do what is enforced by RLS, not the UI: anyone who can see a store can
+see its board; only its active editors and super admins can change the roster
+or the numbers, and only while the switch is on. See
+`0040_salesperson_tracking.sql` in the Launchpad repo.
 
 ## The order of the store cards
 
