@@ -2,12 +2,16 @@
 
 import { useEffect, useRef, useState } from "react";
 import {
+  deleteStore,
   setMembership,
   setReportRecipient,
   setSalespersonTracking,
+  setStoreArchived,
   setStoreOrder,
+  setStoreSuperAdminOnly,
   unassignStore,
 } from "./actions";
+import { ConfirmButton } from "./confirm-button";
 import type { DealershipRole } from "@/lib/database.types";
 
 const selectClass =
@@ -25,6 +29,7 @@ export function StoreRow({
   name,
   sortOrder,
   tracksSalespeople,
+  superAdminOnly,
   members,
   allUsers,
   subscribedIds,
@@ -36,6 +41,8 @@ export function StoreRow({
   sortOrder: number | null;
   /** Editors here enter numbers per salesperson. */
   tracksSalespeople: boolean;
+  /** Only super admins can see this store. */
+  superAdminOnly: boolean;
   members: StoreMember[];
   allUsers: { id: string; email: string; fullName: string | null }[];
   /** Who currently gets this store's emailed daily report. */
@@ -53,6 +60,11 @@ export function StoreRow({
           <span className="truncate font-medium">{name}</span>
         </span>
         <span className="flex items-center gap-2 text-xs text-zinc-500">
+          {superAdminOnly ? (
+            <span className="rounded-full bg-amber-50 px-2 py-0.5 font-medium text-amber-800 dark:bg-amber-950/30 dark:text-amber-300">
+              Super admins only
+            </span>
+          ) : null}
           {tracksSalespeople ? (
             <span className="rounded-full bg-zinc-100 px-2 py-0.5 font-medium text-zinc-600 dark:bg-zinc-800 dark:text-zinc-300">
               Salespeople
@@ -118,10 +130,26 @@ export function StoreRow({
           </ul>
         )}
 
-        <SalespersonTracking
+        <SwitchRow
+          action={setSalespersonTracking}
+          field="tracks_salespeople"
           dealershipId={dealershipId}
           name={name}
           enabled={tracksSalespeople}
+          label="Track individual salespeople"
+          on="On. This store's editors enter numbers per salesperson and manage the roster from Dealership Insights. Turning it off hides it; nothing is deleted."
+          off="Off. Turn on to let this store's editors enter numbers per salesperson. Viewers see the results on Dealership Insights."
+        />
+
+        <SwitchRow
+          action={setStoreSuperAdminOnly}
+          field="super_admin_only"
+          dealershipId={dealershipId}
+          name={name}
+          enabled={superAdminOnly}
+          label="Super admins only"
+          on="On. Only super admins can see this store, enter its numbers or get its emails and notifications. Its members get no access, and it stays out of the company totals."
+          off="Off. Everyone assigned to this store can see it. Turn on for a test store, or one that isn't open yet."
         />
 
         <ReportRecipients
@@ -129,6 +157,7 @@ export function StoreRow({
           allUsers={allUsers}
           subscribedIds={subscribedIds}
           mailConfigured={mailConfigured}
+          superAdminOnly={superAdminOnly}
         />
 
         {available.length > 0 ? (
@@ -157,7 +186,128 @@ export function StoreRow({
             </button>
           </form>
         ) : null}
+
+        <StoreDangerZone dealershipId={dealershipId} name={name} />
       </div>
+    </details>
+  );
+}
+
+/**
+ * An archived store: out of every daily view, its numbers kept. Restore puts
+ * it back as it was; Delete removes it for good.
+ */
+export function ArchivedStoreRow({
+  dealershipId,
+  name,
+  archivedAt,
+}: {
+  dealershipId: string;
+  name: string;
+  archivedAt: string;
+}) {
+  return (
+    <li className="rounded-xl border border-zinc-200 bg-white px-4 py-3 dark:border-zinc-800 dark:bg-[var(--surface)]">
+      <div className="flex flex-wrap items-center justify-between gap-3">
+        <div className="min-w-0">
+          <p className="truncate font-medium">{name}</p>
+          <p className="text-xs text-zinc-500">
+            Archived {new Date(archivedAt).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric", timeZone: "America/Los_Angeles" })}
+            {" · "}
+            <a
+              href={`/dealerships/${dealershipId}/reports`}
+              className="underline underline-offset-2 hover:text-zinc-900 dark:hover:text-white"
+            >
+              View its numbers
+            </a>
+          </p>
+        </div>
+        <form action={setStoreArchived}>
+          <input type="hidden" name="dealership_id" value={dealershipId} />
+          <input type="hidden" name="archive" value="false" />
+          <button
+            type="submit"
+            className="min-h-9 rounded-md border border-zinc-300 px-3 text-sm font-semibold text-zinc-700 hover:border-blue-400 hover:text-blue-700 dark:border-zinc-700 dark:text-zinc-200 dark:hover:text-blue-400"
+          >
+            Restore
+          </button>
+        </form>
+      </div>
+      <DeleteStore dealershipId={dealershipId} name={name} />
+    </li>
+  );
+}
+
+/** Archive and Delete, at the bottom of an open store's panel. */
+function StoreDangerZone({ dealershipId, name }: { dealershipId: string; name: string }) {
+  return (
+    <div className="mt-4 border-t border-zinc-100 pt-3 dark:border-zinc-800">
+      <div className="flex flex-wrap items-start justify-between gap-3">
+        <div className="min-w-0">
+          <p className="text-sm font-medium">Archive store</p>
+          <p className="mt-0.5 text-xs text-zinc-500">
+            For a store that has closed or been sold. It disappears from the
+            dashboard, entry and Insights for everyone, and its members lose
+            access. Every number is kept, and you can restore it any time.
+          </p>
+        </div>
+        <form action={setStoreArchived}>
+          <input type="hidden" name="dealership_id" value={dealershipId} />
+          <input type="hidden" name="archive" value="true" />
+          <ConfirmButton
+            message={`Archive ${name}? It will be hidden from everyone's dashboard and its members will lose access. Its numbers are kept, and you can restore it from the Archived list.`}
+            className="min-h-9 shrink-0 rounded-md border border-zinc-300 px-3 text-sm font-semibold text-zinc-700 hover:border-blue-400 hover:text-blue-700 dark:border-zinc-700 dark:text-zinc-200 dark:hover:text-blue-400"
+          >
+            Archive
+          </ConfirmButton>
+        </form>
+      </div>
+      <DeleteStore dealershipId={dealershipId} name={name} />
+    </div>
+  );
+}
+
+/**
+ * Permanent delete. Collapsed by default, and the button stays disabled until
+ * the store's name is typed exactly — the server checks the same thing.
+ */
+function DeleteStore({ dealershipId, name }: { dealershipId: string; name: string }) {
+  const [typed, setTyped] = useState("");
+  const matches = typed.trim() === name.trim();
+  return (
+    <details className="mt-3">
+      <summary className="inline-flex cursor-pointer list-none items-center text-sm font-medium text-red-700 hover:underline dark:text-red-400 [&::-webkit-details-marker]:hidden">
+        Delete store…
+      </summary>
+      <form
+        action={deleteStore}
+        className="mt-2 flex flex-col gap-2 rounded-lg border border-red-200 bg-red-50 p-3 dark:border-red-900/50 dark:bg-red-950/30"
+      >
+        <input type="hidden" name="dealership_id" value={dealershipId} />
+        <p className="text-xs text-red-800 dark:text-red-200">
+          This permanently deletes <strong>{name}</strong> and everything it
+          logged: every day of numbers, budgets, salespeople, who has access,
+          and its report emails. It can&apos;t be undone. If the store has
+          closed, archive it instead.
+        </p>
+        <label className="flex flex-col gap-1 text-xs font-medium text-red-800 dark:text-red-200">
+          Type <span className="font-mono">{name}</span> to confirm
+          <input
+            name="confirm_name"
+            value={typed}
+            onChange={(e) => setTyped(e.target.value)}
+            autoComplete="off"
+            className="rounded-md border border-red-300 bg-white px-2.5 py-2 text-base text-zinc-900 outline-none focus:ring-2 focus:ring-red-500/30 sm:text-sm dark:border-red-900 dark:bg-transparent dark:text-zinc-50"
+          />
+        </label>
+        <button
+          type="submit"
+          disabled={!matches}
+          className="min-h-9 w-fit rounded-md bg-red-600 px-3 text-sm font-semibold text-white enabled:hover:bg-red-700 disabled:cursor-not-allowed disabled:opacity-50"
+        >
+          Delete permanently
+        </button>
+      </form>
     </details>
   );
 }
@@ -229,11 +379,13 @@ function ReportRecipients({
   allUsers,
   subscribedIds,
   mailConfigured,
+  superAdminOnly,
 }: {
   dealershipId: string;
   allUsers: { id: string; email: string; fullName: string | null }[];
   subscribedIds: string[];
   mailConfigured: boolean;
+  superAdminOnly: boolean;
 }) {
   const subscribed = new Set(subscribedIds);
 
@@ -254,6 +406,14 @@ function ReportRecipients({
         when an earlier day is corrected. Anyone can be added, whether or not
         they have access to this store.
       </p>
+
+      {superAdminOnly ? (
+        <p className="mt-2 rounded-md bg-amber-50 px-3 py-2 text-xs text-amber-800 dark:bg-amber-950/30 dark:text-amber-200">
+          This store is super admins only, so only the super admins ticked
+          here get its email. Everyone else stays on the list and starts
+          receiving it again if the store is opened up.
+        </p>
+      ) : null}
 
       {!mailConfigured ? (
         <p className="mt-2 rounded-md bg-amber-50 px-3 py-2 text-xs text-amber-800 dark:bg-amber-950/30 dark:text-amber-200">
@@ -348,41 +508,48 @@ function StoreRoleSelect({
 }
 
 /**
- * The per-store switch for salesperson tracking. Saves on click, like the
- * report checkboxes — the button submits the opposite of the current state.
+ * A per-store on/off setting. Saves on click, like the report checkboxes — the
+ * button submits the opposite of the current state.
  */
-function SalespersonTracking({
+function SwitchRow({
+  action,
+  field,
   dealershipId,
   name,
   enabled,
+  label,
+  on,
+  off,
 }: {
+  action: (formData: FormData) => Promise<void>;
+  field: string;
   dealershipId: string;
   name: string;
   enabled: boolean;
+  label: string;
+  on: string;
+  off: string;
 }) {
+  const labelId = `${field}-${dealershipId}`;
   return (
     <form
-      action={setSalespersonTracking}
+      action={action}
       className="mt-3 flex items-start justify-between gap-4 border-t border-zinc-100 pt-3 dark:border-zinc-800"
     >
       <input type="hidden" name="dealership_id" value={dealershipId} />
-      <input type="hidden" name="tracks_salespeople" value={(!enabled).toString()} />
+      <input type="hidden" name={field} value={(!enabled).toString()} />
       <div className="min-w-0">
-        <p id={`sp-switch-${dealershipId}`} className="text-sm font-medium">
-          Track individual salespeople
+        <p id={labelId} className="text-sm font-medium">
+          {label}
         </p>
-        <p className="mt-0.5 text-xs text-zinc-500">
-          {enabled
-            ? "On. This store's editors enter numbers per salesperson and manage the roster from Dealership Insights. Turning it off hides it; nothing is deleted."
-            : "Off. Turn on to let this store's editors enter numbers per salesperson. Viewers see the results on Dealership Insights."}
-        </p>
+        <p className="mt-0.5 text-xs text-zinc-500">{enabled ? on : off}</p>
       </div>
       <button
         type="submit"
         role="switch"
         aria-checked={enabled}
-        aria-labelledby={`sp-switch-${dealershipId}`}
-        title={`${enabled ? "Turn off" : "Turn on"} salesperson tracking for ${name}`}
+        aria-labelledby={labelId}
+        title={`${enabled ? "Turn off" : "Turn on"} “${label}” for ${name}`}
         className={`relative mt-0.5 inline-flex h-6 w-11 shrink-0 items-center rounded-full border transition-colors ${
           enabled
             ? "btn-primary border-transparent"

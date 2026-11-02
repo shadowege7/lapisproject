@@ -90,11 +90,23 @@ export async function notifyStoreEntry(opts: {
       .eq("notifications_enabled", true);
     if (!notifProfiles || notifProfiles.length === 0) return;
 
-    const { data: memberRows } = await admin
-      .from("dealership_members")
-      .select("user_id")
-      .eq("dealership_id", opts.dealershipId);
-    const memberIds = new Set((memberRows ?? []).map((m) => m.user_id));
+    const [{ data: memberRows }, { data: store }] = await Promise.all([
+      admin
+        .from("dealership_members")
+        .select("user_id")
+        .eq("dealership_id", opts.dealershipId),
+      admin
+        .from("dealerships")
+        .select("super_admin_only, archived_at")
+        .eq("id", opts.dealershipId)
+        .maybeSingle(),
+    ]);
+    // A super-admins-only or archived store is invisible to its members
+    // (0041), so they are not told about it either.
+    const membersCount = !store?.super_admin_only && !store?.archived_at;
+    const memberIds = new Set(
+      membersCount ? (memberRows ?? []).map((m) => m.user_id) : [],
+    );
 
     const targetIds = notifProfiles
       .filter(

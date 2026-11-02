@@ -44,6 +44,104 @@ export async function createDealership(formData: FormData) {
   revalidatePath("/admin");
 }
 
+function refreshStore(dealershipId: string) {
+  revalidatePath("/admin");
+  revalidatePath("/dashboard");
+  revalidatePath(`/dealerships/${dealershipId}`);
+  revalidatePath(`/dealerships/${dealershipId}/entry`);
+  revalidatePath(`/dealerships/${dealershipId}/reports`);
+}
+
+function storeBack(outcome: { error?: string; done?: string }): never {
+  const q = new URLSearchParams();
+  if (outcome.error) q.set("store_error", outcome.error);
+  if (outcome.done) q.set("store_done", outcome.done);
+  redirect(`/admin?${q.toString()}`);
+}
+
+/**
+ * Super admins only. The store keeps working, but members — and the company
+ * rollup — stop seeing it until it is opened up again. Enforced in the
+ * database (dealership_role(), 0041), not just here.
+ */
+export async function setStoreSuperAdminOnly(formData: FormData) {
+  const supabase = await requireSuperAdmin();
+  const dealershipId = String(formData.get("dealership_id") ?? "");
+  const enabled = String(formData.get("super_admin_only") ?? "") === "true";
+  if (!dealershipId) return;
+
+  await supabase
+    .from("dealerships")
+    .update({ super_admin_only: enabled })
+    .eq("id", dealershipId);
+
+  refreshStore(dealershipId);
+}
+
+/**
+ * Archive (closed or sold) or restore a store. Archiving hides it from every
+ * daily view and from its members, and keeps all of its numbers; restoring
+ * puts it back exactly as it was.
+ */
+export async function setStoreArchived(formData: FormData) {
+  const supabase = await requireSuperAdmin();
+  const dealershipId = String(formData.get("dealership_id") ?? "");
+  const archive = String(formData.get("archive") ?? "") === "true";
+  if (!dealershipId) return;
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+
+  const { data, error } = await supabase
+    .from("dealerships")
+    .update(
+      archive
+        ? { archived_at: new Date().toISOString(), archived_by: user?.id ?? null }
+        : { archived_at: null, archived_by: null },
+    )
+    .eq("id", dealershipId)
+    .select("name");
+
+  if (error || !data?.length) storeBack({ error: "Couldn't update that store." });
+  refreshStore(dealershipId);
+  storeBack({ done: `${archive ? "Archived" : "Restored"} ${data[0].name}.` });
+}
+
+/**
+ * Delete a store for good, with everything it logged. The person has to type
+ * the store's name, checked here as well as in the form, so a stray click or a
+ * hand-made POST with the wrong store cannot do it.
+ */
+export async function deleteStore(formData: FormData) {
+  const supabase = await requireSuperAdmin();
+  const dealershipId = String(formData.get("dealership_id") ?? "");
+  const typed = String(formData.get("confirm_name") ?? "").trim();
+  if (!dealershipId) return;
+
+  const { data: store } = await supabase
+    .from("dealerships")
+    .select("name")
+    .eq("id", dealershipId)
+    .maybeSingle();
+  if (!store) storeBack({ error: "That store no longer exists." });
+  if (typed !== store.name.trim()) {
+    storeBack({ error: `Type the store's name exactly to delete it: ${store.name}` });
+  }
+
+  const { data: deleted, error } = await supabase
+    .from("dealerships")
+    .delete()
+    .eq("id", dealershipId)
+    .select("id");
+  if (error || !deleted?.length) {
+    storeBack({ error: `Couldn't delete ${store.name}.` });
+  }
+
+  revalidatePath("/admin");
+  revalidatePath("/dashboard");
+  storeBack({ done: `Deleted ${store.name} and everything it logged.` });
+}
+
 /**
  * Per-store switch for salesperson tracking. On: the store's editors enter
  * numbers per salesperson and manage the roster from Dealership Insights. Off:

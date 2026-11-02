@@ -45,7 +45,7 @@ export async function sendDailyReport(
     ] = await Promise.all([
       admin
         .from("dealerships")
-        .select("name, tracks_sprinters")
+        .select("name, tracks_sprinters, super_admin_only, archived_at")
         .eq("id", dealershipId)
         .single(),
       admin
@@ -108,7 +108,7 @@ export async function sendDailyReport(
 
     const { data: people } = await admin
       .from("profiles")
-      .select("email, is_active")
+      .select("email, is_active, is_super_admin")
       .in(
         "id",
         subscriptions.map((s) => s.profile_id),
@@ -117,8 +117,13 @@ export async function sendDailyReport(
     // is_active is the Launchpad's "has this person left" flag on the shared
     // profile row. Someone offboarded should stop receiving store mail even if
     // nobody remembered to take them off this list.
+    // A super-admins-only or archived store is invisible to everyone else
+    // (0041), so only the super admins on the list are sent its numbers. The
+    // others stay subscribed and get it again if the store is opened up.
+    const superAdminsOnly = !!store?.super_admin_only || !!store?.archived_at;
     const to = (people ?? [])
       .filter((p) => p.is_active !== false && p.email)
+      .filter((p) => !superAdminsOnly || p.is_super_admin)
       .map((p) => p.email);
 
     if (to.length === 0) return { sent: false, reason: "no active recipients" };

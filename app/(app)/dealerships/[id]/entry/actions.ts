@@ -55,9 +55,17 @@ export async function saveEntry(formData: FormData) {
   // it decides how this day is saved.
   const { data: dealership } = await supabase
     .from("dealerships")
-    .select("name, tracks_sprinters, tracks_salespeople")
+    .select("name, tracks_sprinters, tracks_salespeople, archived_at")
     .eq("id", dealershipId)
     .single();
+
+  // Members are already refused by the database once a store is archived
+  // (0041); this covers super admins, and says why.
+  if (dealership?.archived_at) {
+    redirect(
+      `/dealerships/${dealershipId}/reports`,
+    );
+  }
 
   // Salesperson rows go only when the form actually carried the salesperson
   // section. A form loaded before an admin switched the feature on has none,

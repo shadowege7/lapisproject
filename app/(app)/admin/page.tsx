@@ -14,7 +14,7 @@ import {
 import { InviteForm } from "./invite-form";
 import { EmailTestForm } from "./email-test-form";
 import { UsersPanel, type AdminUser } from "./users-panel";
-import { StoreRow } from "./store-row";
+import { ArchivedStoreRow, StoreRow } from "./store-row";
 import { SmtpForm } from "./smtp-form";
 import { AdminSection } from "./admin-section";
 import { getSmtpSummary } from "@/lib/smtp-settings";
@@ -43,6 +43,8 @@ export default async function AdminPage({
     smtp?: string;
     smtp_test?: string;
     smtp_error?: string;
+    store_error?: string;
+    store_done?: string;
   }>;
 }) {
   const {
@@ -51,6 +53,8 @@ export default async function AdminPage({
     smtp: smtpSaved,
     smtp_test: smtpTested,
     smtp_error: smtpError,
+    store_error: storeError,
+    store_done: storeDone,
   } = await searchParams;
   const user = await getCurrentUser();
   if (!user) redirect("/login");
@@ -67,7 +71,7 @@ export default async function AdminPage({
   ] = await Promise.all([
     supabase
       .from("dealerships")
-      .select("id, name, sort_order, tracks_salespeople")
+      .select("id, name, sort_order, tracks_salespeople, super_admin_only, archived_at")
       .order("sort_order", { ascending: true, nullsFirst: false })
       .order("name"),
     supabase
@@ -141,7 +145,12 @@ export default async function AdminPage({
   const activeById = new Map(profiles?.map((p) => [p.id, p.is_active]));
   const emailById = new Map(authUsers.map((u) => [u.id, u.email ?? ""]));
   const dealershipById = new Map(dealerships?.map((d) => [d.id, d.name]));
+  // Every store, archived ones included: the users panel needs their names to
+  // label old assignments. The Dealerships section and the invite form use
+  // only the active ones.
   const dealershipList = dealerships ?? [];
+  const activeStores = dealershipList.filter((d) => !d.archived_at);
+  const archivedStores = dealershipList.filter((d) => d.archived_at);
   const positionsList = (positions ?? []).map((p) => ({
     id: p.id,
     name: p.name,
@@ -244,30 +253,63 @@ export default async function AdminPage({
 
       <AdminSection
         title="Dealerships"
-        meta={`${dealershipList.length} ${
-          dealershipList.length === 1 ? "store" : "stores"
-        }`}
-        hint="The number in front of each store is its place on the dashboard — change it and click away to save. Leave it empty to send a store to the end. Open a store to see and edit who has access, who gets its daily report by email, and whether managers track individual salespeople. Super admins have full access to every store."
+        meta={`${activeStores.length} ${
+          activeStores.length === 1 ? "store" : "stores"
+        }${archivedStores.length ? ` · ${archivedStores.length} archived` : ""}`}
+        hint="The number in front of each store is its place on the dashboard — change it and click away to save. Leave it empty to send a store to the end. Open a store to see and edit who has access, who gets its daily report by email, whether managers track individual salespeople, and whether only super admins can see it. Archive or delete a store from the bottom of its panel. Super admins have full access to every store."
         defaultOpen
       >
+        {storeError ? (
+          <p
+            role="alert"
+            className="mb-2 rounded-md bg-red-50 px-3 py-2 text-sm text-red-700 dark:bg-red-950/50 dark:text-red-300"
+          >
+            {storeError}
+          </p>
+        ) : storeDone ? (
+          <p
+            role="status"
+            className="mb-2 rounded-md bg-emerald-50 px-3 py-2 text-sm text-emerald-800 dark:bg-emerald-950/50 dark:text-emerald-300"
+          >
+            {storeDone}
+          </p>
+        ) : null}
         <div className="flex flex-col gap-2">
-          {dealershipList.map((d) => (
+          {activeStores.map((d) => (
             <StoreRow
               key={d.id}
               dealershipId={d.id}
               name={d.name}
               sortOrder={d.sort_order}
               tracksSalespeople={d.tracks_salespeople}
+              superAdminOnly={d.super_admin_only}
               members={membersByStore.get(d.id) ?? []}
               allUsers={allUsersLite}
               subscribedIds={recipientsByStore.get(d.id) ?? []}
               mailConfigured={mailConfigured}
             />
           ))}
-          {dealershipList.length === 0 ? (
+          {activeStores.length === 0 ? (
             <p className="text-sm text-zinc-500">No dealerships yet.</p>
           ) : null}
         </div>
+        {archivedStores.length > 0 ? (
+          <details className="mt-2">
+            <summary className="cursor-pointer text-sm font-medium text-zinc-600 dark:text-zinc-300">
+              Archived stores ({archivedStores.length})
+            </summary>
+            <ul className="mt-2 flex flex-col gap-2">
+              {archivedStores.map((d) => (
+                <ArchivedStoreRow
+                  key={d.id}
+                  dealershipId={d.id}
+                  name={d.name}
+                  archivedAt={d.archived_at as string}
+                />
+              ))}
+            </ul>
+          </details>
+        ) : null}
         <form action={createDealership} className="mt-1 flex gap-2">
           <input
             type="text"
@@ -448,7 +490,7 @@ export default async function AdminPage({
       </AdminSection>
 
       <AdminSection title="Add a user">
-        <InviteForm dealerships={dealershipList} positions={positionsList} />
+        <InviteForm dealerships={activeStores} positions={positionsList} />
       </AdminSection>
 
       <AdminSection

@@ -13,6 +13,7 @@ import {
 } from "@/lib/format";
 import { projectMonthEnd } from "@/lib/projection";
 import { BudgetForm } from "./budget-form";
+import { StoreStateBanner } from "./store-state-banner";
 
 export default async function DealershipDetailPage({
   params,
@@ -37,7 +38,7 @@ export default async function DealershipDetailPage({
   ] = await Promise.all([
       supabase
         .from("dealerships")
-        .select("id, name, tracks_sprinters")
+        .select("id, name, tracks_sprinters, super_admin_only, archived_at")
         .eq("id", dealershipId)
         .single(),
       supabase
@@ -147,7 +148,7 @@ export default async function DealershipDetailPage({
           </span>
         </div>
         <div className="flex flex-wrap items-center gap-2">
-          {role === "editor" ? (
+          {role === "editor" && !dealership.archived_at ? (
             <Link
               href={`/dealerships/${dealershipId}/entry`}
               className="rounded-md btn-primary px-4 py-2 text-sm font-semibold shadow-sm transition-colors"
@@ -163,6 +164,11 @@ export default async function DealershipDetailPage({
           </Link>
         </div>
       </div>
+
+      <StoreStateBanner
+        archivedAt={dealership.archived_at}
+        superAdminOnly={dealership.super_admin_only}
+      />
 
       <section>
         <h2 className="mb-3 text-sm font-semibold">
