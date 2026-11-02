@@ -6,6 +6,16 @@ import { todayISODate } from "@/lib/format";
 import { saveEntry } from "./actions";
 import { EntrySanityWarnings } from "./sanity-warnings";
 import { SaveEntryButton } from "./save-entry-button";
+import {
+  SalespeopleFieldset,
+  type SalespersonRowProps,
+} from "./salespeople-fieldset";
+import {
+  byName,
+  salespersonInitials,
+  salespersonName,
+  type RosterPerson,
+} from "@/lib/salespeople";
 
 export default async function EntryPage({
   params,
@@ -31,7 +41,7 @@ export default async function EntryPage({
   ] = await Promise.all([
     supabase
       .from("dealerships")
-      .select("id, name, tracks_sprinters")
+      .select("id, name, tracks_sprinters, tracks_salespeople")
       .eq("id", dealershipId)
       .single(),
     supabase
@@ -63,8 +73,14 @@ export default async function EntryPage({
     redirect(`/dealerships/${dealershipId}/reports`);
   }
 
+  const people = dealership.tracks_salespeople
+    ? await loadSalespeopleForDay(dealershipId, entryDate)
+    : null;
+
   return (
-    <div className="flex max-w-xl flex-col gap-6">
+    <div
+      className={`flex flex-col gap-6 ${people ? "max-w-4xl" : "max-w-xl"}`}
+    >
       <div>
         {/* Neutral rather than the accent: this sits on the page background,
             where Chambray reaches only 2.51. The underline carries the "this
@@ -160,6 +176,16 @@ export default async function EntryPage({
             unitsValue={existing?.sprinter_units ?? 0}
             frontValue={existing?.sprinter_front_end_gross ?? 0}
             backValue={existing?.sprinter_back_end_gross ?? 0}
+          />
+        ) : null}
+
+        {/* Only for stores an admin has switched on. Everything else about
+            this form is unchanged for every other store. */}
+        {people ? (
+          <SalespeopleFieldset
+            dealershipId={dealershipId}
+            people={people}
+            sprinters={dealership.tracks_sprinters}
           />
         ) : null}
 
@@ -294,4 +320,48 @@ function VehicleFieldset({
       </div>
     </fieldset>
   );
+}
+
+/**
+ * Who appears on the entry form for a day: everyone on the roster, plus anyone
+ * since removed who already has numbers on that day — otherwise re-saving a
+ * past day would quietly drop their row.
+ */
+async function loadSalespeopleForDay(
+  dealershipId: string,
+  entryDate: string,
+): Promise<SalespersonRowProps[]> {
+  const supabase = await createClient();
+  const [{ data: roster }, { data: rows }] = await Promise.all([
+    supabase
+      .from("salespeople")
+      .select("id, first_name, last_name, is_active, removed_at")
+      .eq("dealership_id", dealershipId),
+    supabase
+      .from("salesperson_daily_entries")
+      .select(
+        "salesperson_id, new_units, used_units, sprinter_units, front_end_gross, back_end_gross",
+      )
+      .eq("dealership_id", dealershipId)
+      .eq("entry_date", entryDate),
+  ]);
+
+  const byPerson = new Map((rows ?? []).map((r) => [r.salesperson_id, r]));
+  return ((roster ?? []) as RosterPerson[])
+    .filter((p) => p.is_active || byPerson.has(p.id))
+    .sort(byName)
+    .map((p) => {
+      const r = byPerson.get(p.id);
+      return {
+        id: p.id,
+        name: salespersonName(p),
+        initials: salespersonInitials(p),
+        removed: !p.is_active,
+        newUnits: Number(r?.new_units ?? 0),
+        usedUnits: Number(r?.used_units ?? 0),
+        sprinterUnits: Number(r?.sprinter_units ?? 0),
+        front: Number(r?.front_end_gross ?? 0),
+        back: Number(r?.back_end_gross ?? 0),
+      };
+    });
 }

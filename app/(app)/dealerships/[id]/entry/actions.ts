@@ -7,6 +7,7 @@ import { formatCurrency, todayISODate } from "@/lib/format";
 import { notifyStoreEntry } from "@/lib/push";
 import { sendDailyReport } from "@/lib/send-daily-report";
 import { entryChanged, type EntryValues } from "@/lib/entry-diff";
+import { parseSalespersonFields } from "@/lib/salespeople";
 
 export async function saveEntry(formData: FormData) {
   const dealershipId = String(formData.get("dealership_id") ?? "");
@@ -50,6 +51,27 @@ export async function saveEntry(formData: FormData) {
   } = await supabase.auth.getUser();
   if (!user) redirect("/login");
 
+  // Read up front now (it used to be read only for the notification) because
+  // it decides how this day is saved.
+  const { data: dealership } = await supabase
+    .from("dealerships")
+    .select("name, tracks_sprinters, tracks_salespeople")
+    .eq("id", dealershipId)
+    .single();
+
+  // Salesperson rows go only when the form actually carried the salesperson
+  // section. A form loaded before an admin switched the feature on has none,
+  // and sending an empty list would wipe rows someone else just entered.
+  const salespeople =
+    dealership?.tracks_salespeople && formData.get("sp_present") === "1"
+      ? parseSalespersonFields(formData, dealership.tracks_sprinters)
+      : null;
+  if (salespeople && !salespeople.ok) {
+    redirect(
+      `/dealerships/${dealershipId}/entry?date=${entryDate}&error=${encodeURIComponent(salespeople.error)}`,
+    );
+  }
+
   // Asked before the upsert, so the email can say "numbers for" rather than
   // "updated numbers for" on the first save of a day, and so a save that
   // changes nothing can be told from one that does — an identical re-save
@@ -79,26 +101,37 @@ export async function saveEntry(formData: FormData) {
   };
   const changed = entryChanged(previous as EntryValues | null, nextValues);
 
-  const { error } = await supabase.from("daily_entries").upsert(
-    {
-      dealership_id: dealershipId,
-      entry_date: entryDate,
-      new_units: newUnits,
-      used_units: usedUnits,
-      new_front_end_gross: newFrontEndGross,
-      new_back_end_gross: newBackEndGross,
-      used_front_end_gross: usedFrontEndGross,
-      used_back_end_gross: usedBackEndGross,
-      sprinter_units: sprinterUnits,
-      sprinter_front_end_gross: sprinterFrontEndGross,
-      sprinter_back_end_gross: sprinterBackEndGross,
-      sales_calls: salesCalls,
-      appointments: appointments,
-      notes: notes.length ? notes : null,
-      created_by: user.id,
-    },
-    { onConflict: "dealership_id,entry_date" },
-  );
+  const entry = {
+    dealership_id: dealershipId,
+    entry_date: entryDate,
+    new_units: newUnits,
+    used_units: usedUnits,
+    new_front_end_gross: newFrontEndGross,
+    new_back_end_gross: newBackEndGross,
+    used_front_end_gross: usedFrontEndGross,
+    used_back_end_gross: usedBackEndGross,
+    sprinter_units: sprinterUnits,
+    sprinter_front_end_gross: sprinterFrontEndGross,
+    sprinter_back_end_gross: sprinterBackEndGross,
+    sales_calls: salesCalls,
+    appointments: appointments,
+    notes: notes.length ? notes : null,
+    created_by: user.id,
+  };
+
+  // Stores tracking salespeople save the day and its salesperson rows in one
+  // database transaction (0040_salesperson_tracking.sql), so neither half can
+  // land without the other. Every other store keeps the plain upsert, exactly
+  // as before. The function's column list mirrors `entry` above — a new
+  // daily_entries column has to be added to both.
+  const { error } = dealership?.tracks_salespeople
+    ? await supabase.rpc("save_daily_entry_with_salespeople", {
+        p_entry: entry,
+        p_salespeople: salespeople?.ok ? salespeople.rows : null,
+      })
+    : await supabase
+        .from("daily_entries")
+        .upsert(entry, { onConflict: "dealership_id,entry_date" });
 
   if (error) {
     redirect(
@@ -110,12 +143,6 @@ export async function saveEntry(formData: FormData) {
   // no-op re-save stays silent, so a resubmit loop can't blast the recipient
   // list — the root of the "23 emails in 2 minutes" report.
   if (isToday && changed) {
-    const { data: dealership } = await supabase
-      .from("dealerships")
-      .select("name, tracks_sprinters")
-      .eq("id", dealershipId)
-      .single();
-
     const totalGross =
       newFrontEndGross +
       newBackEndGross +

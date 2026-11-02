@@ -19,6 +19,8 @@ import { WeekdayPanel, type WeekdayEntry } from "./weekday-panel";
 import { MissedEntries } from "./missed-entries";
 import { StoreSwitcher } from "./store-switcher";
 import { SummarySection, type SummaryRow } from "./summary-section";
+import { SalespeopleSection } from "./salespeople-section";
+import { parsePeriod, parseRank } from "@/lib/salespeople";
 
 /**
  * How far back the weekday ranking looks. A year gives roughly fifty samples
@@ -31,10 +33,19 @@ const WEEKDAY_WINDOW_DAYS = 365;
 
 export default async function ReportsPage({
   params,
+  searchParams,
 }: {
   params: Promise<{ id: string }>;
+  searchParams: Promise<{
+    sp?: string;
+    rank?: string;
+    manage?: string;
+    sp_error?: string;
+    sp_done?: string;
+  }>;
 }) {
   const { id: dealershipId } = await params;
+  const query = await searchParams;
   const user = await getCurrentUser();
   if (!user) redirect("/login");
 
@@ -51,7 +62,7 @@ export default async function ReportsPage({
   ] = await Promise.all([
     supabase
       .from("dealerships")
-      .select("id, name, tracks_sprinters")
+      .select("id, name, tracks_sprinters, tracks_salespeople, salespeople_tracked_since")
       .eq("id", dealershipId)
       .single(),
     supabase
@@ -240,6 +251,21 @@ export default async function ReportsPage({
         dealershipId={dealershipId}
         canEdit={role === "editor"}
       />
+
+      {/* Only for stores an admin has switched on. */}
+      {dealership.tracks_salespeople ? (
+        <SalespeopleSection
+          dealershipId={dealershipId}
+          sprinters={sprinters}
+          trackedSince={dealership.salespeople_tracked_since}
+          period={parsePeriod(query.sp)}
+          rank={parseRank(query.rank)}
+          canEdit={role === "editor"}
+          manageOpen={role === "editor" && query.manage === "1"}
+          error={query.sp_error}
+          done={query.sp_done}
+        />
+      ) : null}
 
       <WeekdayPanel
         entries={(weekdayEntries ?? []) as WeekdayEntry[]}

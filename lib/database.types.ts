@@ -4,6 +4,16 @@
 
 export type DealershipRole = "editor" | "viewer";
 
+/** One salesperson's numbers for a day, as sent to save_daily_entry_with_salespeople(). */
+export interface SalespersonDayInput {
+  salesperson_id: string;
+  new_units: number;
+  used_units: number;
+  sprinter_units: number;
+  front_end_gross: number;
+  back_end_gross: number;
+}
+
 export interface Database {
   public: {
     Tables: {
@@ -164,6 +174,10 @@ export interface Database {
           tracks_sprinters: boolean;
           /** Hand-set dashboard order. Null sorts last, then by name. */
           sort_order: number | null;
+          /** Editors enter numbers per salesperson. Set on the Admin page. */
+          tracks_salespeople: boolean;
+          /** First day tracking was on; stamped by trigger, never cleared. */
+          salespeople_tracked_since: string | null;
           created_at: string;
         };
         Insert: {
@@ -171,6 +185,8 @@ export interface Database {
           name: string;
           tracks_sprinters?: boolean;
           sort_order?: number | null;
+          tracks_salespeople?: boolean;
+          salespeople_tracked_since?: string | null;
           created_at?: string;
         };
         Update: {
@@ -178,6 +194,8 @@ export interface Database {
           name?: string;
           tracks_sprinters?: boolean;
           sort_order?: number | null;
+          tracks_salespeople?: boolean;
+          salespeople_tracked_since?: string | null;
           created_at?: string;
         };
         Relationships: [];
@@ -268,6 +286,90 @@ export interface Database {
           dealership_id?: string;
           profile_id?: string;
           created_at?: string;
+        };
+        Relationships: [];
+      };
+      // Per-store roster for salesperson tracking. Soft-removed only; see
+      // 0040_salesperson_tracking.sql in the Launchpad repo.
+      salespeople: {
+        Row: {
+          id: string;
+          dealership_id: string;
+          first_name: string;
+          last_name: string;
+          is_active: boolean;
+          removed_at: string | null;
+          created_at: string;
+          created_by: string | null;
+          updated_at: string;
+          updated_by: string | null;
+        };
+        Insert: {
+          id?: string;
+          dealership_id: string;
+          first_name: string;
+          last_name?: string;
+          is_active?: boolean;
+          removed_at?: string | null;
+          created_at?: string;
+          created_by?: string | null;
+          updated_at?: string;
+          updated_by?: string | null;
+        };
+        Update: {
+          id?: string;
+          dealership_id?: string;
+          first_name?: string;
+          last_name?: string;
+          is_active?: boolean;
+          removed_at?: string | null;
+          created_at?: string;
+          created_by?: string | null;
+          updated_at?: string;
+          updated_by?: string | null;
+        };
+        Relationships: [];
+      };
+      // One row per salesperson per day; a breakdown of daily_entries that
+      // need not sum to it. Written only through
+      // save_daily_entry_with_salespeople().
+      salesperson_daily_entries: {
+        Row: {
+          dealership_id: string;
+          entry_date: string;
+          salesperson_id: string;
+          /** Half steps: a split deal is 0.5 to each person. */
+          new_units: number;
+          used_units: number;
+          sprinter_units: number;
+          front_end_gross: number;
+          back_end_gross: number;
+          updated_at: string;
+          updated_by: string | null;
+        };
+        Insert: {
+          dealership_id: string;
+          entry_date: string;
+          salesperson_id: string;
+          new_units?: number;
+          used_units?: number;
+          sprinter_units?: number;
+          front_end_gross?: number;
+          back_end_gross?: number;
+          updated_at?: string;
+          updated_by?: string | null;
+        };
+        Update: {
+          dealership_id?: string;
+          entry_date?: string;
+          salesperson_id?: string;
+          new_units?: number;
+          used_units?: number;
+          sprinter_units?: number;
+          front_end_gross?: number;
+          back_end_gross?: number;
+          updated_at?: string;
+          updated_by?: string | null;
         };
         Relationships: [];
       };
@@ -450,6 +552,25 @@ export interface Database {
             usedUnits: number;
           }[];
         } | null;
+      };
+      can_edit_salespeople: {
+        Args: { target_dealership: string };
+        Returns: boolean;
+      };
+      save_daily_entry_with_salespeople: {
+        Args: { p_entry: Record<string, unknown>; p_salespeople: SalespersonDayInput[] | null };
+        Returns: undefined;
+      };
+      salesperson_totals: {
+        Args: { p_dealership: string; p_from: string; p_to: string };
+        Returns: {
+          salesperson_id: string;
+          new_units: number;
+          used_units: number;
+          sprinter_units: number;
+          front_end_gross: number;
+          back_end_gross: number;
+        }[];
       };
     };
     Enums: {
