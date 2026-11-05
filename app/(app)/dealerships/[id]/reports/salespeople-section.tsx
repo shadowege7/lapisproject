@@ -34,8 +34,10 @@ const gross = (f: Figures) => f.front + f.back;
  * panel are links and forms, so it works before (or without) JavaScript.
  *
  * Store totals for the "Unassigned" line are taken from the store's own
- * daily_entries, but only from the day tracking started — otherwise a store
- * that turned this on mid-year would show months of sales as unassigned.
+ * daily_entries, but only from the day tracking started (or the earliest
+ * backfilled salesperson day, if sooner) — otherwise a store that turned this
+ * on mid-year would show months of sales as unassigned, and a backfill would
+ * show negative unassigned.
  */
 export async function SalespeopleSection({
   dealershipId,
@@ -60,9 +62,8 @@ export async function SalespeopleSection({
 }) {
   const supabase = await createClient();
   const { from, to } = periodRange(period);
-  const windowFrom = trackedSince && trackedSince > from ? trackedSince : from;
 
-  const [{ data: roster }, { data: totals }, { data: storeDays }] = await Promise.all([
+  const [{ data: roster }, { data: totals }, { data: storeDays }, { data: firstLogged }] = await Promise.all([
     supabase
       .from("salespeople")
       .select("id, first_name, last_name, is_active, removed_at")
@@ -76,12 +77,30 @@ export async function SalespeopleSection({
     supabase
       .from("daily_entries")
       .select(
-        "new_units, used_units, sprinter_units, new_front_end_gross, new_back_end_gross, used_front_end_gross, used_back_end_gross, sprinter_front_end_gross, sprinter_back_end_gross",
+        "entry_date, new_units, used_units, sprinter_units, new_front_end_gross, new_back_end_gross, used_front_end_gross, used_back_end_gross, sprinter_front_end_gross, sprinter_back_end_gross",
       )
       .eq("dealership_id", dealershipId)
-      .gte("entry_date", windowFrom)
+      .gte("entry_date", from)
       .lte("entry_date", to),
+    // Earliest salesperson day in the period. Days logged before the switch
+    // was turned on (a backfill) still count as tracked.
+    supabase
+      .from("salesperson_daily_entries")
+      .select("entry_date")
+      .eq("dealership_id", dealershipId)
+      .gte("entry_date", from)
+      .lte("entry_date", to)
+      .order("entry_date", { ascending: true })
+      .limit(1)
+      .maybeSingle(),
   ]);
+
+  // Store totals count from whichever is first: the day tracking was switched
+  // on, or the earliest day anyone logged salesperson numbers for.
+  let windowFrom = trackedSince && trackedSince > from ? trackedSince : from;
+  if (firstLogged?.entry_date && firstLogged.entry_date < windowFrom) {
+    windowFrom = firstLogged.entry_date;
+  }
 
   const people = ((roster ?? []) as RosterPerson[]).slice().sort(byName);
   const byPerson = new Map<string, Figures>(
@@ -99,6 +118,7 @@ export async function SalespeopleSection({
 
   const store: Figures = { n: 0, u: 0, s: 0, front: 0, back: 0 };
   for (const d of storeDays ?? []) {
+    if (d.entry_date < windowFrom) continue;
     store.n += d.new_units;
     store.u += d.used_units;
     store.s += d.sprinter_units;
