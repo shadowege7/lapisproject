@@ -24,6 +24,9 @@ function back(
   const rank = parseRank(String(formData.get("rank") ?? ""));
   if (period !== "mtd") q.set("sp", period);
   if (rank !== "units") q.set("rank", rank);
+  // Back to the past month the roster was changed from, if it was one.
+  const month = String(formData.get("month") ?? "");
+  if (/^\d{4}-(0[1-9]|1[0-2])$/.test(month)) q.set("month", month);
   if (outcome.error) q.set("sp_error", outcome.error);
   if (outcome.done) q.set("sp_done", outcome.done);
   redirect(`/dealerships/${dealershipId}/reports?${q.toString()}#salespeople`);
@@ -115,4 +118,51 @@ export async function setSalespersonActive(formData: FormData) {
   const name = [data[0].first_name, data[0].last_name].join(" ").trim();
   refresh(dealershipId);
   back(dealershipId, formData, { done: active ? `Restored ${name}.` : `Removed ${name}.` });
+}
+
+/**
+ * Correct a salesperson's name. Their id does not change, so every number they
+ * have logged stays with them. Works for removed people too, so a typo can be
+ * fixed on someone who has left.
+ */
+export async function renameSalesperson(formData: FormData) {
+  const dealershipId = String(formData.get("dealership_id") ?? "");
+  const salespersonId = String(formData.get("salesperson_id") ?? "");
+  if (!UUID.test(dealershipId)) redirect("/dashboard");
+  if (!UUID.test(salespersonId)) back(dealershipId, formData, {});
+
+  const first = String(formData.get("first_name") ?? "").trim().replace(/\s+/g, " ");
+  const last = String(formData.get("last_name") ?? "").trim().replace(/\s+/g, " ");
+  if (!first) back(dealershipId, formData, { error: "Enter a first name." });
+  if (first.length > 60 || last.length > 60) {
+    back(dealershipId, formData, { error: "Names can be up to 60 characters." });
+  }
+
+  const supabase = await createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  if (!user) redirect("/login");
+
+  // .select() so a write RLS filtered out comes back as zero rows rather than
+  // as a silent success.
+  const { data, error } = await supabase
+    .from("salespeople")
+    .update({ first_name: first, last_name: last, updated_by: user.id })
+    .eq("id", salespersonId)
+    .eq("dealership_id", dealershipId)
+    .select("id");
+
+  const name = [first, last].join(" ").trim();
+  if (error || !data || data.length === 0) {
+    back(dealershipId, formData, {
+      error:
+        error?.code === "23505"
+          ? `${name} is already on the roster.`
+          : "Couldn't rename them. Only this store's editors can change the roster.",
+    });
+  }
+
+  refresh(dealershipId);
+  back(dealershipId, formData, { done: `Renamed to ${name}.` });
 }

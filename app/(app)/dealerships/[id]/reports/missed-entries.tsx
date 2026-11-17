@@ -1,4 +1,5 @@
 import { monthProgress } from "@/lib/projection";
+import { monthEndISODate } from "@/lib/format";
 
 /**
  * How many days this month have gone by without an entry, shown beside the
@@ -18,12 +19,17 @@ import { monthProgress } from "@/lib/projection";
 export function MissedEntries({
   daysLogged,
   todayLogged,
+  pastMonth,
 }: {
   daysLogged: number;
   todayLogged: boolean;
+  /** YYYY-MM-01 of a finished month: every one of its days has elapsed. */
+  pastMonth?: string;
 }) {
   const { dayOfMonth } = monthProgress();
-  const elapsed = dayOfMonth - (todayLogged ? 0 : 1);
+  const elapsed = pastMonth
+    ? Number(monthEndISODate(pastMonth).slice(8))
+    : dayOfMonth - (todayLogged ? 0 : 1);
   const missed = Math.max(elapsed - daysLogged, 0);
 
   if (elapsed <= 0) return null;

@@ -36,15 +36,24 @@ export function MonthPanel({
   sprinters,
   dealershipId,
   canEdit,
+  pastMonth,
 }: {
   month: MonthSummary | undefined;
   todayLogged: boolean;
   sprinters: boolean;
   dealershipId: string;
   canEdit: boolean;
+  /**
+   * YYYY-MM-01 of a finished month being looked back on. Its totals are final,
+   * so nothing is projected: the projection tile becomes total units and the
+   * cards drop their Projected column.
+   */
+  pastMonth?: string;
 }) {
-  const monthLabel = formatMonth(monthStartISODate());
-  const projected = (value: number) => projectMonthEnd(value, todayLogged);
+  const monthLabel = formatMonth(pastMonth ?? monthStartISODate());
+  const projected = pastMonth
+    ? null
+    : (value: number) => projectMonthEnd(value, todayLogged);
 
   const categories: Category[] = [
     {
@@ -79,7 +88,7 @@ export function MonthPanel({
   return (
     <section>
       <h2 className="mb-3 text-sm font-semibold">
-        This month
+        {pastMonth ? "Month" : "This month"}
         <span className="ml-2 font-normal text-zinc-400">{monthLabel}</span>
       </h2>
 
@@ -90,17 +99,31 @@ export function MonthPanel({
               label="Total gross"
               value={formatCurrency(month.total_gross)}
             />
-            <HeadlineStat
-              label="Projected month-end"
-              value={formatCurrency(projected(month.total_gross))}
-              accent
-            />
+            {projected ? (
+              <HeadlineStat
+                label="Projected month-end"
+                value={formatCurrency(projected(month.total_gross))}
+                accent
+              />
+            ) : (
+              <HeadlineStat
+                label="Total units"
+                value={formatCount(totalUnits)}
+                sub={`${month.days_logged} day${month.days_logged === 1 ? "" : "s"} logged`}
+              />
+            )}
             {/* `sub` survives only for the zero case: without it that tile is
                 a bare dash with nothing saying why. */}
             <HeadlineStat
               label="Average gross per unit"
               value={formatAverage(perUnit(month.total_gross, totalUnits))}
-              sub={totalUnits > 0 ? undefined : "No units sold yet this month"}
+              sub={
+                totalUnits > 0
+                  ? undefined
+                  : pastMonth
+                    ? "No units sold this month"
+                    : "No units sold yet this month"
+              }
             />
           </div>
 
@@ -124,13 +147,16 @@ export function MonthPanel({
       ) : (
         <div className="rounded-xl border border-dashed border-zinc-300 px-4 py-8 text-center dark:border-zinc-700">
           <p className="text-sm font-medium">
-            Nothing logged for {monthLabel} yet.
+            Nothing logged for {monthLabel}
+            {pastMonth ? "." : " yet."}
           </p>
-          <p className="mt-1 text-sm text-zinc-500">
-            Month-to-date, projected and per-unit figures appear here as soon as
-            the first day is entered.
-          </p>
-          {canEdit ? (
+          {pastMonth ? null : (
+            <p className="mt-1 text-sm text-zinc-500">
+              Month-to-date, projected and per-unit figures appear here as soon as
+              the first day is entered.
+            </p>
+          )}
+          {canEdit && !pastMonth ? (
             <Link
               href={`/dealerships/${dealershipId}/entry`}
               className="mt-4 inline-block rounded-md btn-primary px-4 py-2 text-sm font-semibold shadow-sm transition-colors print:hidden"
@@ -155,13 +181,19 @@ export function MonthPanel({
 const FIGURE_GRID =
   "grid grid-cols-[minmax(0,0.7fr)_minmax(0,1.2fr)_minmax(0,1fr)] items-baseline gap-x-2";
 
+/** A finished month's card: term and amount only. */
+const FINAL_GRID =
+  "grid grid-cols-[minmax(0,0.7fr)_minmax(0,1.2fr)] items-baseline gap-x-2";
+
 function CategoryCard({
   category,
   projected,
 }: {
   category: Category;
-  projected: (value: number) => number;
+  /** Null for a finished month: no projection, and no Projected column. */
+  projected: ((value: number) => number) | null;
 }) {
+  const grid = projected ? FIGURE_GRID : FINAL_GRID;
   const { label, units, front, back } = category;
   const gross = front + back;
   const hairline = "border-t border-zinc-200 pt-1 dark:border-zinc-800";
@@ -179,44 +211,48 @@ function CategoryCard({
         <span className="font-mono tabular-nums">{formatCount(units)}</span>
         <span className="ml-1 text-sm font-medium text-zinc-500">units</span>
       </p>
-      <p className="text-xs text-blue-700 dark:text-blue-400">
-        <span className="font-mono tabular-nums">
-          {formatCount(projected(units))}
-        </span>{" "}
-        projected
-      </p>
+      {projected ? (
+        <p className="text-xs text-blue-700 dark:text-blue-400">
+          <span className="font-mono tabular-nums">
+            {formatCount(projected(units))}
+          </span>{" "}
+          projected
+        </p>
+      ) : null}
 
       {/* Column heads for the two figure columns. Aria-hidden because each
           value below carries its own screen-reader label; a screen reader
           reading a bare "MTD" between the count and the list would be noise. */}
       <div
         aria-hidden="true"
-        className={`mt-3 ${FIGURE_GRID} text-[11px] uppercase tracking-wide text-zinc-500`}
+        className={`mt-3 ${grid} text-[11px] uppercase tracking-wide text-zinc-500`}
       >
         <span />
-        <span className="text-right">MTD</span>
-        <span className="text-right text-blue-700 dark:text-blue-400">
-          Projected
-        </span>
+        <span className="text-right">{projected ? "MTD" : "Month"}</span>
+        {projected ? (
+          <span className="text-right text-blue-700 dark:text-blue-400">
+            Projected
+          </span>
+        ) : null}
       </div>
 
-      <dl className={`mt-1 ${FIGURE_GRID} gap-y-3 text-xs`}>
+      <dl className={`mt-1 ${grid} gap-y-3 text-xs`}>
         <FigureRow
           label="Front"
           mtd={front}
-          projected={projected(front)}
+          projected={projected ? projected(front) : null}
           average={perUnit(front, units)}
         />
         <FigureRow
           label="Back"
           mtd={back}
-          projected={projected(back)}
+          projected={projected ? projected(back) : null}
           average={perUnit(back, units)}
         />
         <FigureRow
           label="Gross"
           mtd={gross}
-          projected={projected(gross)}
+          projected={projected ? projected(gross) : null}
           average={perUnit(gross, units)}
           emphasis={hairline}
         />
@@ -250,7 +286,8 @@ function FigureRow({
 }: {
   label: string;
   mtd: number;
-  projected: number;
+  /** Null for a finished month: the projected cell is left out. */
+  projected: number | null;
   /** null where no units sold — see perUnit. */
   average: number | null;
   emphasis?: string;
@@ -279,12 +316,14 @@ function FigureRow({
           )}
         </span>
       </dd>
-      <dd
-        className={`${emphasis} ${strong} text-right font-mono tabular-nums text-blue-700 dark:text-blue-400`}
-      >
-        <span className="sr-only">{label} projected month-end </span>
-        {formatCurrency(projected)}
-      </dd>
+      {projected === null ? null : (
+        <dd
+          className={`${emphasis} ${strong} text-right font-mono tabular-nums text-blue-700 dark:text-blue-400`}
+        >
+          <span className="sr-only">{label} projected month-end </span>
+          {formatCurrency(projected)}
+        </dd>
+      )}
     </>
   );
 }

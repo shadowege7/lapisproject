@@ -26,7 +26,12 @@ Security), deployed on Vercel.
 - **Reports** — a "This month" panel (Today / MTD / Projected across the full
   new/used front/back/gross breakdown), an **Annual** rollup with the same
   detail, a compact **Monthly** trend list, and a **Daily** table with per‑day
-  detail and notes.
+  detail and notes. Click a month in **Monthly** to open Insights for just that
+  month (`?month=YYYY-MM`): final totals with no projection, the Salespeople
+  board for that month, and every day of it.
+- **Deal export import** — upload the DMS *Car Deals* export (.xlsx or .csv)
+  on Dealership Insights to replace a store's numbers for the days it covers.
+  See [Importing a deal export](#importing-a-deal-export).
 - **Budgets** — a monthly unit goal per store, shown on the dashboard tile and
   used to colour the projection green or red. Editable by admins and by anyone
   an admin permits.
@@ -260,7 +265,8 @@ With it on:
   each person is a card that opens on tap.
 - **Dealership Insights** gets a *Salespeople* board for Today / Month / Year,
   ranked by units or gross, with an *Unassigned* line and the store total.
-  Editors get **Manage salespeople** there to add, remove and restore people.
+  Editors get **Manage salespeople** there to add, rename, remove and restore
+  people. Renaming keeps the same person, so their numbers follow the new name.
 
 Rules worth knowing:
 
@@ -288,6 +294,36 @@ Who can do what is enforced by RLS, not the UI: anyone who can see a store can
 see its board; only its active editors and super admins can change the roster
 or the numbers, and only while the switch is on. See
 `0040_salesperson_tracking.sql` in the Launchpad repo.
+
+## Importing a deal export
+
+**Dealership Insights → Update from deal export (.xlsx)** takes the DMS *Car
+Deals* report and replaces the store's numbers for every day it covers. It is
+for corrections after the fact: deals get unwound, re-dated or re-grossed, and
+the nightly numbers drift from the DMS.
+
+- **Columns used:** `Date`, `Type` (New / Used), `FE` (front gross), `Ttl BE`
+  (back gross), `Sls 1`, `Sls 2`. Everything else is ignored. Each deal is one
+  store unit. For stores that track Sprinters, a deal whose Type or Model says
+  "Sprinter" counts as a Sprinter.
+- **Replace, not add.** Each day in the file is overwritten with what the file
+  says. Saved days *inside* the file's date range that have no deals in it are
+  set to zero (there is a checkbox to keep them, for filtered exports).
+- **Kept as is:** sales calls, appointments and notes.
+- **Salespeople** (only where tracking is on): `Sls 1` = `D` is a house deal
+  (store only, nobody credited). A name in `Sls 2` splits the deal — half a
+  unit and half the gross to each. A dash means no split. Names like
+  "Lauren E" are matched to the roster automatically (first name + last
+  initial); anything unmatched can be added to the roster, mapped to someone,
+  or counted as house in the preview. That day's salesperson rows are replaced.
+- **Preview first.** Nothing saves until the manager reviews the day-by-day
+  before/after and presses *Replace*.
+- No notifications or emails are sent. Future-dated deals are refused.
+
+The file is read in the browser (`lib/xlsx-lite.ts`, no dependency) and turned
+into days by `lib/deal-import.ts`, which the server action re-runs before
+writing, so what saves is what was previewed. Days for tracking stores save
+through `save_daily_entry_with_salespeople()`, one transaction per day.
 
 ## Archiving, deleting and hiding stores
 

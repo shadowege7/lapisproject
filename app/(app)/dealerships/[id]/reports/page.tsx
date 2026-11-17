@@ -6,12 +6,14 @@ import {
   daysAgoISODate,
   formatMonth,
   formatYear,
+  monthEndISODate,
   monthStartISODate,
   todayISODate,
 } from "@/lib/format";
 import { ExportCsvButton } from "./export-button";
 import { PrintButton } from "./print-button";
 import { ImportForm } from "./import-form";
+import { DealImportForm } from "./deal-import-form";
 import { MonthPanel } from "./month-panel";
 import { DailyTable } from "./daily-table";
 import { ExpandForPrint } from "./expand-for-print";
@@ -43,6 +45,8 @@ export default async function ReportsPage({
     manage?: string;
     sp_error?: string;
     sp_done?: string;
+    month?: string;
+    edit?: string;
   }>;
 }) {
   const { id: dealershipId } = await params;
@@ -52,6 +56,15 @@ export default async function ReportsPage({
 
   const supabase = await createClient();
 
+  // ?month=YYYY-MM opens a past month: the same page, scoped to that month.
+  // The current month (or anything unreadable or in the future) is the
+  // ordinary live view.
+  const currentMonth = monthStartISODate();
+  const requested = /^(\d{4})-(0[1-9]|1[0-2])$/.exec(query.month ?? "");
+  const viewMonth =
+    requested && `${requested[0]}-01` < currentMonth ? `${requested[0]}-01` : null;
+  const viewMonthEnd = viewMonth ? monthEndISODate(viewMonth) : null;
+
   const [
     { data: dealership },
     { data: membership },
@@ -60,6 +73,7 @@ export default async function ReportsPage({
     { data: annual },
     { data: weekdayEntries },
     { data: switchableStores },
+    { data: openedMonth },
   ] = await Promise.all([
     supabase
       .from("dealerships")
@@ -72,12 +86,20 @@ export default async function ReportsPage({
       .eq("dealership_id", dealershipId)
       .eq("user_id", user.id)
       .maybeSingle(),
-    supabase
-      .from("daily_entries")
-      .select("*")
-      .eq("dealership_id", dealershipId)
-      .order("entry_date", { ascending: false })
-      .limit(31),
+    viewMonth && viewMonthEnd
+      ? supabase
+          .from("daily_entries")
+          .select("*")
+          .eq("dealership_id", dealershipId)
+          .gte("entry_date", viewMonth)
+          .lte("entry_date", viewMonthEnd)
+          .order("entry_date", { ascending: false })
+      : supabase
+          .from("daily_entries")
+          .select("*")
+          .eq("dealership_id", dealershipId)
+          .order("entry_date", { ascending: false })
+          .limit(31),
     supabase
       .from("monthly_summary")
       .select("*")
@@ -106,6 +128,15 @@ export default async function ReportsPage({
       .is("archived_at", null)
       .order("sort_order", { ascending: true, nullsFirst: false })
       .order("name"),
+    // The opened month may be older than the twelve the Monthly table lists.
+    viewMonth
+      ? supabase
+          .from("monthly_summary")
+          .select("*")
+          .eq("dealership_id", dealershipId)
+          .eq("month", viewMonth)
+          .maybeSingle()
+      : Promise.resolve({ data: null }),
   ]);
 
   if (!dealership) notFound();
@@ -132,6 +163,12 @@ export default async function ReportsPage({
 
   const monthlyRows: SummaryRow[] = (monthly ?? []).map((r) => ({
     label: formatMonth(r.month),
+    // Each month opens its own view of this page; this month is the live one.
+    href:
+      r.month === currentMonth
+        ? `/dealerships/${dealershipId}/reports`
+        : `/dealerships/${dealershipId}/reports?month=${r.month.slice(0, 7)}`,
+    selected: viewMonth ? r.month === viewMonth : r.month === currentMonth,
     total_new_units: r.total_new_units,
     total_used_units: r.total_used_units,
     total_sprinter_units: r.total_sprinter_units,
@@ -147,9 +184,11 @@ export default async function ReportsPage({
 
   const today = todayISODate();
   const todayEntry = (dailyEntries ?? []).find((e) => e.entry_date === today);
-  const thisMonth = (monthly ?? []).find(
-    (m) => m.month === monthStartISODate(),
-  );
+  const thisMonth = viewMonth
+    ? (openedMonth ?? undefined)
+    : (monthly ?? []).find((m) => m.month === currentMonth);
+  const isPast = viewMonth !== null;
+  const canEdit = role === "editor" && !dealership.archived_at;
 
   const slug = dealership.name.replace(/[^a-z0-9]+/gi, "-").toLowerCase();
 
@@ -212,6 +251,14 @@ export default async function ReportsPage({
         <div>
           <p className="text-xs font-medium uppercase tracking-wide text-zinc-500">
             Dealership Insights
+            {viewMonth ? (
+              <>
+                {" · "}
+                <span className="text-zinc-700 dark:text-zinc-300">
+                  {formatMonth(viewMonth)}
+                </span>
+              </>
+            ) : null}
           </p>
           <div className="flex flex-wrap items-center gap-2">
             <h1 className="text-xl font-semibold tracking-tight">
@@ -220,8 +267,17 @@ export default async function ReportsPage({
             <MissedEntries
               daysLogged={thisMonth?.days_logged ?? 0}
               todayLogged={!!todayEntry}
+              pastMonth={viewMonth ?? undefined}
             />
           </div>
+          {viewMonth ? (
+            <Link
+              href={`/dealerships/${dealershipId}/reports`}
+              className="mt-1 inline-block text-sm font-medium text-blue-700 hover:underline dark:text-blue-400 print:hidden"
+            >
+              ← Back to this month
+            </Link>
+          ) : null}
         </div>
         <div className="flex flex-wrap items-center gap-2 print:hidden">
           <StoreSwitcher
@@ -230,12 +286,12 @@ export default async function ReportsPage({
           />
           <PrintButton />
           <ExportCsvButton
-            filename={`${slug}-daily.csv`}
+            filename={`${slug}${viewMonth ? `-${viewMonth.slice(0, 7)}` : ""}-daily.csv`}
             headers={dailyCsvHeaders}
             rows={dailyCsvRows}
             label="Export daily"
           />
-          {role === "editor" && !dealership.archived_at ? (
+          {canEdit && !isPast ? (
             <Link
               href={`/dealerships/${dealershipId}/entry`}
               className="rounded-md btn-primary px-4 py-2 text-sm font-semibold shadow-sm transition-colors"
@@ -256,7 +312,8 @@ export default async function ReportsPage({
         todayLogged={!!todayEntry}
         sprinters={sprinters}
         dealershipId={dealershipId}
-        canEdit={role === "editor" && !dealership.archived_at}
+        canEdit={canEdit}
+        pastMonth={viewMonth ?? undefined}
       />
 
       {/* Only for stores an admin has switched on. */}
@@ -267,24 +324,30 @@ export default async function ReportsPage({
           trackedSince={dealership.salespeople_tracked_since}
           period={parsePeriod(query.sp)}
           rank={parseRank(query.rank)}
-          canEdit={role === "editor" && !dealership.archived_at}
-          manageOpen={role === "editor" && !dealership.archived_at && query.manage === "1"}
+          month={viewMonth && viewMonthEnd ? { from: viewMonth, to: viewMonthEnd } : undefined}
+          canEdit={canEdit}
+          manageOpen={canEdit && query.manage === "1"}
+          editingId={canEdit && query.manage === "1" ? query.edit : undefined}
           error={query.sp_error}
           done={query.sp_done}
         />
       ) : null}
 
-      <WeekdayPanel
-        entries={(weekdayEntries ?? []) as WeekdayEntry[]}
-        today={today}
-      />
+      {isPast ? null : (
+        <>
+          <WeekdayPanel
+            entries={(weekdayEntries ?? []) as WeekdayEntry[]}
+            today={today}
+          />
 
-      <SummarySection
-        title="Annual"
-        rows={annualRows}
-        filename={`${slug}-annual.csv`}
-        sprinters={sprinters}
-      />
+          <SummarySection
+            title="Annual"
+            rows={annualRows}
+            filename={`${slug}-annual.csv`}
+            sprinters={sprinters}
+          />
+        </>
+      )}
       <SummarySection
         title="Monthly"
         rows={monthlyRows}
@@ -298,12 +361,16 @@ export default async function ReportsPage({
         entries={dailyEntries ?? []}
         sprinters={sprinters}
         dealershipId={dealershipId}
-        canEdit={role === "editor" && !dealership.archived_at}
+        canEdit={canEdit}
         canDelete={user.isSuperAdmin}
+        monthLabel={viewMonth ? formatMonth(viewMonth) : undefined}
       />
 
-      {role === "editor" && !dealership.archived_at ? (
-        <ImportForm dealershipId={dealershipId} tracksSprinters={sprinters} />
+      {canEdit && !isPast ? (
+        <div className="flex flex-col gap-3">
+          <DealImportForm dealershipId={dealershipId} tracksSprinters={sprinters} />
+          <ImportForm dealershipId={dealershipId} tracksSprinters={sprinters} />
+        </div>
       ) : null}
     </div>
   );

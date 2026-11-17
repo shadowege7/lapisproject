@@ -72,6 +72,14 @@ export function monthStartISODate(): string {
   return `${year}-${pad2(month)}-01`;
 }
 
+/** Last day of the month that `monthStart` (YYYY-MM-01, or any day in it) is in. */
+export function monthEndISODate(monthStart: string): string {
+  const [year, month] = monthStart.split("-").map(Number);
+  // Day 0 of the next month is the last day of this one.
+  const last = new Date(Date.UTC(year, month, 0)).getUTCDate();
+  return `${year}-${pad2(month)}-${pad2(last)}`;
+}
+
 export function yearStartISODate(): string {
   const { year } = datePartsInAppTZ();
   return `${year}-01-01`;
