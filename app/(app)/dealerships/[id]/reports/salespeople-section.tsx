@@ -160,6 +160,18 @@ export async function SalespeopleSection({
     back: store.back - team.back,
   };
 
+  // Unassigned can't really be below zero: it means someone was credited with
+  // more units than the store sold, which is a typo somewhere in the period.
+  const overCredited = (
+    [
+      ["new", team.n, store.n],
+      ["used", team.u, store.u],
+      ["Sprinter", team.s, store.s],
+    ] as const
+  )
+    .filter(([, people, total]) => people > total)
+    .map(([label, people, total]) => `${formatUnits(people)} ${label} vs ${formatUnits(total)}`);
+
   const zero: Figures = { n: 0, u: 0, s: 0, front: 0, back: 0 };
   const rows = people
     .map((p) => ({ p, f: byPerson.get(p.id) ?? zero }))
@@ -191,11 +203,25 @@ export async function SalespeopleSection({
         ? `${from.slice(0, 4)}-12-31`
         : null;
   const todayLogged = (storeDays ?? []).some((d) => d.entry_date === today);
+  const project = (value: number) =>
+    periodEnd ? projectToPeriodEnd(value, windowFrom, periodEnd, today, todayLogged) : value;
+  // New, used and Sprinter are projected and rounded one by one, and the unit
+  // total is their sum, so the line always adds up and the store's figures
+  // match the "projected" counts on the New and Used cards above.
+  const tracked = (f: Figures) => {
+    const n = Math.round(project(f.n));
+    const u = Math.round(project(f.u));
+    const sp = sprinters ? Math.round(project(f.s)) : 0;
+    return { n, u, s: sp, units: n + u + sp, gross: Math.round(project(gross(f))) };
+  };
   const tracking = (f: Figures) => {
     if (!periodEnd) return "—";
-    const value = rank === "gross" ? gross(f) : units(f);
-    const projected = projectToPeriodEnd(value, windowFrom, periodEnd, today, todayLogged);
-    return rank === "gross" ? money(Math.round(projected)) : String(Math.round(projected));
+    const t = tracked(f);
+    return rank === "gross" ? money(t.gross) : String(t.units);
+  };
+  const trackingMix = (f: Figures) => {
+    const t = tracked(f);
+    return [`${t.n} new`, `${t.u} used`, ...(sprinters ? [`${t.s} Sprinter`] : [])].join(" · ");
   };
   const trackingLabel = rank === "gross" ? "gross" : "units";
   const pvr = (f: Figures) => (units(f) ? formatCurrency(gross(f) / units(f)) : "—");
@@ -230,7 +256,7 @@ export async function SalespeopleSection({
   const partialWindow = windowFrom !== from;
 
   const desktopCols = periodEnd
-    ? "grid-cols-[1.5rem_minmax(9rem,1.5fr)_minmax(9rem,1.5fr)_repeat(3,minmax(5rem,0.85fr))_minmax(4rem,0.6fr)_minmax(5rem,0.7fr)]"
+    ? "grid-cols-[1.5rem_minmax(9rem,1.5fr)_minmax(9rem,1.5fr)_repeat(3,minmax(5rem,0.85fr))_minmax(4rem,0.6fr)_minmax(7.5rem,0.9fr)]"
     : "grid-cols-[1.5rem_minmax(9rem,1.5fr)_minmax(9rem,1.5fr)_repeat(3,minmax(5rem,0.85fr))_minmax(4rem,0.6fr)]";
 
   return (
@@ -282,6 +308,14 @@ export async function SalespeopleSection({
         </p>
       ) : null}
 
+      {overCredited.length ? (
+        <p role="alert" className="mb-3 rounded-md bg-amber-50 px-3 py-2 text-sm text-amber-900 dark:bg-amber-950/40 dark:text-amber-200">
+          Salespeople add up to more units than the store for this period (
+          {overCredited.join("; ")}). A salesperson number was probably mistyped —
+          check the Daily table for a day where someone has more units than the store.
+        </p>
+      ) : null}
+
       <div className="flex flex-wrap items-start gap-4">
         <div className="min-w-0 flex-[999_1_38rem]">
           {rows.length === 0 ? (
@@ -293,7 +327,7 @@ export async function SalespeopleSection({
             <Card flush>
               {/* Desktop table */}
               <div className="hidden overflow-x-auto sm:block">
-                <div className="min-w-[44rem] text-sm">
+                <div className="min-w-[48rem] text-sm">
                   <div className={`grid ${desktopCols} gap-3 border-b border-zinc-200 px-4 py-2 text-[11px] font-medium uppercase tracking-wide text-zinc-500 dark:border-zinc-800`}>
                     <span>#</span>
                     <span>Salesperson</span>
@@ -339,8 +373,11 @@ export async function SalespeopleSection({
                         <span className="text-right font-mono font-semibold tabular-nums">{money(gross(f))}</span>
                         <span className="text-right font-mono tabular-nums text-zinc-500">{pvr(f)}</span>
                         {periodEnd ? (
-                          <span className="text-right font-mono font-semibold tabular-nums text-blue-700 dark:text-blue-400">
-                            {tracking(f)}
+                          <span className="text-right">
+                            <span className="block font-mono font-semibold tabular-nums text-blue-700 dark:text-blue-400">
+                              {tracking(f)}
+                            </span>
+                            <span className="block whitespace-nowrap text-xs text-zinc-500">{trackingMix(f)}</span>
                           </span>
                         ) : null}
                       </div>
@@ -358,7 +395,10 @@ export async function SalespeopleSection({
                     <span className="text-right font-mono tabular-nums">{money(gross(unassigned))}</span>
                     <span className="text-right">—</span>
                     {periodEnd ? (
-                      <span className="text-right font-mono tabular-nums">{tracking(unassigned)}</span>
+                      <span className="text-right">
+                        <span className="block font-mono tabular-nums">{tracking(unassigned)}</span>
+                        <span className="block whitespace-nowrap text-xs">{trackingMix(unassigned)}</span>
+                      </span>
                     ) : null}
                   </div>
                   <div className={`grid ${desktopCols} items-center gap-3 px-4 py-3 font-semibold`}>
@@ -373,8 +413,13 @@ export async function SalespeopleSection({
                     <span className="text-right font-mono tabular-nums">{formatCurrency(gross(store))}</span>
                     <span className="text-right font-mono tabular-nums">{pvr(store)}</span>
                     {periodEnd ? (
-                      <span className="text-right font-mono tabular-nums text-blue-700 dark:text-blue-400">
-                        {tracking(store)}
+                      <span className="text-right">
+                        <span className="block font-mono tabular-nums text-blue-700 dark:text-blue-400">
+                          {tracking(store)}
+                        </span>
+                        <span className="block whitespace-nowrap text-xs font-normal text-zinc-500">
+                          {trackingMix(store)}
+                        </span>
                       </span>
                     ) : null}
                   </div>
@@ -405,9 +450,12 @@ export async function SalespeopleSection({
                           </span>
                           <span className="block text-[11px] text-zinc-500">{rank === "gross" ? "gross" : "units"}</span>
                           {periodEnd ? (
-                            <span className="block text-[11px] font-semibold text-blue-700 dark:text-blue-400">
-                              tracking {tracking(f)}
-                            </span>
+                            <>
+                              <span className="block text-[11px] font-semibold text-blue-700 dark:text-blue-400">
+                                tracking {tracking(f)}
+                              </span>
+                              <span className="block text-[11px] text-zinc-500">{trackingMix(f)}</span>
+                            </>
                           ) : null}
                         </span>
                       </div>
@@ -445,10 +493,13 @@ export async function SalespeopleSection({
                     <span className="block">{formatUnits(storeUnits)} units</span>
                     <span className="block text-sm">{formatCurrency(gross(store))}</span>
                     {periodEnd ? (
-                      <span className="block text-[11px] text-blue-700 dark:text-blue-400">
-                        tracking {tracking(store)}
-                        {rank === "gross" ? "" : " units"}
-                      </span>
+                      <>
+                        <span className="block text-[11px] text-blue-700 dark:text-blue-400">
+                          tracking {tracking(store)}
+                          {rank === "gross" ? "" : " units"}
+                        </span>
+                        <span className="block text-[11px] font-normal">{trackingMix(store)}</span>
+                      </>
                     ) : null}
                   </span>
                 </li>

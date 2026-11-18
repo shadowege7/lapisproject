@@ -266,8 +266,13 @@ With it on:
 - **Dealership Insights** gets a *Salespeople* board for Today / Month / Year,
   ranked by units or gross, with an *Unassigned* line and the store total.
   For Month and Year, a **Tracking** column shows where each person (and the
-  store) is heading by month- or year-end at their current pace, in units or
-  gross to match the ranking. It matches the *Projected month-end* figure.
+  store) is heading by month- or year-end at their current pace — the total
+  (units or gross, to match the ranking) with new / used units under it. The
+  store's new and used match the *projected* counts on the New and Used cards.
+  If salespeople ever add up to more units than the store for the period, the
+  board says so: that only happens when a number was mistyped. The entry form
+  also refuses a day where salespeople add up to more new, used or Sprinter
+  units than the store.
   Editors get **Manage salespeople** there to add, rename, remove and restore
   people. Renaming keeps the same person, so their numbers follow the new name.
 
