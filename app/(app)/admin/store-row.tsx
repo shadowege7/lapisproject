@@ -22,6 +22,25 @@ interface StoreMember {
   email: string;
   fullName: string | null;
   role: DealershipRole;
+  /** False once offboarded in the Launchpad. */
+  isActive: boolean;
+}
+
+interface LiteUser {
+  id: string;
+  email: string;
+  fullName: string | null;
+  isActive: boolean;
+}
+
+/** Case-insensitive match on name or email; every word typed has to match. */
+function matches(query: string, fullName: string | null, email: string) {
+  const hay = `${fullName ?? ""} ${email}`.toLowerCase();
+  return query
+    .toLowerCase()
+    .split(/\s+/)
+    .filter(Boolean)
+    .every((word) => hay.includes(word));
 }
 
 export function StoreRow({
@@ -44,13 +63,14 @@ export function StoreRow({
   /** Only super admins can see this store. */
   superAdminOnly: boolean;
   members: StoreMember[];
-  allUsers: { id: string; email: string; fullName: string | null }[];
+  allUsers: LiteUser[];
   /** Who currently gets this store's emailed daily report. */
   subscribedIds: string[];
   mailConfigured: boolean;
 }) {
   const assignedIds = new Set(members.map((m) => m.userId));
-  const available = allUsers.filter((u) => !assignedIds.has(u.id));
+  // Offboarded people can't be given access again from here.
+  const available = allUsers.filter((u) => u.isActive && !assignedIds.has(u.id));
 
   return (
     <details className="group rounded-xl border border-zinc-200 bg-white dark:border-zinc-800 dark:bg-[var(--surface)]">
@@ -89,46 +109,7 @@ export function StoreRow({
         </span>
       </summary>
       <div className="border-t border-zinc-100 p-4 dark:border-zinc-800">
-        {members.length === 0 ? (
-          <p className="text-sm text-zinc-500">
-            No users assigned to this store.
-          </p>
-        ) : (
-          <ul className="flex flex-col gap-1.5 text-sm">
-            {members.map((m) => (
-              <li
-                key={m.userId}
-                className="flex flex-wrap items-center gap-x-3 gap-y-1"
-              >
-                <span className="min-w-40 flex-1 truncate">
-                  {m.fullName ? (
-                    <span className="font-medium">{m.fullName} </span>
-                  ) : null}
-                  <span className="text-zinc-500">{m.email}</span>
-                </span>
-                <StoreRoleSelect
-                  dealershipId={dealershipId}
-                  userId={m.userId}
-                  role={m.role}
-                />
-                <form action={unassignStore}>
-                  <input type="hidden" name="user_id" value={m.userId} />
-                  <input
-                    type="hidden"
-                    name="dealership_id"
-                    value={dealershipId}
-                  />
-                  <button
-                    type="submit"
-                    className="text-zinc-500 hover:text-red-600 hover:underline dark:hover:text-red-400"
-                  >
-                    Unassign
-                  </button>
-                </form>
-              </li>
-            ))}
-          </ul>
-        )}
+        <MemberList dealershipId={dealershipId} name={name} members={members} />
 
         <SwitchRow
           action={setSalespersonTracking}
@@ -382,12 +363,15 @@ function ReportRecipients({
   superAdminOnly,
 }: {
   dealershipId: string;
-  allUsers: { id: string; email: string; fullName: string | null }[];
+  allUsers: LiteUser[];
   subscribedIds: string[];
   mailConfigured: boolean;
   superAdminOnly: boolean;
 }) {
   const subscribed = new Set(subscribedIds);
+  // Offboarded people drop off the picker. Anyone still ticked stays listed
+  // so they can be unticked.
+  const choices = allUsers.filter((u) => u.isActive || subscribed.has(u.id));
 
   return (
     <details className="mt-3 border-t border-zinc-100 pt-3 dark:border-zinc-800">
@@ -424,7 +408,7 @@ function ReportRecipients({
       ) : null}
 
       <ul className="mt-2 flex flex-col gap-1">
-        {allUsers.map((u) => {
+        {choices.map((u) => {
           const on = subscribed.has(u.id);
           return (
             <li key={u.id}>
@@ -471,6 +455,128 @@ function ReportRecipients({
         })}
       </ul>
     </details>
+  );
+}
+
+/**
+ * Who has access to the store. Collapsed by default so a store with thirty
+ * people doesn't push the rest of the panel off screen. Typing in the search
+ * box opens the list and narrows it to matching names and emails.
+ */
+function MemberList({
+  dealershipId,
+  name,
+  members,
+}: {
+  dealershipId: string;
+  name: string;
+  members: StoreMember[];
+}) {
+  const [open, setOpen] = useState(false);
+  const [query, setQuery] = useState("");
+  const searching = query.trim() !== "";
+  const shown = searching
+    ? members.filter((m) => matches(query, m.fullName, m.email))
+    : members;
+  const expanded = open || searching;
+  const editors = members.filter((m) => m.role === "editor").length;
+  const listId = `members-${dealershipId}`;
+
+  if (members.length === 0) {
+    return <p className="text-sm text-zinc-500">No users assigned to this store.</p>;
+  }
+
+  return (
+    <div>
+      <div className="flex flex-wrap items-center gap-x-3 gap-y-2">
+        <button
+          type="button"
+          aria-expanded={expanded}
+          aria-controls={listId}
+          onClick={() => {
+            if (searching) {
+              setQuery("");
+              setOpen(false);
+            } else setOpen((v) => !v);
+          }}
+          className="inline-flex items-center gap-1.5 text-sm font-medium hover:text-blue-700 dark:hover:text-blue-300"
+        >
+          <svg
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            strokeWidth={2}
+            strokeLinecap="round"
+            strokeLinejoin="round"
+            className={`h-4 w-4 text-zinc-400 transition-transform ${expanded ? "rotate-90" : ""}`}
+            aria-hidden
+          >
+            <path d="M9 6l6 6-6 6" />
+          </svg>
+          People with access
+          <span className="text-xs font-normal text-zinc-500">
+            {members.length} · {editors} editor{editors === 1 ? "" : "s"}
+          </span>
+        </button>
+        <div className="relative ml-auto w-full sm:w-64">
+          <input
+            type="search"
+            value={query}
+            onChange={(e) => setQuery(e.target.value)}
+            placeholder="Search name or email"
+            aria-label={`Search people with access to ${name}`}
+            className="w-full rounded-md border border-zinc-300 bg-transparent py-1.5 pl-8 pr-2 text-sm outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-500/30 dark:border-zinc-700"
+          />
+          <svg
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            strokeWidth={2}
+            strokeLinecap="round"
+            className="pointer-events-none absolute left-2.5 top-1/2 h-4 w-4 -translate-y-1/2 text-zinc-400"
+            aria-hidden
+          >
+            <circle cx="11" cy="11" r="7" />
+            <path d="M20 20l-3.5-3.5" />
+          </svg>
+        </div>
+      </div>
+
+      {expanded ? (
+        shown.length === 0 ? (
+          <p id={listId} className="mt-2 text-sm text-zinc-500">
+            Nobody with access matches “{query.trim()}”.
+          </p>
+        ) : (
+          <ul id={listId} className="mt-2 flex flex-col gap-1.5 text-sm">
+            {shown.map((m) => (
+              <li key={m.userId} className="flex flex-wrap items-center gap-x-3 gap-y-1">
+                <span className="min-w-40 flex-1 truncate">
+                  {m.fullName ? <span className="font-medium">{m.fullName} </span> : null}
+                  <span className="text-zinc-500">{m.email}</span>
+                  {m.isActive ? null : (
+                    <span className="ml-2 rounded-full bg-red-50 px-2 py-0.5 text-xs font-medium text-red-700 dark:bg-red-950/40 dark:text-red-300">
+                      Offboarded
+                    </span>
+                  )}
+                </span>
+                <StoreRoleSelect dealershipId={dealershipId} userId={m.userId} role={m.role} />
+                <form action={unassignStore}>
+                  <input type="hidden" name="user_id" value={m.userId} />
+                  <input type="hidden" name="dealership_id" value={dealershipId} />
+                  <button
+                    type="submit"
+                    className="text-zinc-500 hover:text-red-600 hover:underline dark:hover:text-red-400"
+                  >
+                    Unassign
+                  </button>
+                </form>
+              </li>
+            ))}
+          </ul>
+        )
+      ) : null}
+    </div>
   );
 }
 
