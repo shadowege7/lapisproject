@@ -297,7 +297,7 @@ or the numbers, and only while the switch is on. See
 
 ## Importing a deal export
 
-**Dealership Insights → Update from deal export (.xlsx)** takes the DMS *Car
+**Dealership Insights → Upload ReverseRisk Export** takes the ReverseRisk *Car
 Deals* report and replaces the store's numbers for every day it covers. It is
 for corrections after the fact: deals get unwound, re-dated or re-grossed, and
 the nightly numbers drift from the DMS.

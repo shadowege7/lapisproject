@@ -76,7 +76,7 @@ function sameNumbers(a: DayTotals | undefined, b: ExistingDay | undefined) {
 }
 
 /**
- * Dealership Insights → "Update from deal export". Reads a DMS deal export
+ * Dealership Insights → "Upload ReverseRisk Export". Reads a ReverseRisk deal export
  * (.xlsx, or the same report saved as .csv), shows what each day will become
  * next to what is saved, lets the manager settle who each salesperson name is,
  * and then replaces those days. Sales calls, appointments and notes are left
@@ -227,19 +227,11 @@ export function DealImportForm({
   return (
     <details className="rounded-xl border border-zinc-200 bg-white dark:border-zinc-800 dark:bg-[var(--surface)] print:hidden">
       <summary className="cursor-pointer list-none px-4 py-3 text-sm font-semibold [&::-webkit-details-marker]:hidden">
-        Update from deal export (.xlsx)
+        Upload ReverseRisk Export
       </summary>
       <div className="flex flex-col gap-4 border-t border-zinc-100 p-4 dark:border-zinc-800">
         <p className="text-xs text-zinc-500">
-          Upload the DMS <strong>Car Deals</strong> export. Each deal counts as
-          one unit by its <strong>Date</strong> and <strong>Type</strong>, with{" "}
-          <strong>FE</strong> as front gross and <strong>Ttl BE</strong> as back
-          gross. Every day in the file is <strong>replaced</strong> with what the
-          file says; sales calls, appointments and notes stay as they are.
-          {tracksSprinters
-            ? " Deals whose Type or Model says Sprinter count as Sprinters."
-            : ""}{" "}
-          You&apos;ll see a preview before anything is saved.
+          Upload the ReverseRisk BY MONTH/DATE RANGE exported .xlsx sheet.
         </p>
 
         <input
