@@ -1,6 +1,14 @@
 import Link from "next/link";
 import { createClient } from "@/lib/supabase/server";
-import { datePartsInAppTZ, formatCurrency, formatMonth, formatShortDay } from "@/lib/format";
+import {
+  datePartsInAppTZ,
+  formatCurrency,
+  formatMonth,
+  formatShortDay,
+  monthEndISODate,
+  todayISODate,
+} from "@/lib/format";
+import { projectToPeriodEnd } from "@/lib/projection";
 import {
   byName,
   formatUnits,
@@ -171,8 +179,25 @@ export async function SalespeopleSection({
       `${formatUnits(f.u)} used`,
       ...(sprinters ? [`${formatUnits(f.s)} Sprinter`] : []),
     ].join(" · ");
-  const share = (f: Figures) =>
-    storeUnits ? `${Math.round((units(f) / storeUnits) * 1000) / 10}%` : "—";
+  // Tracking: where each line is heading by the end of the month (or year) at
+  // its current pace, in whatever the board is ranked by. Nothing to project
+  // for a single day or a finished month, so the column only shows for this
+  // month and this year.
+  const today = todayISODate();
+  const periodEnd =
+    !month && period === "mtd"
+      ? monthEndISODate(from)
+      : !month && period === "ytd"
+        ? `${from.slice(0, 4)}-12-31`
+        : null;
+  const todayLogged = (storeDays ?? []).some((d) => d.entry_date === today);
+  const tracking = (f: Figures) => {
+    if (!periodEnd) return "—";
+    const value = rank === "gross" ? gross(f) : units(f);
+    const projected = projectToPeriodEnd(value, windowFrom, periodEnd, today, todayLogged);
+    return rank === "gross" ? money(Math.round(projected)) : String(Math.round(projected));
+  };
+  const trackingLabel = rank === "gross" ? "gross" : "units";
   const pvr = (f: Figures) => (units(f) ? formatCurrency(gross(f) / units(f)) : "—");
   const money = (n: number) => (n ? formatCurrency(n) : "—");
 
@@ -204,8 +229,9 @@ export async function SalespeopleSection({
         : "Year to date";
   const partialWindow = windowFrom !== from;
 
-  const desktopCols =
-    "grid-cols-[1.5rem_minmax(9rem,1.5fr)_minmax(9rem,1.5fr)_repeat(3,minmax(5rem,0.85fr))_minmax(4rem,0.6fr)_minmax(3.5rem,0.45fr)]";
+  const desktopCols = periodEnd
+    ? "grid-cols-[1.5rem_minmax(9rem,1.5fr)_minmax(9rem,1.5fr)_repeat(3,minmax(5rem,0.85fr))_minmax(4rem,0.6fr)_minmax(5rem,0.7fr)]"
+    : "grid-cols-[1.5rem_minmax(9rem,1.5fr)_minmax(9rem,1.5fr)_repeat(3,minmax(5rem,0.85fr))_minmax(4rem,0.6fr)]";
 
   return (
     <section id="salespeople" aria-labelledby="salespeople-h" className="scroll-mt-20">
@@ -276,7 +302,14 @@ export async function SalespeopleSection({
                     <span className="text-right">Back</span>
                     <span className="text-right">Gross</span>
                     <span className="text-right">PVR</span>
-                    <span className="text-right">Share</span>
+                    {periodEnd ? (
+                      <span
+                        className="text-right text-blue-700 dark:text-blue-400"
+                        title={`Projected ${trackingLabel} by ${period === "ytd" ? "year" : "month"} end at the current pace`}
+                      >
+                        Tracking
+                      </span>
+                    ) : null}
                   </div>
                   {rows.map(({ p, f }, i) => {
                     const value = rank === "gross" ? gross(f) : units(f);
@@ -305,7 +338,11 @@ export async function SalespeopleSection({
                         <span className="text-right font-mono tabular-nums">{money(f.back)}</span>
                         <span className="text-right font-mono font-semibold tabular-nums">{money(gross(f))}</span>
                         <span className="text-right font-mono tabular-nums text-zinc-500">{pvr(f)}</span>
-                        <span className="text-right font-mono tabular-nums text-zinc-500">{share(f)}</span>
+                        {periodEnd ? (
+                          <span className="text-right font-mono font-semibold tabular-nums text-blue-700 dark:text-blue-400">
+                            {tracking(f)}
+                          </span>
+                        ) : null}
                       </div>
                     );
                   })}
@@ -320,7 +357,9 @@ export async function SalespeopleSection({
                     <span className="text-right font-mono tabular-nums">{money(unassigned.back)}</span>
                     <span className="text-right font-mono tabular-nums">{money(gross(unassigned))}</span>
                     <span className="text-right">—</span>
-                    <span className="text-right font-mono tabular-nums">{share(unassigned)}</span>
+                    {periodEnd ? (
+                      <span className="text-right font-mono tabular-nums">{tracking(unassigned)}</span>
+                    ) : null}
                   </div>
                   <div className={`grid ${desktopCols} items-center gap-3 px-4 py-3 font-semibold`}>
                     <span />
@@ -333,7 +372,11 @@ export async function SalespeopleSection({
                     <span className="text-right font-mono tabular-nums">{formatCurrency(store.back)}</span>
                     <span className="text-right font-mono tabular-nums">{formatCurrency(gross(store))}</span>
                     <span className="text-right font-mono tabular-nums">{pvr(store)}</span>
-                    <span className="text-right font-mono tabular-nums">{storeUnits ? "100%" : "—"}</span>
+                    {periodEnd ? (
+                      <span className="text-right font-mono tabular-nums text-blue-700 dark:text-blue-400">
+                        {tracking(store)}
+                      </span>
+                    ) : null}
                   </div>
                 </div>
               </div>
@@ -361,6 +404,11 @@ export async function SalespeopleSection({
                             {rank === "gross" ? money(gross(f)) : formatUnits(units(f))}
                           </span>
                           <span className="block text-[11px] text-zinc-500">{rank === "gross" ? "gross" : "units"}</span>
+                          {periodEnd ? (
+                            <span className="block text-[11px] font-semibold text-blue-700 dark:text-blue-400">
+                              tracking {tracking(f)}
+                            </span>
+                          ) : null}
                         </span>
                       </div>
                       <div className="ml-6">
@@ -396,6 +444,12 @@ export async function SalespeopleSection({
                   <span className="text-right font-mono tabular-nums">
                     <span className="block">{formatUnits(storeUnits)} units</span>
                     <span className="block text-sm">{formatCurrency(gross(store))}</span>
+                    {periodEnd ? (
+                      <span className="block text-[11px] text-blue-700 dark:text-blue-400">
+                        tracking {tracking(store)}
+                        {rank === "gross" ? "" : " units"}
+                      </span>
+                    ) : null}
                   </span>
                 </li>
               </ol>

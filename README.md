@@ -265,6 +265,9 @@ With it on:
   each person is a card that opens on tap.
 - **Dealership Insights** gets a *Salespeople* board for Today / Month / Year,
   ranked by units or gross, with an *Unassigned* line and the store total.
+  For Month and Year, a **Tracking** column shows where each person (and the
+  store) is heading by month- or year-end at their current pace, in units or
+  gross to match the ranking. It matches the *Projected month-end* figure.
   Editors get **Manage salespeople** there to add, rename, remove and restore
   people. Renaming keeps the same person, so their numbers follow the new name.
 
@@ -304,22 +307,26 @@ the nightly numbers drift from the DMS.
 
 - **Columns used:** `Date`, `Type` (New / Used), `FE` (front gross), `Ttl BE`
   (back gross), `Sls 1`, `Sls 2`. Everything else is ignored. Each deal is one
-  store unit. For stores that track Sprinters, a deal whose Type or Model says
-  "Sprinter" counts as a Sprinter.
+  store unit. The export has no Sprinter type, so for stores that track
+  Sprinters a deal whose Type is **New** and whose Model contains "Sprinter"
+  counts as a Sprinter. A Used deal is never a Sprinter.
+- **`D` in `Sls 1` is left out entirely** — no store units or gross, no
+  salesperson credit — at every store, tracking or not. The preview says how
+  many were left out.
 - **Export date range.** Enter the From/To dates picked in ReverseRisk
   (defaults to this month to date; there is also a Last month shortcut). Every
   day in that range is replaced with what the file says, and saved days with
   no deals become zero. Days outside it are not touched. A deal dated outside
   the range blocks the import, since it means the dates don't match the file.
 - **Kept as is:** sales calls, appointments and notes.
-- **Salespeople** (only where tracking is on): `Sls 1` = `D` is a house deal
-  (store only, nobody credited). A name in `Sls 2` splits the deal — half a
-  unit and half the gross to each. A dash means no split. Names like
+- **Salespeople** (only where tracking is on): a name in `Sls 2` splits the
+  deal — half a unit and half the gross to each. A dash means no split. A
+  blank `Sls 1` counts for the store with nobody credited. Names like
   "Lauren E" are matched to the roster automatically (first name + last
   initial); anything unmatched can be added to the roster, mapped to someone,
   or counted as house in the preview. That day's salesperson rows are replaced.
 - **Preview first.** Nothing saves until the manager reviews the day-by-day
-  before/after and presses *Replace*.
+  before/after and presses *Confirm import*.
 - No notifications or emails are sent. Future-dated deals are refused.
 
 The file is read in the browser (`lib/xlsx-lite.ts`, no dependency) and turned

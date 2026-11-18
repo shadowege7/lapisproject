@@ -6,15 +6,19 @@ import type { Cell } from "@/lib/xlsx-lite";
  * so what the preview shows is exactly what gets written.
  *
  * Only six columns matter: Date, Type, FE, Ttl BE, Sls 1 and Sls 2. Everything
- * else in the export is ignored, with one exception: for a store that tracks
- * Sprinters, a deal whose Type or Model says "Sprinter" counts as a Sprinter
- * rather than a New unit — otherwise replacing a Mercedes store's days would
- * quietly zero its Sprinter line.
+ * else in the export is ignored, with one exception: the export has no
+ * Sprinter type, so for a store that tracks Sprinters a deal whose Type is New
+ * and whose Model contains "Sprinter" counts as a Sprinter instead of a New
+ * unit. A Used deal is never a Sprinter.
+ *
+ * A deal with "D" in Sls 1 is left out of every number — store and
+ * salespeople alike — whether or not the store tracks salespeople.
  *
  * Salesperson rules (only for stores with salesperson tracking on):
- *   - Sls 1 of "D" is a house deal: it counts for the store, nobody is credited.
  *   - A name in Sls 2 splits the deal: half a unit and half the gross each.
  *     A dash (or blank) in Sls 2 means no split.
+ *   - A blank Sls 1 is a deal nobody is credited with; it still counts for
+ *     the store.
  */
 
 export type DealType = "new" | "used" | "sprinter";
@@ -38,6 +42,8 @@ export interface SkippedRow {
 export interface ParsedDeals {
   deals: Deal[];
   skipped: SkippedRow[];
+  /** Spreadsheet row numbers of deals left out because Sls 1 is "D". */
+  excluded: number[];
   /** True when the file had Sls 1 / Sls 2 columns at all. */
   hasSalespeople: boolean;
 }
@@ -143,10 +149,11 @@ export function classifyType(
   sprinters: boolean,
 ): DealType | null {
   const t = type.toLowerCase();
-  if (sprinters && (t.includes("sprinter") || model.toLowerCase().includes("sprinter"))) {
-    return "sprinter";
+  if (t.startsWith("new")) {
+    // The export has no Sprinter type: a new Sprinter is a New deal whose
+    // Model says so. Used Sprinters stay Used.
+    return sprinters && model.toLowerCase().includes("sprinter") ? "sprinter" : "new";
   }
-  if (t.startsWith("new")) return "new";
   if (/^(used|cpo|certified|pre-?owned)/.test(t)) return "used";
   return null;
 }
@@ -195,12 +202,17 @@ export function parseDealGrid(grid: Cell[][], sprinters: boolean): ParsedDeals {
   const model = col.model;
   const deals: Deal[] = [];
   const skipped: SkippedRow[] = [];
+  const excluded: number[] = [];
 
   for (let r = headerRow + 1; r < grid.length; r++) {
     const row = grid[r] ?? [];
     const rowNum = r + 1;
     const rawDate = row[col.date];
     if (cellText(rawDate) === "") continue;
+    if (sls1 !== undefined && isHouse(cellText(row[sls1]))) {
+      excluded.push(rowNum);
+      continue;
+    }
     const date = toISODate(rawDate);
     if (!date) {
       skipped.push({ row: rowNum, reason: `"${cellText(rawDate)}" isn't a date` });
@@ -235,7 +247,7 @@ export function parseDealGrid(grid: Cell[][], sprinters: boolean): ParsedDeals {
     });
   }
 
-  return { deals, skipped, hasSalespeople: sls1 !== undefined };
+  return { deals, skipped, excluded, hasSalespeople: sls1 !== undefined };
 }
 
 // ---------------------------------------------------------------------------
@@ -253,7 +265,7 @@ export function isNobody(raw: string): boolean {
   return k === "" || /^[-–—]+$/.test(k);
 }
 
-/** "D" alone is the house. */
+/** "D" alone is the house. In Sls 1 it keeps the deal out of every number. */
 export function isHouse(raw: string): boolean {
   return nameKey(raw) === "d";
 }
