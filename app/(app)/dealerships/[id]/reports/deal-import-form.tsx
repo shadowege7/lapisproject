@@ -1,17 +1,18 @@
 "use client";
 
 import { useMemo, useState } from "react";
-import { formatCurrency, formatShortDay } from "@/lib/format";
+import { formatCurrency, formatShortDay, monthEndISODate } from "@/lib/format";
 import { formatUnits, salespersonName } from "@/lib/salespeople";
 import { readFirstSheet, type Cell } from "@/lib/xlsx-lite";
 import {
   autoMatch,
   collectNames,
-  dateSpan,
   eachDay,
   parseDealGrid,
+  rangeError,
   rollupDeals,
   type Assignment,
+  type DateRange,
   type DayTotals,
   type ParsedDeals,
 } from "@/lib/deal-import";
@@ -25,9 +26,13 @@ import {
 
 interface Loaded {
   fileName: string;
+  range: DateRange;
   parsed: ParsedDeals;
   preview: PreviewResult;
 }
+
+const dateField =
+  "min-h-10 rounded-md border border-zinc-300 bg-white px-2.5 text-sm text-zinc-900 outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-500/30 dark:border-zinc-600 dark:bg-zinc-800 dark:text-zinc-100";
 
 const sel =
   "min-w-0 rounded-md border border-zinc-300 bg-transparent px-2 py-1.5 text-sm outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-500/30 dark:border-zinc-700 dark:bg-[var(--surface)]";
@@ -85,15 +90,23 @@ function sameNumbers(a: DayTotals | undefined, b: ExistingDay | undefined) {
 export function DealImportForm({
   dealershipId,
   tracksSprinters,
+  today,
+  monthStart,
 }: {
   dealershipId: string;
   tracksSprinters: boolean;
+  /** Today and the 1st of this month in the app's timezone, from the server,
+   *  so the default range matches what the rest of the page calls "today". */
+  today: string;
+  monthStart: string;
 }) {
   const [busy, setBusy] = useState(false);
   const [msg, setMsg] = useState<{ tone: "error" | "ok"; text: string } | null>(null);
   const [loaded, setLoaded] = useState<Loaded | null>(null);
   const [assign, setAssign] = useState<Record<string, Assignment>>({});
-  const [zeroMissing, setZeroMissing] = useState(true);
+  // Month to date is how the export is usually pulled, so it's the default.
+  const [from, setFrom] = useState(monthStart);
+  const [to, setTo] = useState(today);
   const [inputKey, setInputKey] = useState(0);
   const [file, setFile] = useState<File | null>(null);
   const [dragging, setDragging] = useState(false);
@@ -111,12 +124,13 @@ export function DealImportForm({
         return;
       }
       const parsed = parseDealGrid(grid, tracksSprinters);
-      const span = dateSpan(parsed.deals);
-      if (!span) {
-        setMsg({ tone: "error", text: "No deals found in that file." });
+      const range = { from, to };
+      const bad = rangeError(range, parsed.deals, today);
+      if (bad) {
+        setMsg({ tone: "error", text: bad });
         return;
       }
-      const preview = await previewDealImport(dealershipId, span.from, span.to);
+      const preview = await previewDealImport(dealershipId, range);
       if (!preview.ok) {
         setMsg({ tone: "error", text: preview.error ?? "Couldn't preview that file." });
         return;
@@ -128,8 +142,7 @@ export function DealImportForm({
         initial[key] = id ? { kind: "person", id } : { kind: "add" };
       }
       setAssign(initial);
-      setZeroMissing(true);
-      setLoaded({ fileName: chosen.name, parsed, preview });
+      setLoaded({ fileName: chosen.name, range, parsed, preview });
     } catch (e) {
       setMsg({
         tone: "error",
@@ -154,16 +167,38 @@ export function DealImportForm({
     setMsg(null);
   }
 
+  // Changing the dates after a preview makes it stale: drop it so Import
+  // has to be pressed again.
+  function setDate(which: "from" | "to", value: string) {
+    if (which === "from") setFrom(value);
+    else setTo(value);
+    setLoaded(null);
+    setMsg(null);
+  }
+
+  function setRange(next: DateRange) {
+    setFrom(next.from);
+    setTo(next.to);
+    setLoaded(null);
+    setMsg(null);
+  }
+
+  const lastMonth = (() => {
+    const [y, m] = monthStart.split("-").map(Number);
+    const start = m === 1 ? `${y - 1}-12-01` : `${y}-${String(m - 1).padStart(2, "0")}-01`;
+    return { from: start, to: monthEndISODate(start) };
+  })();
+  const presets: { label: string; range: DateRange }[] = [
+    { label: "This month to date", range: { from: monthStart, to: today } },
+    { label: "Last month", range: lastMonth },
+  ];
+
   const view = useMemo(() => {
     if (!loaded) return null;
-    const { parsed, preview } = loaded;
-    const span = dateSpan(parsed.deals)!;
+    const { parsed, preview, range } = loaded;
     const { days } = rollupDeals(parsed.deals);
     const existing = preview.existing ?? {};
-    const missing = Object.keys(existing)
-      .filter((d) => !days.has(d))
-      .sort();
-    const rows = eachDay(span.from, span.to)
+    const rows = eachDay(range.from, range.to)
       .filter((d) => days.has(d) || existing[d])
       .map((date) => {
         const next = days.get(date);
@@ -190,7 +225,8 @@ export function DealImportForm({
       { units: 0, gross: 0 },
     );
     const houseDeals = parsed.deals.filter((d) => d.sls1.trim().toUpperCase() === "D").length;
-    return { span, days, existing, missing, rows, names, totals, houseDeals };
+    const zeroed = rows.filter((r) => r.status === "zero").length;
+    return { range, days, existing, zeroed, rows, names, totals, houseDeals };
   }, [loaded]);
 
   async function apply() {
@@ -202,7 +238,7 @@ export function DealImportForm({
         dealershipId,
         loaded.parsed.deals,
         loaded.preview.tracksSalespeople ? assign : {},
-        zeroMissing,
+        loaded.range,
       );
       const addedText = res.added?.length
         ? ` Added ${res.added.join(", ")} to the roster.`
@@ -230,9 +266,7 @@ export function DealImportForm({
   const roster = loaded?.preview.roster ?? [];
   // Unchanged days are still written: their store numbers match, but for a
   // store tracking salespeople the per-person split may not.
-  const writeCount = view
-    ? view.rows.filter((r) => r.status !== "zero" || zeroMissing).length
-    : 0;
+  const writeCount = view ? view.rows.length : 0;
 
   return (
     <details className="rounded-xl border border-zinc-200 bg-white dark:border-zinc-800 dark:bg-[var(--surface)] print:hidden">
@@ -243,6 +277,59 @@ export function DealImportForm({
         <p className="text-xs text-zinc-500">
           Upload the ReverseRisk BY MONTH/DATE RANGE exported .xlsx sheet.
         </p>
+
+        <fieldset disabled={busy} className="flex flex-col gap-1.5">
+          <legend className="text-xs font-semibold">Export date range</legend>
+          <div className="flex flex-wrap gap-1.5" role="group" aria-label="Quick ranges">
+            {presets.map((p) => {
+              const active = p.range.from === from && p.range.to === to;
+              return (
+                <button
+                  key={p.label}
+                  type="button"
+                  aria-pressed={active}
+                  onClick={() => setRange(p.range)}
+                  className={`min-h-9 rounded-full border px-3 text-xs font-semibold ${
+                    active
+                      ? "btn-primary border-transparent"
+                      : "border-zinc-300 text-zinc-700 hover:border-blue-400 hover:text-blue-700 dark:border-zinc-600 dark:text-zinc-200 dark:hover:text-blue-300"
+                  }`}
+                >
+                  {p.label}
+                </button>
+              );
+            })}
+          </div>
+          <div className="flex flex-wrap items-end gap-3">
+            <label className="flex flex-col gap-1 text-xs text-zinc-500">
+              From
+              <input
+                type="date"
+                required
+                value={from}
+                max={to || today}
+                onChange={(e) => setDate("from", e.target.value)}
+                className={dateField}
+              />
+            </label>
+            <label className="flex flex-col gap-1 text-xs text-zinc-500">
+              To
+              <input
+                type="date"
+                required
+                value={to}
+                min={from || undefined}
+                max={today}
+                onChange={(e) => setDate("to", e.target.value)}
+                className={dateField}
+              />
+            </label>
+          </div>
+          <p className="text-xs text-zinc-500">
+            Use the same dates you picked in ReverseRisk. Every day in this range is
+            replaced, and days with no deals become zero.
+          </p>
+        </fieldset>
 
         {/* The native file input is hidden behind a drop zone with a real
             button, so picking a file looks like something you can click. */}
@@ -292,7 +379,7 @@ export function DealImportForm({
             <button
               type="button"
               onClick={() => file && void onFile(file)}
-              disabled={!file || busy}
+              disabled={!file || !from || !to || busy}
               className="min-h-10 w-fit shrink-0 rounded-md btn-primary px-4 text-sm font-semibold disabled:cursor-not-allowed disabled:opacity-50"
             >
               {busy ? "Reading…" : "Import"}
@@ -318,7 +405,7 @@ export function DealImportForm({
             <div className="text-sm">
               <p className="font-medium">
                 {loaded.parsed.deals.length} deal{loaded.parsed.deals.length === 1 ? "" : "s"} ·{" "}
-                {formatShortDay(view.span.from)} – {formatShortDay(view.span.to)} ·{" "}
+                {formatShortDay(view.range.from)} – {formatShortDay(view.range.to)} ·{" "}
                 {view.totals.units} units · {formatCurrency(view.totals.gross)} gross
               </p>
               <p className="text-xs text-zinc-500">{loaded.fileName}</p>
@@ -394,23 +481,11 @@ export function DealImportForm({
               </p>
             ) : null}
 
-            {view.missing.length ? (
-              <label className="flex items-start gap-2 text-sm">
-                <input
-                  type="checkbox"
-                  checked={zeroMissing}
-                  onChange={(e) => setZeroMissing(e.target.checked)}
-                  className="mt-1"
-                />
-                <span>
-                  Set {view.missing.length} saved day{view.missing.length === 1 ? "" : "s"} with
-                  no deals in the file to zero
-                  <span className="block text-xs text-zinc-500">
-                    {view.missing.map(formatShortDay).join(", ")} — inside the file&apos;s date
-                    range but no deals in it. Untick if the export was filtered.
-                  </span>
-                </span>
-              </label>
+            {view.zeroed ? (
+              <p className="rounded-md bg-amber-50 px-3 py-2 text-xs text-amber-900 dark:bg-amber-950/40 dark:text-amber-200">
+                {view.zeroed} saved day{view.zeroed === 1 ? " has" : "s have"} no deals in this
+                export and will be set to zero.
+              </p>
             ) : null}
 
             <div className="overflow-x-auto rounded-lg border border-zinc-200 dark:border-zinc-800">
@@ -428,9 +503,8 @@ export function DealImportForm({
                 </thead>
                 <tbody>
                   {view.rows.map(({ date, next, saved, status }) => {
-                    const skip = status === "zero" && !zeroMissing;
-                    const show = skip ? saved : next;
-                    const was = status === "change" || (status === "zero" && !skip) ? saved : undefined;
+                    const show = next;
+                    const was = status === "change" || status === "zero" ? saved : undefined;
                     const n = (v: number | undefined) => v ?? 0;
                     const cell = (now: number, before: number | undefined, money = false) => {
                       const f = (v: number) => (money ? formatCurrency(v) : String(v));
@@ -450,7 +524,7 @@ export function DealImportForm({
                       <tr
                         key={date}
                         className={`border-b border-zinc-100 last:border-0 dark:border-zinc-900 ${
-                          status === "same" || skip ? "text-zinc-400" : ""
+                          status === "same" ? "text-zinc-400" : ""
                         }`}
                       >
                         <td className="whitespace-nowrap px-3 py-1.5">{formatShortDay(date)}</td>
@@ -473,9 +547,7 @@ export function DealImportForm({
                             : status === "change"
                               ? "Replaces saved"
                               : status === "zero"
-                                ? skip
-                                  ? "Kept as is"
-                                  : "No deals → zero"
+                                ? "No deals → zero"
                                 : "No change"}
                         </td>
                       </tr>

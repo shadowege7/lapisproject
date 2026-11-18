@@ -446,6 +446,45 @@ export function dateSpan(deals: Deal[]): { from: string; to: string } | null {
   return { from, to };
 }
 
+export interface DateRange {
+  /** ISO dates, inclusive: the range picked when exporting from ReverseRisk. */
+  from: string;
+  to: string;
+}
+
+const shortDate = (iso: string) => {
+  const [y, m, d] = iso.split("-");
+  return `${Number(m)}/${Number(d)}/${y}`;
+};
+
+/**
+ * Why a range can't be imported, or null when it can. The range is what the
+ * import replaces: every day in it ends up matching the file, including days
+ * the file has no deals for (they become zero). So it has to be a real,
+ * finished span, and every deal has to sit inside it — a deal outside means
+ * the dates typed in don't match the export.
+ */
+export function rangeError(range: DateRange, deals: Deal[], today: string): string | null {
+  const iso = /^\d{4}-\d{2}-\d{2}$/;
+  if (!iso.test(range.from) || !iso.test(range.to) || !toISODate(range.from) || !toISODate(range.to)) {
+    return "Enter the From and To dates of the export.";
+  }
+  if (range.from > range.to) return "The From date is after the To date.";
+  if (range.to > today) {
+    return "The To date is in the future. Numbers can't be saved for a day that hasn't happened.";
+  }
+  if (eachDay(range.from, range.to).length > MAX_SPAN_DAYS) {
+    return `That range is more than ${MAX_SPAN_DAYS} days. Split it into smaller exports.`;
+  }
+  const outside = deals.filter((d) => d.date < range.from || d.date > range.to);
+  if (outside.length) {
+    const dates = [...new Set(outside.map((d) => d.date))].sort();
+    const list = dates.slice(0, 3).map(shortDate).join(", ") + (dates.length > 3 ? "…" : "");
+    return `${outside.length} deal${outside.length === 1 ? " is" : "s are"} dated outside ${shortDate(range.from)} – ${shortDate(range.to)} (${list}). Check the dates match the export.`;
+  }
+  return null;
+}
+
 /** Server-side shape check on deals that came from the browser. */
 export function validDeal(d: unknown): d is Deal {
   if (!d || typeof d !== "object") return false;

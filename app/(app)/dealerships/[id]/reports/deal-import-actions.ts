@@ -5,15 +5,14 @@ import { createClient } from "@/lib/supabase/server";
 import { todayISODate } from "@/lib/format";
 import {
   MAX_DEALS,
-  MAX_SPAN_DAYS,
   autoMatch,
   collectNames,
-  dateSpan,
-  eachDay,
+  rangeError,
   rollupDeals,
   splitName,
   validDeal,
   type Assignment,
+  type DateRange,
   type Deal,
   type RosterName,
 } from "@/lib/deal-import";
@@ -54,16 +53,6 @@ const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 const EXISTING_COLUMNS =
   "entry_date, new_units, used_units, sprinter_units, new_front_end_gross, new_back_end_gross, used_front_end_gross, used_back_end_gross, sprinter_front_end_gross, sprinter_back_end_gross, sales_calls, appointments, notes";
 
-function spanError(from: string, to: string): string | null {
-  if (to > todayISODate()) {
-    return "The file has deals dated after today. Numbers can't be saved for a day that hasn't happened.";
-  }
-  if (eachDay(from, to).length > MAX_SPAN_DAYS) {
-    return `The file covers more than ${MAX_SPAN_DAYS} days. Split it into smaller exports.`;
-  }
-  return null;
-}
-
 async function loadExisting(
   supabase: Awaited<ReturnType<typeof createClient>>,
   dealershipId: string,
@@ -92,18 +81,15 @@ async function loadExisting(
   return { existing: out, error };
 }
 
-/** What is already saved for the file's date span, and who is on the roster. */
+/** What is already saved for the export's date range, and who is on the roster. */
 export async function previewDealImport(
   dealershipId: string,
-  from: string,
-  to: string,
+  range: DateRange,
 ): Promise<PreviewResult> {
   if (!UUID.test(dealershipId)) return { ok: false, error: "Unknown store." };
-  if (!/^\d{4}-\d{2}-\d{2}$/.test(from) || !/^\d{4}-\d{2}-\d{2}$/.test(to) || from > to) {
-    return { ok: false, error: "The file's dates couldn't be read." };
-  }
-  const bad = spanError(from, to);
+  const bad = rangeError(range, [], todayISODate());
   if (bad) return { ok: false, error: bad };
+  const { from, to } = range;
 
   const supabase = await createClient();
   const {
@@ -150,8 +136,9 @@ export interface ApplyResult {
 }
 
 /**
- * Replace the numbers for every day in the file (and, with `zeroMissing`,
- * zero any saved day inside the file's date span that has no deals in it).
+ * Replace the numbers for every day in the export's date range: days with
+ * deals get the file's totals, and saved days with no deals become zero.
+ * Days outside the range are not touched.
  * Sales calls, appointments and notes are carried over from what is saved.
  * For stores tracking salespeople, each day's salesperson rows are replaced
  * too, through the same one-transaction-per-day function the entry form uses.
@@ -160,12 +147,11 @@ export async function applyDealImport(
   dealershipId: string,
   rawDeals: unknown[],
   assignments: Record<string, Assignment>,
-  zeroMissing: boolean,
+  range: DateRange,
 ): Promise<ApplyResult> {
   if (!UUID.test(dealershipId)) return { ok: false, error: "Unknown store." };
-  if (!Array.isArray(rawDeals) || rawDeals.length === 0) {
-    return { ok: false, error: "No deals to import." };
-  }
+  // An empty file is allowed: a range with no deals in it zeroes those days.
+  if (!Array.isArray(rawDeals)) return { ok: false, error: "No deals to import." };
   if (rawDeals.length > MAX_DEALS) {
     return { ok: false, error: `Too many deals (max ${MAX_DEALS}).` };
   }
@@ -173,8 +159,10 @@ export async function applyDealImport(
     return { ok: false, error: "Some deals in the file couldn't be read. Re-select the file and try again." };
   }
   const deals = rawDeals as Deal[];
-  const span = dateSpan(deals)!;
-  const bad = spanError(span.from, span.to);
+  if (!range || typeof range.from !== "string" || typeof range.to !== "string") {
+    return { ok: false, error: "Enter the From and To dates of the export." };
+  }
+  const bad = rangeError({ from: range.from, to: range.to }, deals, todayISODate());
   if (bad) return { ok: false, error: bad };
 
   const supabase = await createClient();
@@ -265,19 +253,19 @@ export async function applyDealImport(
   const { existing, error: readError } = await loadExisting(
     supabase,
     dealershipId,
-    span.from,
-    span.to,
+    range.from,
+    range.to,
   );
   if (readError) return { ok: false, error: "Couldn't read this store's saved numbers." };
 
+  // Every saved day in the range is rewritten; the ones with no deals in the
+  // file become zero. Days with neither a deal nor a saved row stay empty.
   const dates = new Set(days.keys());
   let daysZeroed = 0;
-  if (zeroMissing) {
-    for (const date of Object.keys(existing)) {
-      if (!dates.has(date)) {
-        dates.add(date);
-        daysZeroed++;
-      }
+  for (const date of Object.keys(existing)) {
+    if (!dates.has(date)) {
+      dates.add(date);
+      daysZeroed++;
     }
   }
 
@@ -305,6 +293,7 @@ export async function applyDealImport(
   });
 
   // ---- Write ---------------------------------------------------------------
+  if (entries.length === 0) return { ok: true, daysWritten: 0, daysZeroed: 0, added };
   const failedDays: string[] = [];
   if (tracking) {
     // One call per day: the function saves the day and replaces its

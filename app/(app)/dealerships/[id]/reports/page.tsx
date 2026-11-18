@@ -366,7 +366,12 @@ export default async function ReportsPage({
       />
 
       {canEdit && !isPast ? (
-        <DealImportForm dealershipId={dealershipId} tracksSprinters={sprinters} />
+        <DealImportForm
+          dealershipId={dealershipId}
+          tracksSprinters={sprinters}
+          today={today}
+          monthStart={currentMonth}
+        />
       ) : null}
     </div>
   );

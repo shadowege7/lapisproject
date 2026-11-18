@@ -1,5 +1,5 @@
 import type { Metadata } from "next";
-import { Geist, Geist_Mono } from "next/font/google";
+const Geist = (_: unknown) => ({ variable: "" }); const Geist_Mono = Geist;
 import { APP_NAME, COMPANY_NAME } from "@/app/brand";
 import "./globals.css";
 
