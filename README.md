@@ -306,9 +306,11 @@ the nightly numbers drift from the DMS.
   (back gross), `Sls 1`, `Sls 2`. Everything else is ignored. Each deal is one
   store unit. For stores that track Sprinters, a deal whose Type or Model says
   "Sprinter" counts as a Sprinter.
-- **Replace, not add.** Each day in the file is overwritten with what the file
-  says. Saved days *inside* the file's date range that have no deals in it are
-  set to zero (there is a checkbox to keep them, for filtered exports).
+- **Export date range.** Enter the From/To dates picked in ReverseRisk
+  (defaults to this month to date; there is also a Last month shortcut). Every
+  day in that range is replaced with what the file says, and saved days with
+  no deals become zero. Days outside it are not touched. A deal dated outside
+  the range blocks the import, since it means the dates don't match the file.
 - **Kept as is:** sales calls, appointments and notes.
 - **Salespeople** (only where tracking is on): `Sls 1` = `D` is a house deal
   (store only, nobody credited). A name in `Sls 2` splits the deal — half a
