@@ -95,15 +95,17 @@ export function DealImportForm({
   const [assign, setAssign] = useState<Record<string, Assignment>>({});
   const [zeroMissing, setZeroMissing] = useState(true);
   const [inputKey, setInputKey] = useState(0);
+  const [file, setFile] = useState<File | null>(null);
+  const [dragging, setDragging] = useState(false);
 
-  async function onFile(file: File) {
+  async function onFile(chosen: File) {
     setBusy(true);
     setMsg(null);
     setLoaded(null);
     try {
       let grid: Cell[][];
-      if (/\.csv$/i.test(file.name)) grid = parseCsv(await file.text());
-      else if (/\.xlsx$/i.test(file.name)) grid = await readFirstSheet(await file.arrayBuffer());
+      if (/\.csv$/i.test(chosen.name)) grid = parseCsv(await chosen.text());
+      else if (/\.xlsx$/i.test(chosen.name)) grid = await readFirstSheet(await chosen.arrayBuffer());
       else {
         setMsg({ tone: "error", text: "Choose an .xlsx (or .csv) deal export." });
         return;
@@ -127,7 +129,7 @@ export function DealImportForm({
       }
       setAssign(initial);
       setZeroMissing(true);
-      setLoaded({ fileName: file.name, parsed, preview });
+      setLoaded({ fileName: chosen.name, parsed, preview });
     } catch (e) {
       setMsg({
         tone: "error",
@@ -141,7 +143,15 @@ export function DealImportForm({
   function reset() {
     setLoaded(null);
     setAssign({});
+    setFile(null);
     setInputKey((k) => k + 1);
+  }
+
+  function pick(f: File | undefined) {
+    if (!f) return;
+    setFile(f);
+    setLoaded(null);
+    setMsg(null);
   }
 
   const view = useMemo(() => {
@@ -234,17 +244,61 @@ export function DealImportForm({
           Upload the ReverseRisk BY MONTH/DATE RANGE exported .xlsx sheet.
         </p>
 
-        <input
-          key={inputKey}
-          type="file"
-          accept=".xlsx,.csv,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet,text/csv"
-          disabled={busy}
-          onChange={(e) => {
-            const f = e.target.files?.[0];
-            if (f) void onFile(f);
+        {/* The native file input is hidden behind a drop zone with a real
+            button, so picking a file looks like something you can click. */}
+        <div
+          onDragOver={(e) => {
+            e.preventDefault();
+            if (!busy) setDragging(true);
           }}
-          className="text-sm"
-        />
+          onDragLeave={() => setDragging(false)}
+          onDrop={(e) => {
+            e.preventDefault();
+            setDragging(false);
+            if (!busy) pick(e.dataTransfer.files?.[0]);
+          }}
+          className={`flex flex-col gap-3 rounded-lg border-2 border-dashed p-4 sm:flex-row sm:items-center ${
+            dragging
+              ? "border-blue-500 bg-blue-50/60 dark:bg-blue-950/30"
+              : "border-zinc-300 dark:border-zinc-700"
+          }`}
+        >
+          <label
+            className={`inline-flex min-h-10 w-fit shrink-0 cursor-pointer items-center gap-2 rounded-md border border-zinc-300 bg-white px-3 text-sm font-semibold text-zinc-800 hover:border-blue-400 hover:text-blue-700 focus-within:ring-2 focus-within:ring-blue-500/40 dark:border-zinc-600 dark:bg-zinc-800 dark:text-zinc-100 dark:hover:text-blue-300 ${
+              busy ? "pointer-events-none opacity-60" : ""
+            }`}
+          >
+            <svg aria-hidden viewBox="0 0 20 20" fill="currentColor" className="h-4 w-4">
+              <path d="M10 3a1 1 0 0 1 .7.3l3.5 3.5a1 1 0 1 1-1.4 1.4L11 6.4V13a1 1 0 1 1-2 0V6.4L7.2 8.2a1 1 0 0 1-1.4-1.4l3.5-3.5A1 1 0 0 1 10 3ZM4 14a1 1 0 0 1 1 1v1h10v-1a1 1 0 1 1 2 0v2a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1v-2a1 1 0 0 1 1-1Z" />
+            </svg>
+            {file ? "Choose a different file" : "Choose file"}
+            <input
+              key={inputKey}
+              type="file"
+              accept=".xlsx,.csv,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet,text/csv"
+              disabled={busy}
+              onChange={(e) => pick(e.target.files?.[0])}
+              className="sr-only"
+            />
+          </label>
+          <span className="min-w-0 flex-1 truncate text-sm">
+            {file ? (
+              <span className="font-medium">{file.name}</span>
+            ) : (
+              <span className="text-zinc-500">or drag the .xlsx here</span>
+            )}
+          </span>
+          {loaded ? null : (
+            <button
+              type="button"
+              onClick={() => file && void onFile(file)}
+              disabled={!file || busy}
+              className="min-h-10 w-fit shrink-0 rounded-md btn-primary px-4 text-sm font-semibold disabled:cursor-not-allowed disabled:opacity-50"
+            >
+              {busy ? "Reading…" : "Import"}
+            </button>
+          )}
+        </div>
 
         {msg ? (
           <p
@@ -440,7 +494,7 @@ export function DealImportForm({
               >
                 {busy
                   ? "Saving…"
-                  : `Replace ${writeCount} day${writeCount === 1 ? "" : "s"}`}
+                  : `Confirm import · ${writeCount} day${writeCount === 1 ? "" : "s"}`}
               </button>
               <button
                 type="button"
@@ -457,8 +511,6 @@ export function DealImportForm({
               ) : null}
             </div>
           </div>
-        ) : busy ? (
-          <p className="text-sm text-zinc-500">Reading file…</p>
         ) : null}
       </div>
     </details>
