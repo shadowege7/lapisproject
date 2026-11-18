@@ -161,6 +161,7 @@ export default async function AdminPage({
     id: u.id,
     email: u.email ?? "(no email)",
     fullName: fullNameById.get(u.id) ?? null,
+    isActive: activeById.get(u.id) ?? true,
   }));
 
   // memberships grouped per user (for the user rows)
@@ -176,6 +177,7 @@ export default async function AdminPage({
       role: DealershipRole;
       email: string;
       fullName: string | null;
+      isActive: boolean;
     }[]
   >();
   for (const m of members ?? []) {
@@ -189,6 +191,7 @@ export default async function AdminPage({
       role: m.role,
       email: emailById.get(m.user_id) ?? m.user_id,
       fullName: fullNameById.get(m.user_id) ?? null,
+      isActive: activeById.get(m.user_id) ?? true,
     });
     membersByStore.set(m.dealership_id, forStore);
   }
@@ -256,7 +259,7 @@ export default async function AdminPage({
         meta={`${activeStores.length} ${
           activeStores.length === 1 ? "store" : "stores"
         }${archivedStores.length ? ` · ${archivedStores.length} archived` : ""}`}
-        hint="The number in front of each store is its place on the dashboard — change it and click away to save. Leave it empty to send a store to the end. Open a store to see and edit who has access, who gets its daily report by email, whether managers track individual salespeople, and whether only super admins can see it. Archive or delete a store from the bottom of its panel. Super admins have full access to every store."
+        hint="The number in front of each store is its place on the dashboard — change it and click away to save. Leave it empty to send a store to the end. Open a store to see and edit who has access (expand “People with access” or search it), who gets its daily report by email, whether managers track individual salespeople, and whether only super admins can see it. Archive or delete a store from the bottom of its panel. Super admins have full access to every store."
         defaultOpen
       >
         {storeError ? (
