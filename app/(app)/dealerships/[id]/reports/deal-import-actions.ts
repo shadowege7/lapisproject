@@ -7,6 +7,7 @@ import {
   MAX_DEALS,
   autoMatch,
   collectNames,
+  isHouse,
   rangeError,
   rollupDeals,
   splitName,
@@ -158,7 +159,9 @@ export async function applyDealImport(
   if (!rawDeals.every(validDeal)) {
     return { ok: false, error: "Some deals in the file couldn't be read. Re-select the file and try again." };
   }
-  const deals = rawDeals as Deal[];
+  // Sls 1 "D" deals never count. The browser already drops them; this keeps
+  // a stale tab from sending them in.
+  const deals = (rawDeals as Deal[]).filter((d) => !isHouse(d.sls1));
   if (!range || typeof range.from !== "string" || typeof range.to !== "string") {
     return { ok: false, error: "Enter the From and To dates of the export." };
   }
@@ -179,8 +182,9 @@ export async function applyDealImport(
   if (!store) return { ok: false, error: "Unknown store." };
   if (store.archived_at) return { ok: false, error: "This store is archived." };
 
-  // Sprinter deals only land on stores that keep a Sprinter line. The browser
-  // already classifies by the store's setting; this guards a stale tab.
+  // Sprinter deals only land on stores that keep a Sprinter line, and only
+  // from New deals. The browser already classifies by the store's setting;
+  // this guards a stale tab.
   if (!store.tracks_sprinters && deals.some((d) => d.type === "sprinter")) {
     return { ok: false, error: "This store doesn't track Sprinters. Re-select the file and try again." };
   }

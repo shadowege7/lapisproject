@@ -80,6 +80,29 @@ export async function saveEntry(formData: FormData) {
     );
   }
 
+  // Salespeople can't sell more than the store did. Fewer is fine (house and
+  // fleet deals go unassigned), but more is always a typo — a 41 for a 1 —
+  // and it shows up as negative Unassigned on Dealership Insights.
+  if (salespeople?.ok) {
+    const sum = (key: "new_units" | "used_units" | "sprinter_units") =>
+      salespeople.rows.reduce((t, r) => t + r[key], 0);
+    const over = (
+      [
+        ["new", sum("new_units"), newUnits],
+        ["used", sum("used_units"), usedUnits],
+        ["Sprinter", sum("sprinter_units"), sprinterUnits],
+      ] as const
+    ).find(([, people, store]) => people > Math.max(store, 0));
+    if (over) {
+      const [label, people, store] = over;
+      redirect(
+        `/dealerships/${dealershipId}/entry?date=${entryDate}&error=${encodeURIComponent(
+          `Salespeople add up to ${people} ${label} unit${people === 1 ? "" : "s"}, but the store has ${store}. Check the salesperson numbers.`,
+        )}`,
+      );
+    }
+  }
+
   // Asked before the upsert, so the email can say "numbers for" rather than
   // "updated numbers for" on the first save of a day, and so a save that
   // changes nothing can be told from one that does — an identical re-save

@@ -29,3 +29,31 @@ export function projectMonthEnd(
   if (daysElapsed <= 0) return monthToDate;
   return (monthToDate / daysElapsed) * daysInMonth;
 }
+
+const dayNumber = (iso: string) => {
+  const [y, m, d] = iso.split("-").map(Number);
+  return Date.UTC(y, m - 1, d) / 86_400_000;
+};
+
+/**
+ * Where a running total is tracking to by `periodEnd`, at its current daily
+ * pace. The same rule as projectMonthEnd, generalised to any span: the pace is
+ * the total over the days elapsed since `windowFrom` (today counts once its
+ * numbers are in), stretched across `windowFrom` → `periodEnd`.
+ *
+ * `windowFrom` is usually the 1st of the month or year; it is later when
+ * salesperson tracking was switched on partway through, so someone isn't
+ * projected over days they couldn't have been credited for.
+ */
+export function projectToPeriodEnd(
+  total: number,
+  windowFrom: string,
+  periodEnd: string,
+  today: string,
+  todayLogged: boolean,
+): number {
+  const elapsed = dayNumber(today) - dayNumber(windowFrom) + (todayLogged ? 1 : 0);
+  const span = dayNumber(periodEnd) - dayNumber(windowFrom) + 1;
+  if (elapsed <= 0 || span <= elapsed) return total;
+  return (total / elapsed) * span;
+}

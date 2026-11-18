@@ -224,9 +224,8 @@ export function DealImportForm({
       }),
       { units: 0, gross: 0 },
     );
-    const houseDeals = parsed.deals.filter((d) => d.sls1.trim().toUpperCase() === "D").length;
     const zeroed = rows.filter((r) => r.status === "zero").length;
-    return { range, days, existing, zeroed, rows, names, totals, houseDeals };
+    return { range, days, existing, zeroed, rows, names, totals };
   }, [loaded]);
 
   async function apply() {
@@ -411,6 +410,15 @@ export function DealImportForm({
               <p className="text-xs text-zinc-500">
                 {loaded.fileName} · dollars rounded to the nearest dollar; cents are saved
               </p>
+              {loaded.parsed.excluded.length ? (
+                <p className="mt-1 text-xs text-zinc-500">
+                  {loaded.parsed.excluded.length} deal
+                  {loaded.parsed.excluded.length === 1 ? "" : "s"} with “D” in Sls 1 left out of
+                  all numbers (row{loaded.parsed.excluded.length === 1 ? "" : "s"}{" "}
+                  {loaded.parsed.excluded.slice(0, 10).join(", ")}
+                  {loaded.parsed.excluded.length > 10 ? "…" : ""}).
+                </p>
+              ) : null}
               {loaded.parsed.skipped.length ? (
                 <details className="mt-2 text-xs text-amber-800 dark:text-amber-200">
                   <summary className="cursor-pointer">
@@ -435,9 +443,7 @@ export function DealImportForm({
                 </p>
                 <p className="mt-0.5 text-xs text-zinc-500">
                   A name in Sls 2 splits the deal half-and-half.{" "}
-                  {view.houseDeals
-                    ? `${view.houseDeals} house deal${view.houseDeals === 1 ? "" : "s"} (Sls 1 “D”) count for the store only.`
-                    : "Sls 1 “D” is a house deal and counts for the store only."}
+                  A blank Sls 1 counts for the store with nobody credited.
                 </p>
                 <ul className="mt-2 flex flex-col gap-1.5">
                   {view.names.map(([key, { label, deals }]) => {
