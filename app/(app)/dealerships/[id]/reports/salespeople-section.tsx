@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { createClient } from "@/lib/supabase/server";
-import { datePartsInAppTZ, formatCurrency, formatShortDay } from "@/lib/format";
+import { datePartsInAppTZ, formatCurrency, formatMonth, formatShortDay } from "@/lib/format";
 import {
   byName,
   formatUnits,
@@ -11,7 +11,11 @@ import {
   type SalespersonPeriod,
   type SalespersonRank,
 } from "@/lib/salespeople";
-import { addSalesperson, setSalespersonActive } from "./salespeople-actions";
+import {
+  addSalesperson,
+  renameSalesperson,
+  setSalespersonActive,
+} from "./salespeople-actions";
 import { Card } from "./table-chrome";
 
 const PERIODS: [SalespersonPeriod, string][] = [
@@ -45,8 +49,10 @@ export async function SalespeopleSection({
   trackedSince,
   period,
   rank,
+  month,
   canEdit,
   manageOpen,
+  editingId,
   error,
   done,
 }: {
@@ -55,13 +61,17 @@ export async function SalespeopleSection({
   trackedSince: string | null;
   period: SalespersonPeriod;
   rank: SalespersonRank;
+  /** A past month opened from the Monthly table. Replaces the period picker. */
+  month?: { from: string; to: string };
   canEdit: boolean;
   manageOpen: boolean;
+  /** Roster row whose name form is open (?edit=<id>). */
+  editingId?: string;
   error?: string;
   done?: string;
 }) {
   const supabase = await createClient();
-  const { from, to } = periodRange(period);
+  const { from, to } = month ?? periodRange(period);
 
   const [{ data: roster }, { data: totals }, { data: storeDays }, { data: firstLogged }] = await Promise.all([
     supabase
@@ -166,7 +176,12 @@ export async function SalespeopleSection({
   const pvr = (f: Figures) => (units(f) ? formatCurrency(gross(f) / units(f)) : "—");
   const money = (n: number) => (n ? formatCurrency(n) : "—");
 
-  const href = (next: { sp?: SalespersonPeriod; rank?: SalespersonRank; manage?: boolean }) => {
+  const href = (next: {
+    sp?: SalespersonPeriod;
+    rank?: SalespersonRank;
+    manage?: boolean;
+    edit?: string;
+  }) => {
     const q = new URLSearchParams();
     const p = next.sp ?? period;
     const r = next.rank ?? rank;
@@ -174,12 +189,15 @@ export async function SalespeopleSection({
     if (p !== "mtd") q.set("sp", p);
     if (r !== "units") q.set("rank", r);
     if (m) q.set("manage", "1");
+    if (month) q.set("month", month.from.slice(0, 7));
+    if (next.edit) q.set("edit", next.edit);
     const qs = q.toString();
     return `/dealerships/${dealershipId}/reports${qs ? `?${qs}` : ""}#salespeople`;
   };
 
-  const periodLabel =
-    period === "today"
+  const periodLabel = month
+    ? formatMonth(month.from)
+    : period === "today"
       ? `Today · ${formatShortDay(to)}`
       : period === "mtd"
         ? "Month to date"
@@ -199,13 +217,15 @@ export async function SalespeopleSection({
           <p className="text-xs text-zinc-500">{periodLabel}</p>
         </div>
         <div className="flex flex-wrap items-center gap-2 print:hidden">
-          <Segmented label="Period">
-            {PERIODS.map(([value, text]) => (
-              <SegLink key={value} href={href({ sp: value })} active={period === value}>
-                {text}
-              </SegLink>
-            ))}
-          </Segmented>
+          {month ? null : (
+            <Segmented label="Period">
+              {PERIODS.map(([value, text]) => (
+                <SegLink key={value} href={href({ sp: value })} active={period === value}>
+                  {text}
+                </SegLink>
+              ))}
+            </Segmented>
+          )}
           <Segmented label="Rank by">
             <span className="px-1.5 text-xs text-zinc-500">Rank by</span>
             {RANKS.map(([value, text]) => (
@@ -405,6 +425,7 @@ export async function SalespeopleSection({
               <input type="hidden" name="dealership_id" value={dealershipId} />
               <input type="hidden" name="sp" value={period} />
               <input type="hidden" name="rank" value={rank} />
+              {month ? <input type="hidden" name="month" value={month.from.slice(0, 7)} /> : null}
               <span className="text-xs font-semibold">Add a salesperson</span>
               <div className="grid grid-cols-2 gap-2">
                 <label className="flex flex-col gap-1 text-xs text-zinc-500">
@@ -441,7 +462,11 @@ export async function SalespeopleSection({
               dealershipId={dealershipId}
               period={period}
               rank={rank}
+              month={month?.from.slice(0, 7)}
               makeActive={false}
+              editingId={editingId}
+              editHref={(id) => href({ manage: true, edit: id })}
+              closeHref={href({ manage: true })}
             />
             <RosterList
               title="Removed"
@@ -449,7 +474,11 @@ export async function SalespeopleSection({
               dealershipId={dealershipId}
               period={period}
               rank={rank}
+              month={month?.from.slice(0, 7)}
               makeActive
+              editingId={editingId}
+              editHref={(id) => href({ manage: true, edit: id })}
+              closeHref={href({ manage: true })}
             />
 
             <p className="mt-4 text-xs text-zinc-500">
@@ -470,16 +499,37 @@ function RosterList({
   dealershipId,
   period,
   rank,
+  month,
   makeActive,
+  editingId,
+  editHref,
+  closeHref,
 }: {
   title: string;
   people: RosterPerson[];
   dealershipId: string;
   period: SalespersonPeriod;
   rank: SalespersonRank;
+  /** YYYY-MM when the page is showing a past month, so actions return there. */
+  month?: string;
   makeActive: boolean;
+  editingId?: string;
+  editHref: (id: string) => string;
+  closeHref: string;
 }) {
   if (people.length === 0 && makeActive) return null;
+  const hidden = (
+    <>
+      <input type="hidden" name="dealership_id" value={dealershipId} />
+      <input type="hidden" name="sp" value={period} />
+      <input type="hidden" name="rank" value={rank} />
+      {month ? <input type="hidden" name="month" value={month} /> : null}
+    </>
+  );
+  const field =
+    "min-w-0 rounded-md border border-zinc-300 bg-transparent px-2.5 py-2 text-base text-zinc-900 outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-500/30 sm:text-sm dark:border-zinc-700 dark:text-zinc-50";
+  const smallButton =
+    "inline-flex min-h-9 items-center rounded-md border border-zinc-300 px-2.5 text-xs font-semibold text-zinc-700 hover:border-blue-400 hover:text-blue-700 dark:border-zinc-700 dark:text-zinc-200 dark:hover:text-blue-400";
   return (
     <div className="mt-4">
       <p className="text-[11px] font-semibold uppercase tracking-wide text-zinc-500">
@@ -489,33 +539,94 @@ function RosterList({
         <p className="mt-1 text-sm text-zinc-500">Nobody yet.</p>
       ) : (
         <ul className="mt-1">
-          {people.map((p) => (
-            <li
-              key={p.id}
-              className="flex min-h-11 items-center justify-between gap-2 border-b border-zinc-100 py-1 last:border-0 dark:border-zinc-900"
-            >
-              <span className="flex min-w-0 items-center gap-2">
-                {makeActive ? null : <Avatar person={p} />}
-                <span className={`truncate text-sm ${makeActive ? "text-zinc-500" : ""}`}>
-                  {salespersonName(p)}
+          {people.map((p) =>
+            editingId === p.id ? (
+              <li
+                key={p.id}
+                className="border-b border-zinc-100 py-2 last:border-0 dark:border-zinc-900"
+              >
+                <form action={renameSalesperson} className="flex flex-col gap-2">
+                  {hidden}
+                  <input type="hidden" name="salesperson_id" value={p.id} />
+                  <span className="text-xs font-semibold">
+                    Edit {salespersonName(p)}
+                  </span>
+                  <div className="grid grid-cols-2 gap-2">
+                    <label className="flex flex-col gap-1 text-xs text-zinc-500">
+                      First name
+                      <input
+                        name="first_name"
+                        required
+                        maxLength={60}
+                        defaultValue={p.first_name}
+                        autoComplete="off"
+                        autoFocus
+                        className={field}
+                      />
+                    </label>
+                    <label className="flex flex-col gap-1 text-xs text-zinc-500">
+                      Last name
+                      <input
+                        name="last_name"
+                        maxLength={60}
+                        defaultValue={p.last_name}
+                        autoComplete="off"
+                        className={field}
+                      />
+                    </label>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <button
+                      type="submit"
+                      className="min-h-9 rounded-md btn-primary px-3 text-xs font-semibold"
+                    >
+                      Save name
+                    </button>
+                    <Link href={closeHref} scroll={false} className={smallButton}>
+                      Cancel
+                    </Link>
+                  </div>
+                  <p className="text-xs text-zinc-500">
+                    Their numbers stay with them under the new name.
+                  </p>
+                </form>
+              </li>
+            ) : (
+              <li
+                key={p.id}
+                className="flex min-h-11 items-center justify-between gap-2 border-b border-zinc-100 py-1 last:border-0 dark:border-zinc-900"
+              >
+                <span className="flex min-w-0 items-center gap-2">
+                  {makeActive ? null : <Avatar person={p} />}
+                  <span className={`truncate text-sm ${makeActive ? "text-zinc-500" : ""}`}>
+                    {salespersonName(p)}
+                  </span>
                 </span>
-              </span>
-              <form action={setSalespersonActive}>
-                <input type="hidden" name="dealership_id" value={dealershipId} />
-                <input type="hidden" name="salesperson_id" value={p.id} />
-                <input type="hidden" name="active" value={String(makeActive)} />
-                <input type="hidden" name="sp" value={period} />
-                <input type="hidden" name="rank" value={rank} />
-                <button
-                  type="submit"
-                  aria-label={`${makeActive ? "Restore" : "Remove"} ${salespersonName(p)}`}
-                  className="min-h-9 rounded-md border border-zinc-300 px-2.5 text-xs font-semibold text-zinc-700 hover:border-blue-400 hover:text-blue-700 dark:border-zinc-700 dark:text-zinc-200 dark:hover:text-blue-400"
-                >
-                  {makeActive ? "Restore" : "Remove"}
-                </button>
-              </form>
-            </li>
-          ))}
+                <span className="flex shrink-0 items-center gap-1.5">
+                  <Link
+                    href={editHref(p.id)}
+                    scroll={false}
+                    aria-label={`Edit ${salespersonName(p)}'s name`}
+                    className={smallButton}
+                  >
+                    Edit
+                  </Link>
+                  <form action={setSalespersonActive}>
+                    {hidden}
+                    <input type="hidden" name="salesperson_id" value={p.id} />
+                    <input type="hidden" name="active" value={String(makeActive)} />
+                    <button
+                      type="submit"
+                      aria-label={`${makeActive ? "Restore" : "Remove"} ${salespersonName(p)}`}
+                      className={smallButton}
+                    >
+                      {makeActive ? "Restore" : "Remove"}
+                    </button>
+                  </form>
+                </span>
+              </li>
+            ),
+          )}
         </ul>
       )}
     </div>

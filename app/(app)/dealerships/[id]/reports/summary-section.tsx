@@ -1,9 +1,14 @@
+import Link from "next/link";
 import { formatCurrency } from "@/lib/format";
 import { ExportCsvButton } from "./export-button";
 import { Card, GROUP_RULE, GROUP_PAD } from "./table-chrome";
 
 export interface SummaryRow {
   label: string;
+  /** Where clicking the row goes (Monthly only: that month's Insights view). */
+  href?: string;
+  /** The month the page is currently showing. */
+  selected?: boolean;
   total_new_units: number;
   total_used_units: number;
   total_sprinter_units: number;
@@ -92,7 +97,14 @@ export function SummarySection({
   return (
     <section>
       <div className="mb-3 flex items-center justify-between gap-2">
-        <h2 className="text-sm font-semibold">{title}</h2>
+        <h2 className="text-sm font-semibold">
+          {title}
+          {rows.some((r) => r.href) ? (
+            <span className="ml-2 font-normal text-zinc-400 print:hidden">
+              select a month to open it
+            </span>
+          ) : null}
+        </h2>
         {rows.length > 0 ? (
           <ExportCsvButton
             filename={filename}
@@ -221,9 +233,26 @@ export function SummarySection({
               {rows.map((r) => (
                 <tr
                   key={r.label}
-                  className="border-b border-zinc-100 last:border-0 hover:bg-blue-50/40 dark:border-zinc-900 dark:hover:bg-blue-950/20"
+                  aria-current={r.selected ? "true" : undefined}
+                  className={`border-b border-zinc-100 last:border-0 hover:bg-blue-50/40 dark:border-zinc-900 dark:hover:bg-blue-950/20 ${
+                    r.href ? "relative cursor-pointer" : ""
+                  } ${r.selected && r.href ? "bg-blue-50/60 dark:bg-blue-950/30" : ""}`}
                 >
-                  <td className="py-2.5 pr-4 font-medium">{r.label}</td>
+                  <td className="py-2.5 pr-4 font-medium">
+                    {r.href ? (
+                      // The link's ::after covers the whole row, so the row is
+                      // the click target while the label stays the one link a
+                      // keyboard or screen reader meets.
+                      <Link
+                        href={r.href}
+                        className="text-blue-700 underline-offset-2 after:absolute after:inset-0 after:content-[''] hover:underline focus-visible:outline-none focus-visible:after:rounded focus-visible:after:ring-2 focus-visible:after:ring-blue-500 dark:text-blue-400 print:text-inherit print:after:hidden"
+                      >
+                        {r.label}
+                      </Link>
+                    ) : (
+                      r.label
+                    )}
+                  </td>
                   <td className={`${group} ${figure}`}>{r.total_new_units}</td>
                   {compact ? null : (
                     <>

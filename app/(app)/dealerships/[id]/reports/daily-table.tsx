@@ -23,12 +23,16 @@ export function DailyTable({
   dealershipId,
   canEdit,
   canDelete,
+  monthLabel,
 }: {
   entries: DailyEntry[];
   sprinters: boolean;
   dealershipId: string;
   canEdit: boolean;
   canDelete: boolean;
+  /** Set when the page is showing one past month: every day of it is listed,
+   *  and the section starts open since the days are what you came to see. */
+  monthLabel?: string;
 }) {
   // Date + 4 new + 4 used + total gross, plus 4 more where Sprinters show.
   // Used for the notes row's colSpan and the empty-state message, both of
@@ -60,7 +64,7 @@ export function DailyTable({
           `data-print-expand` is read by ExpandForPrint, because a closed
           <details> prints as its summary and nothing else, and what lands on
           paper should not depend on what someone left open. */}
-      <details data-print-expand className="group">
+      <details data-print-expand className="group" open={monthLabel ? true : undefined}>
         <summary className="mb-3 flex cursor-pointer list-none items-center gap-2 [&::-webkit-details-marker]:hidden">
           <svg
             viewBox="0 0 24 24"
@@ -77,9 +81,11 @@ export function DailyTable({
           <h2 className="text-sm font-semibold">
             Daily
             <span className="ml-2 font-normal text-zinc-400">
-              {entryCount === 0
-                ? "no entries yet"
-                : `most recent ${entryCount} ${entryCount === 1 ? "entry" : "entries"}`}
+              {monthLabel
+                ? `${monthLabel} · ${entryCount} ${entryCount === 1 ? "entry" : "entries"}`
+                : entryCount === 0
+                  ? "no entries yet"
+                  : `most recent ${entryCount} ${entryCount === 1 ? "entry" : "entries"}`}
             </span>
           </h2>
         </summary>
