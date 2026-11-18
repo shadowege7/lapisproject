@@ -15,7 +15,7 @@ import {
   type DayTotals,
   type ParsedDeals,
 } from "@/lib/deal-import";
-import { parseCsv } from "./import-form";
+import { parseCsv } from "@/lib/csv";
 import {
   applyDealImport,
   previewDealImport,

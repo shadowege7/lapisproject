@@ -272,7 +272,7 @@ Rules worth knowing:
 
 - **The store's numbers stay the official ones.** Salesperson numbers live in
   their own table and nothing that reads `daily_entries` — summaries, the
-  dashboard, budgets, the CSV export and import, the daily email — sees them.
+  dashboard, budgets, the CSV export, the daily email — sees them.
 - **Half units are for people, not stores.** A split deal is 0.5 to each
   salesperson; the store's units stay whole (`daily_entries` is integer).
 - **Removing someone keeps their numbers**, so month and year totals do not
@@ -420,8 +420,8 @@ Some deliberate choices:
 - **It sends on every save, including corrections to an earlier day**, and the
   wording says "Updated numbers for" when the day already existed. Silence
   after a correction would be worse than a second mail.
-- **The CSV importer sends nothing.** Backfilling a year would otherwise fire
-  hundreds of emails.
+- **The ReverseRisk import sends nothing.** Replacing a month of days would
+  otherwise fire dozens of emails.
 - **The send is awaited, not left dangling.** A serverless function can be
   frozen the moment its response is sent, and an unawaited send gets killed
   part-way often enough to look like flaky delivery.

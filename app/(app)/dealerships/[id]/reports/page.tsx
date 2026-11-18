@@ -12,7 +12,6 @@ import {
 } from "@/lib/format";
 import { ExportCsvButton } from "./export-button";
 import { PrintButton } from "./print-button";
-import { ImportForm } from "./import-form";
 import { DealImportForm } from "./deal-import-form";
 import { MonthPanel } from "./month-panel";
 import { DailyTable } from "./daily-table";
@@ -367,10 +366,7 @@ export default async function ReportsPage({
       />
 
       {canEdit && !isPast ? (
-        <div className="flex flex-col gap-3">
-          <DealImportForm dealershipId={dealershipId} tracksSprinters={sprinters} />
-          <ImportForm dealershipId={dealershipId} tracksSprinters={sprinters} />
-        </div>
+        <DealImportForm dealershipId={dealershipId} tracksSprinters={sprinters} />
       ) : null}
     </div>
   );
