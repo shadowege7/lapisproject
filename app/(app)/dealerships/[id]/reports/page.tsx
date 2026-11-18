@@ -373,6 +373,14 @@ export default async function ReportsPage({
           monthStart={currentMonth}
         />
       ) : null}
+
+      {/* Everything is stored to the cent but shown to the dollar, so a
+          column of days, or front + back, can be a dollar or two off the
+          total shown. */}
+      <p className="text-xs text-zinc-500">
+        Dollar amounts are rounded to the nearest dollar, so added-up figures can
+        be off by $1–2. The CSV exports keep the cents.
+      </p>
     </div>
   );
 }

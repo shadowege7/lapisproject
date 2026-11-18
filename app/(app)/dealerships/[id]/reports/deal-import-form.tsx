@@ -408,7 +408,9 @@ export function DealImportForm({
                 {formatShortDay(view.range.from)} – {formatShortDay(view.range.to)} ·{" "}
                 {view.totals.units} units · {formatCurrency(view.totals.gross)} gross
               </p>
-              <p className="text-xs text-zinc-500">{loaded.fileName}</p>
+              <p className="text-xs text-zinc-500">
+                {loaded.fileName} · dollars rounded to the nearest dollar; cents are saved
+              </p>
               {loaded.parsed.skipped.length ? (
                 <details className="mt-2 text-xs text-amber-800 dark:text-amber-200">
                   <summary className="cursor-pointer">
