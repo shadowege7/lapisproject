@@ -115,6 +115,11 @@
      has, and it works only on a card: 7.47 on Obsidian, but 2.19 on white, so
      light keeps Slate at 5.51. */
   --figure-muted: var(--slate);
+  /* Chart series (dataviz reference palette, slots 1-2), validated for
+     lightness, chroma, colour-blind separation and 3:1 contrast on this
+     surface. Lines and dots only — text never wears these. */
+  --series-1: #2a78d6;
+  --series-2: #eb6834;
 
   /* The primary action. Its label has to move with its fill — see the note in
      the dark block for why one fixed pair cannot serve both themes. */
@@ -170,6 +175,9 @@
      where every average sits — this must not be used on the page itself, where
      a Slate ground would drop it to 2.51. */
   --figure-muted: var(--chambray);
+  /* Same hues stepped for the obsidian surface; validated there too. */
+  --series-1: #3987e5;
+  --series-2: #d95926;
 
   /*
    * A Slate button on a Slate page is invisible, and an Obsidian one vanishes

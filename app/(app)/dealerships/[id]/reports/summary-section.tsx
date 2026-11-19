@@ -1,3 +1,4 @@
+import type React from "react";
 import Link from "next/link";
 import { formatCurrency } from "@/lib/format";
 import { ExportCsvButton } from "./export-button";
@@ -44,12 +45,15 @@ export function SummarySection({
   compact = false,
   filename,
   sprinters,
+  before,
 }: {
   title: string;
   rows: SummaryRow[];
   compact?: boolean;
   filename: string;
   sprinters: boolean;
+  /** Shown between the heading and the table (Monthly: the trend tiles). */
+  before?: React.ReactNode;
 }) {
   // The CSV always carries the full breakdown, even in the compact table:
   // exporting is where someone goes to do their own sums.
@@ -99,11 +103,6 @@ export function SummarySection({
       <div className="mb-3 flex items-center justify-between gap-2">
         <h2 className="text-sm font-semibold">
           {title}
-          {rows.some((r) => r.href) ? (
-            <span className="ml-2 font-normal text-zinc-400 print:hidden">
-              select a month to open it
-            </span>
-          ) : null}
         </h2>
         {rows.length > 0 ? (
           <ExportCsvButton
@@ -113,6 +112,8 @@ export function SummarySection({
           />
         ) : null}
       </div>
+
+      {before ? <div className="mb-3">{before}</div> : null}
       {rows.length === 0 ? (
         <p className="text-sm text-zinc-500">
           No {title.toLowerCase()} totals yet — they appear once daily entries
