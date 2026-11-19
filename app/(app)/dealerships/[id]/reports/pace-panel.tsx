@@ -79,6 +79,23 @@ export function PacePanel({
   const daysLeft = isPast ? 0 : monthDays - cut;
   const toGo = budgetTotal - now.units;
 
+  // New / used (/ Sprinter) against the budget pace: what each should have
+  // sold by now if the month's budget were spread evenly over its days.
+  const categories =
+    budgetTotal > 0
+      ? (
+          [
+            { label: "New", sold: now.n, budget: budget!.new_units },
+            { label: "Used", sold: now.u, budget: budget!.used_units },
+            ...(sprinters ? [{ label: "Sprinter", sold: now.s, budget: budget!.sprinter_units }] : []),
+          ] as const
+        ).map((c) => {
+          const expected = isPast ? c.budget : (c.budget * cut) / monthDays;
+          const tracking = isPast ? c.sold : Math.round(projectMonthEnd(c.sold, todayLogged));
+          return { ...c, expected, tracking, ahead: c.sold - expected };
+        })
+      : [];
+
   // Same point last month (capped to its length) and last year.
   const comparisons: { label: string; through: number; units: number; gross: number }[] = [];
   for (const m of [prevMonth, lastYear]) {
@@ -191,6 +208,57 @@ export function PacePanel({
           )}
         </div>
       </div>
+
+      {categories.length ? (
+        <ul className={`mt-3 grid grid-cols-1 gap-3 ${categories.length === 3 ? "sm:grid-cols-3" : "sm:grid-cols-2"}`}>
+          {categories.map((c) => {
+            // Within half a unit counts as on pace: units are whole cars.
+            const state = cut === 0 || c.budget <= 0 ? "none" : Math.abs(c.ahead) < 0.5 ? "on" : c.ahead > 0 ? "ahead" : "behind";
+            const gap = Math.round(Math.abs(c.ahead));
+            const vsBudget = c.tracking - c.budget;
+            return (
+              <li key={c.label} className={tile}>
+                <div className="flex items-center justify-between gap-2">
+                  <p className={tileLabel}>{c.label}</p>
+                  {state === "none" ? null : (
+                    <span
+                      className={`inline-flex items-center gap-1 text-xs font-semibold ${
+                        state === "behind"
+                          ? "text-red-600 dark:text-red-400"
+                          : "text-emerald-600 dark:text-emerald-400"
+                      }`}
+                    >
+                      <span aria-hidden>{state === "behind" ? "▼" : state === "ahead" ? "▲" : "●"}</span>
+                      {isPast
+                        ? state === "on"
+                          ? "Hit budget"
+                          : `${gap} ${state === "ahead" ? "over" : "under"} budget`
+                        : state === "on"
+                          ? "On budget pace"
+                          : `${gap} ${state === "ahead" ? "ahead of" : "behind"} budget pace`}
+                    </span>
+                  )}
+                </div>
+                <p className={tileValue}>
+                  {c.sold.toLocaleString("en-US")}
+                  <span className="ml-1 text-sm font-normal text-zinc-500">
+                    of {c.budget} {isPast ? "budget" : "budgeted"}
+                  </span>
+                </p>
+                <p className="mt-0.5 text-xs text-zinc-500">
+                  {c.budget <= 0
+                    ? "No budget set for this type"
+                    : isPast
+                      ? `${Math.round((c.sold / c.budget) * 100)}% of budget`
+                      : `Pace for today ${c.expected.toFixed(1)} · tracking ${c.tracking}${
+                          vsBudget === 0 ? ", on budget" : `, ${Math.abs(vsBudget)} ${vsBudget > 0 ? "over" : "under"} budget`
+                        }`}
+                </p>
+              </li>
+            );
+          })}
+        </ul>
+      ) : null}
 
       {comparisons.length ? (
         <ul className="mt-3 flex flex-col gap-2 sm:flex-row">

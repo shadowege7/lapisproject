@@ -152,8 +152,3 @@ export function signed(n: number, digits = 0): string {
     maximumFractionDigits: digits,
   })}`;
 }
-
-/** A share as a whole percent, or null where the base is zero. */
-export function rate(part: number, whole: number): number | null {
-  return whole > 0 ? (part / whole) * 100 : null;
-}

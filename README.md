@@ -32,8 +32,11 @@ Security), deployed on Vercel.
   needed per remaining day), compares it with last month at the same point
   (and the same month last year, once a year of data exists), and charts
   running units by day against last month and a straight budget line.
-  **Calls & appointments** turns the nightly activity numbers into
-  calls → appointments → sold, with both conversion rates. Lines are the two
+  New, used (and Sprinter) each show whether they're ahead of or behind
+  budget pace — the budget spread evenly over the month's days — and where
+  they're tracking against their own budget.
+  **Calls & appointments** shows calls → appointments → units sold for the
+  month, each against the same point last month. Lines are the two
   validated series colours in `globals.css` (`--series-1`, `--series-2`). Click a month in **Monthly** to open Insights for just that
   month (`?month=YYYY-MM`): final totals with no projection, the Salespeople
   board for that month, and every day of it.
