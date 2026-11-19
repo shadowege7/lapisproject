@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 
 export interface TrendPoint {
   /** "Nov", "Oct"… */
@@ -13,10 +13,12 @@ export interface TrendPoint {
 }
 
 /**
- * Two stat tiles over the Monthly table — units per month and gross per unit —
- * each with a small trend line. Built to the stat-tile rule: the line in the
- * de-emphasis ink, the current month as a dot in the accent, a tooltip on
- * every point (hover or focus). The Monthly table below is the table view.
+ * Two tiles over the Monthly table — units per month and gross per unit —
+ * each with a small line chart. Every month is labelled along the bottom and
+ * carries its value above its dot, so the line can be read without hovering.
+ * The line is in the de-emphasis ink and the current month's dot in the
+ * accent; hovering or focusing a month also puts it in the tile's headline.
+ * The Monthly table below is the table view.
  */
 export function MonthlyTrends({
   units,
@@ -33,6 +35,7 @@ export function MonthlyTrends({
         title="Units by month"
         points={units}
         format={(v) => Math.round(v).toLocaleString("en-US")}
+        labelFormat={(v) => Math.round(v).toLocaleString("en-US")}
         currentNote="projected"
       />
       <TrendTile
@@ -41,75 +44,99 @@ export function MonthlyTrends({
         format={(v) =>
           v.toLocaleString("en-US", { style: "currency", currency: "USD", maximumFractionDigits: 0 })
         }
+        // On the chart, $9.5K rather than $9,533: twelve full amounts don't fit
+        // side by side. The headline above keeps the full figure.
+        labelFormat={(v) =>
+          `${v < 0 ? "−" : ""}$${
+            Math.abs(v) >= 1000 ? `${(Math.abs(v) / 1000).toFixed(1)}K` : Math.round(Math.abs(v))
+          }`
+        }
         currentNote="so far"
       />
     </div>
   );
 }
 
-const W = 240;
-const H = 56;
-const PAD = 6;
+/** Plot box: fixed pixel height, with room above the highest dot for its label. */
+const PLOT_H = 96;
+const TOP = 24;
+const BOTTOM = 8;
+/** Points are inset from the tile's sides so the first and last labels fit. */
+const INSET = 6;
 
 function TrendTile({
   title,
   points: all,
   format,
+  labelFormat,
   currentNote,
 }: {
   title: string;
   points: TrendPoint[];
   format: (v: number) => string;
+  labelFormat: (v: number) => string;
   currentNote: string;
 }) {
   // A month with nothing to plot (no units, so no gross per unit) is left out
   // rather than drawn as a gap, so the line always spans the tile.
-  const points = all.filter((p) => p.value !== null);
+  const points = all.filter((p): p is TrendPoint & { value: number } => p.value !== null);
   const [active, setActive] = useState<number | null>(null);
-  const values = points.map((p) => p.value).filter((v): v is number => v !== null);
+  const values = points.map((p) => p.value);
   const lo = Math.min(...values);
   const hi = Math.max(...values);
   const span = hi - lo || Math.abs(hi) || 1;
-  const step = points.length > 1 ? (W - PAD * 2) / (points.length - 1) : 0;
-  const px = (i: number) => PAD + i * step;
-  const py = (v: number) => PAD + (H - PAD * 2) * (1 - (v - lo) / span);
+  const n = points.length;
+  /** Horizontal position as a percentage of the tile. */
+  const xPct = (i: number) => (n > 1 ? INSET + (i * (100 - INSET * 2)) / (n - 1) : 50);
+  /** Vertical position in pixels within the plot box. */
+  const yPx = (v: number) => TOP + (PLOT_H - TOP - BOTTOM) * (1 - (v - lo) / span);
 
-  const line = points
-    .map((p, i) => (p.value === null ? null : `${px(i)},${py(p.value)}`))
-    .filter(Boolean)
-    .join(" L");
-
-  const latest = [...points].reverse().find((p) => p.value !== null)!;
-  const latestIndex = points.lastIndexOf(latest);
-  const prior = points.slice(0, latestIndex).reverse().find((p) => p.value !== null);
-  const shown = active !== null && points[active]?.value !== null ? points[active] : latest;
+  const latest = points[n - 1];
+  const prior = points[n - 2];
+  const shown = active !== null ? points[active] : latest;
+  // Labels only where they fit: the plot measures its own width, and when
+  // months sit closer than a label is wide, every second (or third…) label
+  // is shown, counted back from the latest so the current month always has
+  // one. The month being pointed at always shows its own.
+  const plot = useRef<HTMLDivElement>(null);
+  const [width, setWidth] = useState(0);
+  useEffect(() => {
+    const el = plot.current;
+    if (!el) return;
+    const ro = new ResizeObserver(([e]) => setWidth(e.contentRect.width));
+    ro.observe(el);
+    return () => ro.disconnect();
+  }, []);
+  const gap = n > 1 && width > 0 ? (width * (100 - INSET * 2)) / 100 / (n - 1) : Infinity;
+  const valueEvery = Math.max(1, Math.ceil(46 / gap));
+  const monthEvery = Math.max(1, Math.ceil(30 / gap));
+  const thin = (i: number, every: number) =>
+    active === i || (n - 1 - i) % every === 0 ? "" : "invisible";
 
   return (
     <div className="rounded-xl border border-zinc-200 bg-white p-4 dark:border-zinc-800 dark:bg-[var(--surface)]">
-      <div className="flex items-start justify-between gap-3">
-        <div>
-          <p className="text-xs font-medium uppercase tracking-wide text-zinc-500">{title}</p>
-          <p className="mt-1 text-xl font-semibold">{format(shown.value!)}</p>
-          <p className="mt-0.5 text-xs text-zinc-500">
-            {shown.full}
-            {shown.current ? ` · ${currentNote}` : ""}
-            {shown === latest && prior?.value != null
-              ? ` · ${prior.label} ${format(prior.value)}`
-              : ""}
-          </p>
-        </div>
-      </div>
-      {/* The line stretches to the tile's width; dots and hover targets are
-          HTML laid over it by percentage so they stay round and focusable. */}
-      <div className="relative mt-2 h-14" onPointerLeave={() => setActive(null)}>
+      <p className="text-xs font-medium uppercase tracking-wide text-zinc-500">{title}</p>
+      <p className="mt-1 text-xl font-semibold">{format(shown.value)}</p>
+      <p className="mt-0.5 text-xs text-zinc-500">
+        {shown.full}
+        {shown.current ? ` · ${currentNote}` : ""}
+        {shown === latest && prior ? ` · ${prior.label} ${format(prior.value)}` : ""}
+      </p>
+
+      <div
+        ref={plot}
+        className="relative mt-2"
+        style={{ height: PLOT_H }}
+        onPointerLeave={() => setActive(null)}
+      >
         <svg
-          viewBox={`0 0 ${W} ${H}`}
-          className="absolute inset-0 h-full w-full overflow-visible"
+          viewBox={`0 0 100 ${PLOT_H}`}
           preserveAspectRatio="none"
+          className="absolute inset-0 h-full w-full overflow-visible"
           aria-hidden
         >
-          <path
-            d={`M${line}`}
+          <polyline
+            points={points.map((p, i) => `${xPct(i)},${yPx(p.value)}`).join(" ")}
             fill="none"
             stroke="var(--figure-muted)"
             strokeWidth={2}
@@ -118,8 +145,10 @@ function TrendTile({
             vectorEffect="non-scaling-stroke"
           />
         </svg>
-        {points.map((p, i) =>
-          p.value === null ? null : (
+
+        {points.map((p, i) => {
+          const on = active === i;
+          return (
             <button
               key={p.full}
               type="button"
@@ -128,24 +157,52 @@ function TrendTile({
               onFocus={() => setActive(i)}
               onBlur={() => setActive(null)}
               className="group absolute top-0 h-full -translate-x-1/2 outline-none"
-              style={{ left: `${(px(i) / W) * 100}%`, width: `max(1.5rem, ${(step / W) * 100}%)` }}
+              style={{ left: `${xPct(i)}%`, width: `max(1.75rem, ${100 / Math.max(n, 1)}%)` }}
             >
+              {/* Value above the dot. */}
               <span
-                className={`absolute left-1/2 h-2.5 w-2.5 -translate-x-1/2 -translate-y-1/2 rounded-full ring-2 ring-[var(--surface)] group-focus-visible:ring-blue-500 ${
-                  p.current || active === i ? "" : "opacity-0"
+                className={`absolute left-1/2 -translate-x-1/2 -translate-y-full whitespace-nowrap pb-1.5 font-mono text-[11px] tabular-nums ${
+                  p.current || on
+                    ? "font-semibold text-zinc-900 dark:text-zinc-50"
+                    : "text-zinc-500"
+                } ${thin(i, valueEvery)}`}
+                // A halo in the card colour keeps a label legible where it
+                // crosses the line.
+                style={{
+                  top: yPx(p.value),
+                  textShadow: "0 0 3px var(--surface), 0 0 3px var(--surface), 0 0 2px var(--surface)",
+                }}
+              >
+                {labelFormat(p.value)}
+              </span>
+              {/* The dot, with a 2px surface ring. */}
+              <span
+                className={`absolute left-1/2 -translate-x-1/2 -translate-y-1/2 rounded-full ring-2 ring-[var(--surface)] group-focus-visible:ring-blue-500 ${
+                  p.current ? "h-2.5 w-2.5" : on ? "h-2.5 w-2.5" : "h-2 w-2"
                 }`}
                 style={{
-                  top: `${(py(p.value) / H) * 100}%`,
+                  top: yPx(p.value),
                   background: p.current ? "var(--series-1)" : "var(--figure-muted)",
                 }}
               />
             </button>
-          ),
-        )}
+          );
+        })}
       </div>
-      <div className="mt-1 flex justify-between text-[10px] text-zinc-500">
-        <span>{points.find((p) => p.value !== null)?.label}</span>
-        <span>{latest.label}</span>
+
+      {/* Month along the bottom, under each dot. */}
+      <div className="relative mt-1 h-4 text-[11px] text-zinc-500" aria-hidden>
+        {points.map((p, i) => (
+          <span
+            key={p.full}
+            className={`absolute -translate-x-1/2 whitespace-nowrap ${
+              p.current || active === i ? "font-semibold text-zinc-700 dark:text-zinc-200" : ""
+            } ${thin(i, monthEvery)}`}
+            style={{ left: `${xPct(i)}%` }}
+          >
+            {p.label}
+          </span>
+        ))}
       </div>
     </div>
   );
