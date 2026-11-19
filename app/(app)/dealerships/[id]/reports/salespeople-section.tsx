@@ -450,12 +450,12 @@ export async function SalespeopleSection({
                           </span>
                           <span className="block text-[11px] text-zinc-500">{rank === "gross" ? "gross" : "units"}</span>
                           {periodEnd ? (
-                            <>
+                            <span className="mt-2 block border-t border-zinc-200 pt-1.5 dark:border-zinc-700">
                               <span className="block text-[11px] font-semibold text-blue-700 dark:text-blue-400">
-                                tracking {tracking(f)}
+                                Tracking {tracking(f)}
                               </span>
                               <span className="block text-[11px] text-zinc-500">{trackingMix(f)}</span>
-                            </>
+                            </span>
                           ) : null}
                         </span>
                       </div>
@@ -493,13 +493,13 @@ export async function SalespeopleSection({
                     <span className="block">{formatUnits(storeUnits)} units</span>
                     <span className="block text-sm">{formatCurrency(gross(store))}</span>
                     {periodEnd ? (
-                      <>
+                      <span className="mt-2 block border-t border-zinc-200 pt-1.5 dark:border-zinc-700">
                         <span className="block text-[11px] text-blue-700 dark:text-blue-400">
-                          tracking {tracking(store)}
+                          Tracking {tracking(store)}
                           {rank === "gross" ? "" : " units"}
                         </span>
                         <span className="block text-[11px] font-normal">{trackingMix(store)}</span>
-                      </>
+                      </span>
                     ) : null}
                   </span>
                 </li>
