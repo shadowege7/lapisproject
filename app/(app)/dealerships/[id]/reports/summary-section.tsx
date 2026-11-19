@@ -10,6 +10,8 @@ export interface SummaryRow {
   href?: string;
   /** The month the page is currently showing. */
   selected?: boolean;
+  /** Monthly only: the calendar year, for grouping earlier years. */
+  year?: string;
   total_new_units: number;
   total_used_units: number;
   total_sprinter_units: number;
@@ -46,6 +48,8 @@ export function SummarySection({
   filename,
   sprinters,
   before,
+  collapseBefore,
+  openYear,
 }: {
   title: string;
   rows: SummaryRow[];
@@ -54,6 +58,13 @@ export function SummarySection({
   sprinters: boolean;
   /** Shown between the heading and the table (Monthly: the trend tiles). */
   before?: React.ReactNode;
+  /**
+   * Monthly only: rows from years before this one fold into one collapsible
+   * row per year, showing that year's totals until opened.
+   */
+  collapseBefore?: string;
+  /** A collapsed year to start open — the year of a past month being viewed. */
+  openYear?: string;
 }) {
   // The CSV always carries the full breakdown, even in the compact table:
   // exporting is where someone goes to do their own sums.
@@ -97,6 +108,107 @@ export function SummarySection({
 
   const group = `${GROUP_RULE} ${GROUP_PAD}`;
   const figure = "py-2.5 pr-4 font-mono tabular-nums";
+
+
+  /** One period's row. `extra` adds classes — the hidden months of a folded year. */
+  const renderRow = (r: SummaryRow, extra = "") => (
+                <tr
+                  key={r.label}
+                  aria-current={r.selected ? "true" : undefined}
+                  className={`${extra} border-b border-zinc-100 last:border-0 hover:bg-blue-50/40 dark:border-zinc-900 dark:hover:bg-blue-950/20 ${
+                    r.href ? "relative cursor-pointer" : ""
+                  } ${r.selected && r.href ? "bg-blue-50/60 dark:bg-blue-950/30" : ""}`}
+                >
+                  <td className="py-2.5 pr-4 font-medium">
+                    {r.href ? (
+                      // The link's ::after covers the whole row, so the row is
+                      // the click target while the label stays the one link a
+                      // keyboard or screen reader meets.
+                      <Link
+                        href={r.href}
+                        className="text-blue-700 underline-offset-2 after:absolute after:inset-0 after:content-[''] hover:underline focus-visible:outline-none focus-visible:after:rounded focus-visible:after:ring-2 focus-visible:after:ring-blue-500 dark:text-blue-400 print:text-inherit print:after:hidden"
+                      >
+                        {r.label}
+                      </Link>
+                    ) : (
+                      r.label
+                    )}
+                  </td>
+                  <td className={`${group} ${figure}`}>{r.total_new_units}</td>
+                  {compact ? null : (
+                    <>
+                      <td className={figure}>
+                        {formatCurrency(r.total_new_front_end_gross)}
+                      </td>
+                      <td className={figure}>
+                        {formatCurrency(r.total_new_back_end_gross)}
+                      </td>
+                      <td className={`${figure} font-medium`}>
+                        {formatCurrency(
+                          r.total_new_front_end_gross +
+                            r.total_new_back_end_gross,
+                        )}
+                      </td>
+                    </>
+                  )}
+                  <td className={`${group} ${figure}`}>{r.total_used_units}</td>
+                  {compact ? null : (
+                    <>
+                      <td className={figure}>
+                        {formatCurrency(r.total_used_front_end_gross)}
+                      </td>
+                      <td className={figure}>
+                        {formatCurrency(r.total_used_back_end_gross)}
+                      </td>
+                      <td className={`${figure} font-medium`}>
+                        {formatCurrency(
+                          r.total_used_front_end_gross +
+                            r.total_used_back_end_gross,
+                        )}
+                      </td>
+                    </>
+                  )}
+                  {sprinters ? (
+                    <>
+                      <td className={`${group} ${figure}`}>
+                        {r.total_sprinter_units}
+                      </td>
+                      {compact ? null : (
+                        <>
+                          <td className={figure}>
+                            {formatCurrency(r.total_sprinter_front_end_gross)}
+                          </td>
+                          <td className={figure}>
+                            {formatCurrency(r.total_sprinter_back_end_gross)}
+                          </td>
+                          <td className={`${figure} font-medium`}>
+                            {formatCurrency(
+                              r.total_sprinter_front_end_gross +
+                                r.total_sprinter_back_end_gross,
+                            )}
+                          </td>
+                        </>
+                      )}
+                    </>
+                  ) : null}
+                  <td
+                    className={`${group} ${figure} font-semibold text-blue-700 dark:text-blue-400`}
+                  >
+                    {formatCurrency(r.total_gross)}
+                  </td>
+                </tr>
+  );
+
+  // Recent rows stay flat; earlier years fold into one row each, newest first.
+  const flat = collapseBefore ? rows.filter((r) => !r.year || r.year >= collapseBefore) : rows;
+  const folded = new Map<string, SummaryRow[]>();
+  if (collapseBefore) {
+    for (const r of rows) {
+      if (r.year && r.year < collapseBefore) folded.set(r.year, [...(folded.get(r.year) ?? []), r]);
+    }
+  }
+  const sum = (list: SummaryRow[], key: keyof SummaryRow) =>
+    list.reduce((t, r) => t + (r[key] as number), 0);
 
   return (
     <section>
@@ -230,95 +342,57 @@ export function SummarySection({
                 </th>
               </tr>
             </thead>
-            <tbody>
-              {rows.map((r) => (
-                <tr
-                  key={r.label}
-                  aria-current={r.selected ? "true" : undefined}
-                  className={`border-b border-zinc-100 last:border-0 hover:bg-blue-50/40 dark:border-zinc-900 dark:hover:bg-blue-950/20 ${
-                    r.href ? "relative cursor-pointer" : ""
-                  } ${r.selected && r.href ? "bg-blue-50/60 dark:bg-blue-950/30" : ""}`}
-                >
+            <tbody>{flat.map((r) => renderRow(r))}</tbody>
+            {/* An earlier year: one row with the year's totals and a toggle.
+                The toggle is a checkbox, and the months show while it's
+                ticked (CSS :has), so it works before any script loads and
+                prints open. */}
+            {[...folded.entries()].map(([year, months]) => (
+              <tbody key={year} className="group/yr">
+                <tr className="border-t border-zinc-200 bg-zinc-50/60 dark:border-zinc-800 dark:bg-zinc-900/30">
                   <td className="py-2.5 pr-4 font-medium">
-                    {r.href ? (
-                      // The link's ::after covers the whole row, so the row is
-                      // the click target while the label stays the one link a
-                      // keyboard or screen reader meets.
-                      <Link
-                        href={r.href}
-                        className="text-blue-700 underline-offset-2 after:absolute after:inset-0 after:content-[''] hover:underline focus-visible:outline-none focus-visible:after:rounded focus-visible:after:ring-2 focus-visible:after:ring-blue-500 dark:text-blue-400 print:text-inherit print:after:hidden"
+                    <label className="inline-flex cursor-pointer items-center gap-1.5 rounded has-[:focus-visible]:ring-2 has-[:focus-visible]:ring-blue-500">
+                      <input
+                        type="checkbox"
+                        className="sr-only"
+                        defaultChecked={openYear === year}
+                        aria-label={`Show ${year} by month`}
+                      />
+                      <svg
+                        aria-hidden
+                        viewBox="0 0 24 24"
+                        fill="none"
+                        stroke="currentColor"
+                        strokeWidth={2}
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                        className="h-4 w-4 text-zinc-400 transition-transform group-has-[input:checked]/yr:rotate-90 print:hidden"
                       >
-                        {r.label}
-                      </Link>
-                    ) : (
-                      r.label
-                    )}
+                        <path d="M9 6l6 6-6 6" />
+                      </svg>
+                      {year}
+                      <span className="text-xs font-normal text-zinc-500">
+                        {months.length} month{months.length === 1 ? "" : "s"}
+                      </span>
+                    </label>
                   </td>
-                  <td className={`${group} ${figure}`}>{r.total_new_units}</td>
-                  {compact ? null : (
-                    <>
-                      <td className={figure}>
-                        {formatCurrency(r.total_new_front_end_gross)}
-                      </td>
-                      <td className={figure}>
-                        {formatCurrency(r.total_new_back_end_gross)}
-                      </td>
-                      <td className={`${figure} font-medium`}>
-                        {formatCurrency(
-                          r.total_new_front_end_gross +
-                            r.total_new_back_end_gross,
-                        )}
-                      </td>
-                    </>
-                  )}
-                  <td className={`${group} ${figure}`}>{r.total_used_units}</td>
-                  {compact ? null : (
-                    <>
-                      <td className={figure}>
-                        {formatCurrency(r.total_used_front_end_gross)}
-                      </td>
-                      <td className={figure}>
-                        {formatCurrency(r.total_used_back_end_gross)}
-                      </td>
-                      <td className={`${figure} font-medium`}>
-                        {formatCurrency(
-                          r.total_used_front_end_gross +
-                            r.total_used_back_end_gross,
-                        )}
-                      </td>
-                    </>
-                  )}
+                  <td className={`${group} ${figure}`}>{sum(months, "total_new_units")}</td>
+                  {compact ? null : <td colSpan={3} />}
+                  <td className={`${group} ${figure}`}>{sum(months, "total_used_units")}</td>
+                  {compact ? null : <td colSpan={3} />}
                   {sprinters ? (
                     <>
-                      <td className={`${group} ${figure}`}>
-                        {r.total_sprinter_units}
-                      </td>
-                      {compact ? null : (
-                        <>
-                          <td className={figure}>
-                            {formatCurrency(r.total_sprinter_front_end_gross)}
-                          </td>
-                          <td className={figure}>
-                            {formatCurrency(r.total_sprinter_back_end_gross)}
-                          </td>
-                          <td className={`${figure} font-medium`}>
-                            {formatCurrency(
-                              r.total_sprinter_front_end_gross +
-                                r.total_sprinter_back_end_gross,
-                            )}
-                          </td>
-                        </>
-                      )}
+                      <td className={`${group} ${figure}`}>{sum(months, "total_sprinter_units")}</td>
+                      {compact ? null : <td colSpan={3} />}
                     </>
                   ) : null}
-                  <td
-                    className={`${group} ${figure} font-semibold text-blue-700 dark:text-blue-400`}
-                  >
-                    {formatCurrency(r.total_gross)}
+                  <td className={`${group} ${figure} font-semibold text-blue-700 dark:text-blue-400`}>
+                    {formatCurrency(sum(months, "total_gross"))}
                   </td>
                 </tr>
-              ))}
-            </tbody>
+                {months.map((r) => renderRow(r, "hidden group-has-[input:checked]/yr:table-row print:table-row"))}
+              </tbody>
+            ))}
           </table>
         </Card>
       )}

@@ -120,6 +120,9 @@
      surface. Lines and dots only — text never wears these. */
   --series-1: #2a78d6;
   --series-2: #eb6834;
+  /* Slot 3 is just under 3:1 on white: only used where its line also has a
+     legend entry, an end label and a table view. */
+  --series-3: #1baf7a;
 
   /* The primary action. Its label has to move with its fill — see the note in
      the dark block for why one fixed pair cannot serve both themes. */
@@ -178,6 +181,7 @@
   /* Same hues stepped for the obsidian surface; validated there too. */
   --series-1: #3987e5;
   --series-2: #d95926;
+  --series-3: #199e70;
 
   /*
    * A Slate button on a Slate page is invisible, and an Obsidian one vanishes

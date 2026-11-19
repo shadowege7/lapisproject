@@ -113,7 +113,9 @@ export default async function ReportsPage({
       .select("*")
       .eq("dealership_id", dealershipId)
       .order("month", { ascending: false })
-      .limit(12),
+      // Every month on record (ten years at most): earlier years fold into a
+      // row each in the Monthly table, and the trend tiles take the last 12.
+      .limit(120),
     supabase
       .from("annual_summary")
       .select("*")
@@ -183,6 +185,7 @@ export default async function ReportsPage({
 
   const monthlyRows: SummaryRow[] = (monthly ?? []).map((r) => ({
     label: formatMonth(r.month),
+    year: r.month.slice(0, 4),
     // Each month opens its own view of this page; this month is the live one.
     href:
       r.month === currentMonth
@@ -222,13 +225,24 @@ export default async function ReportsPage({
         Math.round(projectMonthEnd(m.total_used_units, todayLogged)) +
         (sprinters ? Math.round(projectMonthEnd(m.total_sprinter_units, todayLogged)) : 0)
       : m.total_new_units + m.total_used_units + (sprinters ? m.total_sprinter_units : 0);
-  const trendMonths = [...(monthly ?? [])].reverse();
+  const trendMonths = (monthly ?? []).slice(0, 12).reverse();
   const trendPoint = (m: NonNullable<typeof monthly>[number], value: number | null): TrendPoint => ({
     label: formatMonth(m.month).slice(0, 3),
     full: formatMonth(m.month),
     value,
     current: m.month === currentMonth,
   });
+  const yearAgoRow = (monthly ?? []).find((m) => m.month === shiftMonth(currentMonth, -12));
+  const yearAgoUnits = yearAgoRow
+    ? yearAgoRow.total_new_units + yearAgoRow.total_used_units + (sprinters ? yearAgoRow.total_sprinter_units : 0)
+    : 0;
+  const yearAgoTrend = yearAgoRow
+    ? {
+        label: `${formatMonth(yearAgoRow.month).slice(0, 3)} '${yearAgoRow.month.slice(2, 4)}`,
+        units: yearAgoUnits,
+        perUnit: yearAgoUnits > 0 ? yearAgoRow.total_gross / yearAgoUnits : null,
+      }
+    : null;
   const unitTrend = trendMonths.map((m) => trendPoint(m, monthUnits(m)));
   const perUnitTrend = trendMonths.map((m) => {
     const sold = m.total_new_units + m.total_used_units + (sprinters ? m.total_sprinter_units : 0);
@@ -415,7 +429,9 @@ export default async function ReportsPage({
         compact
         filename={`${slug}-monthly.csv`}
         sprinters={sprinters}
-        before={<MonthlyTrends units={unitTrend} perUnit={perUnitTrend} />}
+        before={<MonthlyTrends units={unitTrend} perUnit={perUnitTrend} yearAgo={yearAgoTrend} />}
+        collapseBefore={currentMonth.slice(0, 4)}
+        openYear={viewMonth?.slice(0, 4)}
       />
 
       <ExpandForPrint />

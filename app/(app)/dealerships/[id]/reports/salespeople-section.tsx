@@ -34,6 +34,7 @@ const PERIODS: [SalespersonPeriod, string][] = [
 const RANKS: [SalespersonRank, string][] = [
   ["units", "Units"],
   ["gross", "Gross"],
+  ["pvr", "PVR"],
 ];
 
 type Figures = { n: number; u: number; s: number; front: number; back: number };
@@ -173,16 +174,28 @@ export async function SalespeopleSection({
     .map(([label, people, total]) => `${formatUnits(people)} ${label} vs ${formatUnits(total)}`);
 
   const zero: Figures = { n: 0, u: 0, s: 0, front: 0, back: 0 };
+  const perUnitOf = (f: Figures) => (units(f) ? gross(f) / units(f) : null);
   const rows = people
     .map((p) => ({ p, f: byPerson.get(p.id) ?? zero }))
     // Removed people stay on the board for any period they sold in.
     .filter(({ p, f }) => p.is_active || units(f) !== 0 || gross(f) !== 0)
-    .sort((a, b) =>
-      rank === "gross"
+    .sort((a, b) => {
+      if (rank === "pvr") {
+        // Nobody with no units has a PVR: they sort to the bottom, then by
+        // gross per unit, then by who sold more.
+        const pa = perUnitOf(a.f);
+        const pb = perUnitOf(b.f);
+        if (pa === null || pb === null) return pa === null ? (pb === null ? 0 : 1) : -1;
+        return pb - pa || units(b.f) - units(a.f);
+      }
+      return rank === "gross"
         ? gross(b.f) - gross(a.f) || units(b.f) - units(a.f)
-        : units(b.f) - units(a.f) || gross(b.f) - gross(a.f),
-    );
-  const max = Math.max(1, ...rows.map(({ f }) => (rank === "gross" ? gross(f) : units(f))));
+        : units(b.f) - units(a.f) || gross(b.f) - gross(a.f);
+    });
+  /** What the board is ranked by, for the bar. A negative PVR draws no bar. */
+  const metric = (f: Figures) =>
+    rank === "gross" ? gross(f) : rank === "pvr" ? (perUnitOf(f) ?? 0) : units(f);
+  const max = Math.max(1, ...rows.map(({ f }) => metric(f)));
   const storeUnits = units(store);
 
   const mix = (f: Figures) =>
@@ -217,6 +230,8 @@ export async function SalespeopleSection({
   const tracking = (f: Figures) => {
     if (!periodEnd) return "—";
     const t = tracked(f);
+    // PVR is an average, so there's nothing to project: ranked by PVR, the
+    // column tracks units.
     return rank === "gross" ? money(t.gross) : String(t.units);
   };
   const trackingMix = (f: Figures) => {
@@ -346,7 +361,7 @@ export async function SalespeopleSection({
                     ) : null}
                   </div>
                   {rows.map(({ p, f }, i) => {
-                    const value = rank === "gross" ? gross(f) : units(f);
+                    const value = metric(f);
                     const idle = units(f) === 0 && gross(f) === 0;
                     return (
                       <div
@@ -371,7 +386,13 @@ export async function SalespeopleSection({
                         <span className="text-right font-mono tabular-nums">{money(f.front)}</span>
                         <span className="text-right font-mono tabular-nums">{money(f.back)}</span>
                         <span className="text-right font-mono font-semibold tabular-nums">{money(gross(f))}</span>
-                        <span className="text-right font-mono tabular-nums text-zinc-500">{pvr(f)}</span>
+                        <span
+                          className={`text-right font-mono tabular-nums ${
+                            rank === "pvr" ? "font-semibold" : "text-zinc-500"
+                          }`}
+                        >
+                          {pvr(f)}
+                        </span>
                         {periodEnd ? (
                           <span className="text-right">
                             <span className="block font-mono font-semibold tabular-nums text-blue-700 dark:text-blue-400">
@@ -429,7 +450,7 @@ export async function SalespeopleSection({
               {/* Phone list */}
               <ol className="sm:hidden">
                 {rows.map(({ p, f }, i) => {
-                  const value = rank === "gross" ? gross(f) : units(f);
+                  const value = metric(f);
                   const idle = units(f) === 0 && gross(f) === 0;
                   return (
                     <li
@@ -446,9 +467,11 @@ export async function SalespeopleSection({
                         </span>
                         <span className="text-right">
                           <span className="block font-mono text-base font-semibold tabular-nums">
-                            {rank === "gross" ? money(gross(f)) : formatUnits(units(f))}
+                            {rank === "gross" ? money(gross(f)) : rank === "pvr" ? pvr(f) : formatUnits(units(f))}
                           </span>
-                          <span className="block text-[11px] text-zinc-500">{rank === "gross" ? "gross" : "units"}</span>
+                          <span className="block text-[11px] text-zinc-500">
+                            {rank === "gross" ? "gross" : rank === "pvr" ? "PVR" : "units"}
+                          </span>
                           {periodEnd ? (
                             <span className="mt-2 block border-t border-zinc-200 pt-1.5 dark:border-zinc-700">
                               <span className="block text-[11px] font-semibold text-blue-700 dark:text-blue-400">
@@ -465,11 +488,24 @@ export async function SalespeopleSection({
                       <dl className="ml-6 grid grid-cols-4 gap-1.5 text-[11px] text-zinc-500">
                         <MiniStat label="Front" value={money(f.front)} />
                         <MiniStat label="Back" value={money(f.back)} />
-                        <MiniStat
-                          label={rank === "gross" ? "Units" : "Gross"}
-                          value={rank === "gross" ? formatUnits(units(f)) : money(gross(f))}
-                        />
-                        <MiniStat label="PVR" value={pvr(f)} />
+                        {/* Whichever of units, gross and PVR isn't the big
+                            number on the right. */}
+                        {rank === "units" ? (
+                          <>
+                            <MiniStat label="Gross" value={money(gross(f))} />
+                            <MiniStat label="PVR" value={pvr(f)} />
+                          </>
+                        ) : rank === "gross" ? (
+                          <>
+                            <MiniStat label="Units" value={formatUnits(units(f))} />
+                            <MiniStat label="PVR" value={pvr(f)} />
+                          </>
+                        ) : (
+                          <>
+                            <MiniStat label="Units" value={formatUnits(units(f))} />
+                            <MiniStat label="Gross" value={money(gross(f))} />
+                          </>
+                        )}
                       </dl>
                     </li>
                   );

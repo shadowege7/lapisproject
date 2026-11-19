@@ -304,6 +304,10 @@ export function PacePanel({
           daysInMonth={monthDays}
           current={cut > 0 ? cumulativeUnits(rows, viewMonth, cut, sprinters) : []}
           previous={hasMonth(rows, prevMonth) ? cumulativeUnits(rows, prevMonth, prevDays, sprinters) : []}
+          lastYearLabel={formatMonth(lastYear)}
+          lastYear={
+            hasMonth(rows, lastYear) ? cumulativeUnits(rows, lastYear, daysInMonth(lastYear), sprinters) : []
+          }
           budget={budgetTotal}
         />
       </div>
