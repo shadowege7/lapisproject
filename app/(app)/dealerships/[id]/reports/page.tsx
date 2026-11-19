@@ -3,7 +3,6 @@ import { notFound, redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { getCurrentUser, effectiveRole } from "@/lib/auth";
 import {
-  daysAgoISODate,
   formatMonth,
   formatYear,
   monthEndISODate,
@@ -16,7 +15,11 @@ import { DealImportForm } from "./deal-import-form";
 import { MonthPanel } from "./month-panel";
 import { DailyTable } from "./daily-table";
 import { ExpandForPrint } from "./expand-for-print";
-import { WeekdayPanel, type WeekdayEntry } from "./weekday-panel";
+import { PacePanel } from "./pace-panel";
+import { projectMonthEnd } from "@/lib/projection";
+import { shiftMonth, type InsightDay } from "@/lib/insights";
+import { ActivityPanel } from "./activity-panel";
+import { MonthlyTrends, type TrendPoint } from "./monthly-trends";
 import { MissedEntries } from "./missed-entries";
 import { StoreSwitcher } from "./store-switcher";
 import { SummarySection, type SummaryRow } from "./summary-section";
@@ -31,7 +34,9 @@ import { StoreStateBanner } from "../store-state-banner";
  * Daily table fetches would be about four samples a day, which is not a
  * ranking so much as a coincidence — hence the separate, narrower query.
  */
-const WEEKDAY_WINDOW_DAYS = 365;
+
+const INSIGHT_COLUMNS =
+  "entry_date, new_units, used_units, sprinter_units, new_front_end_gross, new_back_end_gross, used_front_end_gross, used_back_end_gross, sprinter_front_end_gross, sprinter_back_end_gross, sales_calls, appointments";
 
 export default async function ReportsPage({
   params,
@@ -63,6 +68,8 @@ export default async function ReportsPage({
   const viewMonth =
     requested && `${requested[0]}-01` < currentMonth ? `${requested[0]}-01` : null;
   const viewMonthEnd = viewMonth ? monthEndISODate(viewMonth) : null;
+  /** The month the Pace and activity sections describe. */
+  const insightMonth = viewMonth ?? currentMonth;
 
   const [
     { data: dealership },
@@ -70,9 +77,11 @@ export default async function ReportsPage({
     { data: dailyEntries },
     { data: monthly },
     { data: annual },
-    { data: weekdayEntries },
     { data: switchableStores },
     { data: openedMonth },
+    { data: insightRows },
+    { data: lastYearRows },
+    { data: budget },
   ] = await Promise.all([
     supabase
       .from("dealerships")
@@ -110,14 +119,6 @@ export default async function ReportsPage({
       .select("*")
       .eq("dealership_id", dealershipId)
       .order("year", { ascending: false }),
-    // Only the four columns the ranking needs, over a year rather than the
-    // Daily table's 31 rows.
-    supabase
-      .from("daily_entries")
-      .select("entry_date, new_units, used_units, sprinter_units")
-      .eq("dealership_id", dealershipId)
-      .gte("entry_date", daysAgoISODate(WEEKDAY_WINDOW_DAYS))
-      .order("entry_date", { ascending: false }),
     // Every store this user may open, for the switcher. No filter here on
     // purpose: `dealerships_select` already narrows this to super admins and
     // active members, so the scoping is the database's rather than ours.
@@ -136,6 +137,26 @@ export default async function ReportsPage({
           .eq("month", viewMonth)
           .maybeSingle()
       : Promise.resolve({ data: null }),
+    // Pace and Calls & appointments: the viewed month and the one before it…
+    supabase
+      .from("daily_entries")
+      .select(INSIGHT_COLUMNS)
+      .eq("dealership_id", dealershipId)
+      .gte("entry_date", shiftMonth(insightMonth, -1))
+      .lte("entry_date", monthEndISODate(insightMonth)),
+    // …and the same month last year, which only shows once there's data.
+    supabase
+      .from("daily_entries")
+      .select(INSIGHT_COLUMNS)
+      .eq("dealership_id", dealershipId)
+      .gte("entry_date", shiftMonth(insightMonth, -12))
+      .lte("entry_date", monthEndISODate(shiftMonth(insightMonth, -12))),
+    supabase
+      .from("store_budgets")
+      .select("new_units, used_units, sprinter_units")
+      .eq("dealership_id", dealershipId)
+      .eq("month", insightMonth)
+      .maybeSingle(),
   ]);
 
   if (!dealership) notFound();
@@ -188,6 +209,31 @@ export default async function ReportsPage({
     : (monthly ?? []).find((m) => m.month === currentMonth);
   const isPast = viewMonth !== null;
   const canEdit = role === "editor" && !dealership.archived_at;
+
+  const allInsightRows = [...(insightRows ?? []), ...(lastYearRows ?? [])] as InsightDay[];
+  const todayLogged = !!todayEntry;
+
+  // Monthly trend tiles, oldest first. The month in progress plots its
+  // projected units (rounded per category, like the New / Used cards) so a
+  // half-finished month doesn't read as a slump.
+  const monthUnits = (m: NonNullable<typeof monthly>[number]) =>
+    m.month === currentMonth
+      ? Math.round(projectMonthEnd(m.total_new_units, todayLogged)) +
+        Math.round(projectMonthEnd(m.total_used_units, todayLogged)) +
+        (sprinters ? Math.round(projectMonthEnd(m.total_sprinter_units, todayLogged)) : 0)
+      : m.total_new_units + m.total_used_units + (sprinters ? m.total_sprinter_units : 0);
+  const trendMonths = [...(monthly ?? [])].reverse();
+  const trendPoint = (m: NonNullable<typeof monthly>[number], value: number | null): TrendPoint => ({
+    label: formatMonth(m.month).slice(0, 3),
+    full: formatMonth(m.month),
+    value,
+    current: m.month === currentMonth,
+  });
+  const unitTrend = trendMonths.map((m) => trendPoint(m, monthUnits(m)));
+  const perUnitTrend = trendMonths.map((m) => {
+    const sold = m.total_new_units + m.total_used_units + (sprinters ? m.total_sprinter_units : 0);
+    return trendPoint(m, sold > 0 ? m.total_gross / sold : null);
+  });
 
   const slug = dealership.name.replace(/[^a-z0-9]+/gi, "-").toLowerCase();
 
@@ -315,6 +361,18 @@ export default async function ReportsPage({
         pastMonth={viewMonth ?? undefined}
       />
 
+      <PacePanel
+        dealershipId={dealershipId}
+        viewMonth={insightMonth}
+        currentMonth={currentMonth}
+        today={today}
+        todayLogged={todayLogged}
+        sprinters={sprinters}
+        rows={allInsightRows}
+        budget={budget ?? null}
+        canSetBudget={user.canEditBudgets}
+      />
+
       {/* Only for stores an admin has switched on. */}
       {dealership.tracks_salespeople ? (
         <SalespeopleSection
@@ -332,13 +390,17 @@ export default async function ReportsPage({
         />
       ) : null}
 
+      <ActivityPanel
+        viewMonth={insightMonth}
+        currentMonth={currentMonth}
+        today={today}
+        todayLogged={todayLogged}
+        sprinters={sprinters}
+        rows={allInsightRows}
+      />
+
       {isPast ? null : (
         <>
-          <WeekdayPanel
-            entries={(weekdayEntries ?? []) as WeekdayEntry[]}
-            today={today}
-          />
-
           <SummarySection
             title="Annual"
             rows={annualRows}
@@ -353,6 +415,7 @@ export default async function ReportsPage({
         compact
         filename={`${slug}-monthly.csv`}
         sprinters={sprinters}
+        before={<MonthlyTrends units={unitTrend} perUnit={perUnitTrend} />}
       />
 
       <ExpandForPrint />
@@ -373,14 +436,6 @@ export default async function ReportsPage({
           monthStart={currentMonth}
         />
       ) : null}
-
-      {/* Everything is stored to the cent but shown to the dollar, so a
-          column of days, or front + back, can be a dollar or two off the
-          total shown. */}
-      <p className="text-xs text-zinc-500">
-        Dollar amounts are rounded to the nearest dollar, so added-up figures can
-        be off by $1–2. The CSV exports keep the cents.
-      </p>
     </div>
   );
 }

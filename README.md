@@ -25,8 +25,19 @@ Security), deployed on Vercel.
   The projection assumes the current daily pace holds for the rest of the month.
 - **Reports** — a "This month" panel (Today / MTD / Projected across the full
   new/used front/back/gross breakdown), an **Annual** rollup with the same
-  detail, a compact **Monthly** trend list, and a **Daily** table with per‑day
-  detail and notes. Click a month in **Monthly** to open Insights for just that
+  detail, a compact **Monthly** list with two trend tiles (units by month —
+  the current month projected — and gross per unit), and a **Daily** table
+  with per‑day detail and notes.
+  **Pace** puts the month against its budget (tracking, over/under, units
+  needed per remaining day), compares it with last month at the same point
+  (and the same month last year, once a year of data exists), and charts
+  running units by day against last month and a straight budget line.
+  New, used (and Sprinter) each show whether they're ahead of or behind
+  budget pace — the budget spread evenly over the month's days — and where
+  they're tracking against their own budget.
+  **Calls & appointments** shows calls → appointments → units sold for the
+  month, each against the same point last month. Lines are the two
+  validated series colours in `globals.css` (`--series-1`, `--series-2`). Click a month in **Monthly** to open Insights for just that
   month (`?month=YYYY-MM`): final totals with no projection, the Salespeople
   board for that month, and every day of it.
 - **Deal export import** — upload the DMS *Car Deals* export (.xlsx or .csv)
