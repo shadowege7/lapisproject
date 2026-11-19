@@ -23,10 +23,16 @@ export interface TrendPoint {
 export function MonthlyTrends({
   units,
   perUnit,
+  yearAgo,
 }: {
   /** Oldest first. The current month's units are its projected month-end. */
   units: TrendPoint[];
   perUnit: TrendPoint[];
+  /**
+   * The same month last year, once a store has that much history, shown next
+   * to last month under each headline. Final figures (it's a finished month).
+   */
+  yearAgo?: { label: string; units: number; perUnit: number | null } | null;
 }) {
   if (units.filter((p) => p.value !== null).length < 2) return null;
   return (
@@ -37,6 +43,7 @@ export function MonthlyTrends({
         format={(v) => Math.round(v).toLocaleString("en-US")}
         labelFormat={(v) => Math.round(v).toLocaleString("en-US")}
         currentNote="projected"
+        yearAgo={yearAgo ? { label: yearAgo.label, value: yearAgo.units } : null}
       />
       <TrendTile
         title="Gross per unit"
@@ -52,6 +59,7 @@ export function MonthlyTrends({
           }`
         }
         currentNote="so far"
+        yearAgo={yearAgo && yearAgo.perUnit !== null ? { label: yearAgo.label, value: yearAgo.perUnit } : null}
       />
     </div>
   );
@@ -70,12 +78,14 @@ function TrendTile({
   format,
   labelFormat,
   currentNote,
+  yearAgo,
 }: {
   title: string;
   points: TrendPoint[];
   format: (v: number) => string;
   labelFormat: (v: number) => string;
   currentNote: string;
+  yearAgo: { label: string; value: number } | null;
 }) {
   // A month with nothing to plot (no units, so no gross per unit) is left out
   // rather than drawn as a gap, so the line always spans the tile.
@@ -121,6 +131,7 @@ function TrendTile({
         {shown.full}
         {shown.current ? ` · ${currentNote}` : ""}
         {shown === latest && prior ? ` · ${prior.label} ${format(prior.value)}` : ""}
+        {shown === latest && yearAgo ? ` · ${yearAgo.label} ${format(yearAgo.value)}` : ""}
       </p>
 
       <div

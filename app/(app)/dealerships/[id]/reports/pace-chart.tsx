@@ -4,7 +4,8 @@ import { useEffect, useMemo, useRef, useState } from "react";
 
 /**
  * Running units through the month: this month (series 1), last month
- * (series 2) and a straight budget-pace reference line. Built to the dataviz
+ * (series 2), the same month last year once there's data for it (series 3),
+ * and a straight budget-pace reference line. Built to the dataviz
  * rules — 2px lines, ringed end dots, solid hairline grid, a legend plus
  * sparing end labels, a crosshair tooltip on hover and on the arrow keys, and
  * a table view so nothing depends on hovering or on colour.
@@ -38,6 +39,8 @@ export function PaceChart({
   daysInMonth,
   current,
   previous,
+  lastYearLabel,
+  lastYear,
   budget,
 }: {
   monthLabel: string;
@@ -47,6 +50,10 @@ export function PaceChart({
   current: number[];
   /** Last month's running units for every day of it, or empty if no data. */
   previous: number[];
+  /** e.g. "November 2025". */
+  lastYearLabel: string;
+  /** The same month last year, every day, or empty until there's data. */
+  lastYear: number[];
   /** Budgeted units for the month, or 0 when none is set. */
   budget: number;
 }) {
@@ -62,11 +69,13 @@ export function PaceChart({
     return () => ro.disconnect();
   }, []);
 
-  const xMax = Math.max(daysInMonth, previous.length, 1);
+  const xMax = Math.max(daysInMonth, previous.length, lastYear.length, 1);
   const yMax = useMemo(
-    () => niceMax(Math.max(budget, current.at(-1) ?? 0, previous.at(-1) ?? 0, 1)),
-    [budget, current, previous],
+    () =>
+      niceMax(Math.max(budget, current.at(-1) ?? 0, previous.at(-1) ?? 0, lastYear.at(-1) ?? 0, 1)),
+    [budget, current, previous, lastYear],
   );
+  const lastYearShort = `${lastYearLabel.slice(0, 3)} '${lastYearLabel.slice(-2)}`;
 
   const innerW = Math.max(width - M.left - M.right, 10);
   const innerH = HEIGHT - M.top - M.bottom;
@@ -90,6 +99,9 @@ export function PaceChart({
   if (previous.length) {
     ends.push({ key: "prev", day: previous.length, value: previous.at(-1)!, text: `${previousLabel.slice(0, 3)} ${previous.at(-1)}` });
   }
+  if (lastYear.length) {
+    ends.push({ key: "ly", day: lastYear.length, value: lastYear.at(-1)!, text: `${lastYearShort} ${lastYear.at(-1)}` });
+  }
   const placed: typeof ends = [];
   for (const e of ends) {
     if (placed.every((p) => Math.abs(y(p.value) - y(e.value)) >= 14 || Math.abs(x(p.day) - x(e.day)) > 70)) {
@@ -109,6 +121,9 @@ export function PaceChart({
           ...(h <= previous.length
             ? [{ key: "prev", name: previousLabel, value: previous[h - 1], day: previous[h - 1] - (previous[h - 2] ?? 0) }]
             : []),
+          ...(h <= lastYear.length
+            ? [{ key: "ly", name: lastYearLabel, value: lastYear[h - 1], day: lastYear[h - 1] - (lastYear[h - 2] ?? 0) }]
+            : []),
           ...(budget > 0 && h <= daysInMonth
             ? [{ key: "bud", name: "Budget pace", value: Math.round(budgetAt(h) * 10) / 10, day: null as number | null }]
             : []),
@@ -127,6 +142,8 @@ export function PaceChart({
       <span className="inline-block h-0.5 w-4 rounded-full" style={{ background: "var(--series-1)" }} />
     ) : key === "prev" ? (
       <span className="inline-block h-0.5 w-4 rounded-full" style={{ background: "var(--series-2)" }} />
+    ) : key === "ly" ? (
+      <span className="inline-block h-0.5 w-4 rounded-full" style={{ background: "var(--series-3)" }} />
     ) : (
       <span className="inline-block w-4 border-t-2 border-dashed" style={{ borderColor: "var(--figure-muted)" }} />
     );
@@ -136,6 +153,7 @@ export function PaceChart({
       <ul className="mb-2 flex flex-wrap gap-x-4 gap-y-1 text-xs text-zinc-500" aria-label="Legend">
         <li className="flex items-center gap-1.5">{lineKey("cur")}{monthLabel}</li>
         {previous.length ? <li className="flex items-center gap-1.5">{lineKey("prev")}{previousLabel}</li> : null}
+        {lastYear.length ? <li className="flex items-center gap-1.5">{lineKey("ly")}{lastYearLabel}</li> : null}
         {budget > 0 ? <li className="flex items-center gap-1.5">{lineKey("bud")}Budget pace</li> : null}
       </ul>
 
@@ -147,7 +165,9 @@ export function PaceChart({
             role="img"
             aria-label={`Running units by day: ${monthLabel} ${current.at(-1) ?? 0}${
               previous.length ? `, ${previousLabel} ${previous.at(-1)}` : ""
-            }${budget > 0 ? `, budget ${budget}` : ""}. Use the arrow keys to step through days.`}
+            }${lastYear.length ? `, ${lastYearLabel} ${lastYear.at(-1)}` : ""}${
+              budget > 0 ? `, budget ${budget}` : ""
+            }. Use the arrow keys to step through days.`}
             tabIndex={0}
             className="overflow-visible outline-none focus-visible:ring-2 focus-visible:ring-blue-500/50"
             onPointerMove={(e) => setFromPointer(e.clientX)}
@@ -194,6 +214,9 @@ export function PaceChart({
                 strokeDasharray="4 4"
               />
             ) : null}
+            {lastYear.length ? (
+              <path d={path(lastYear)} fill="none" stroke="var(--series-3)" strokeWidth={2} strokeLinejoin="round" strokeLinecap="round" />
+            ) : null}
             {previous.length ? (
               <path d={path(previous)} fill="none" stroke="var(--series-2)" strokeWidth={2} strokeLinejoin="round" strokeLinecap="round" />
             ) : null}
@@ -202,6 +225,9 @@ export function PaceChart({
             ) : null}
 
             {/* End dots with a 2px surface ring. */}
+            {lastYear.length ? (
+              <circle cx={x(lastYear.length)} cy={y(lastYear.at(-1)!)} r={4} fill="var(--series-3)" stroke="var(--surface)" strokeWidth={2} />
+            ) : null}
             {previous.length ? (
               <circle cx={x(previous.length)} cy={y(previous.at(-1)!)} r={4} fill="var(--series-2)" stroke="var(--surface)" strokeWidth={2} />
             ) : null}
@@ -264,6 +290,7 @@ export function PaceChart({
                 <th className="px-3 py-1.5 text-left font-medium">Day</th>
                 <th className="px-3 py-1.5 font-medium">{monthLabel}</th>
                 {previous.length ? <th className="px-3 py-1.5 font-medium">{previousLabel}</th> : null}
+                {lastYear.length ? <th className="px-3 py-1.5 font-medium">{lastYearLabel}</th> : null}
                 {budget > 0 ? <th className="px-3 py-1.5 font-medium">Budget pace</th> : null}
               </tr>
             </thead>
@@ -273,6 +300,7 @@ export function PaceChart({
                   <td className="px-3 py-1 text-left">{d}</td>
                   <td className="px-3 py-1">{d <= current.length ? current[d - 1] : "—"}</td>
                   {previous.length ? <td className="px-3 py-1">{d <= previous.length ? previous[d - 1] : "—"}</td> : null}
+                  {lastYear.length ? <td className="px-3 py-1">{d <= lastYear.length ? lastYear[d - 1] : "—"}</td> : null}
                   {budget > 0 ? (
                     <td className="px-3 py-1">{d <= daysInMonth ? Math.round(budgetAt(d) * 10) / 10 : "—"}</td>
                   ) : null}

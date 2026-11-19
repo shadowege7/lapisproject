@@ -47,14 +47,14 @@ export function formatUnits(value: number) {
 }
 
 export type SalespersonPeriod = "today" | "mtd" | "ytd";
-export type SalespersonRank = "units" | "gross";
+export type SalespersonRank = "units" | "gross" | "pvr";
 
 export function parsePeriod(value: string | undefined): SalespersonPeriod {
   return value === "today" || value === "ytd" ? value : "mtd";
 }
 
 export function parseRank(value: string | undefined): SalespersonRank {
-  return value === "gross" ? "gross" : "units";
+  return value === "gross" || value === "pvr" ? value : "units";
 }
 
 /** Inclusive date range for a period, in the app's (Pacific) business days. */

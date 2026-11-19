@@ -25,13 +25,16 @@ Security), deployed on Vercel.
   The projection assumes the current daily pace holds for the rest of the month.
 - **Reports** — a "This month" panel (Today / MTD / Projected across the full
   new/used front/back/gross breakdown), an **Annual** rollup with the same
-  detail, a compact **Monthly** list with two trend tiles (units by month —
+  detail, a compact **Monthly** list (this year's months, with each earlier
+  year folded into one row of totals that opens to its months) with two
+  trend tiles (units by month —
   the current month projected — and gross per unit), and a **Daily** table
   with per‑day detail and notes.
   **Pace** puts the month against its budget (tracking, over/under, units
   needed per remaining day), compares it with last month at the same point
-  (and the same month last year, once a year of data exists), and charts
-  running units by day against last month and a straight budget line.
+  and, once a store has a year of data, the same month last year — and charts
+  running units by day against both and a straight budget line. Calls &
+  appointments and the trend tiles add the same last-year comparison.
   New, used (and Sprinter) each show whether they're ahead of or behind
   budget pace — the budget spread evenly over the month's days — and where
   they're tracking against their own budget.
@@ -275,7 +278,8 @@ With it on:
   to save; leftovers are house deals, fleet, a manager's own deal. On a phone
   each person is a card that opens on tap.
 - **Dealership Insights** gets a *Salespeople* board for Today / Month / Year,
-  ranked by units or gross, with an *Unassigned* line and the store total.
+  ranked by units, gross or PVR, with an *Unassigned* line and the store
+  total.
   For Month and Year, a **Tracking** column shows where each person (and the
   store) is heading by month- or year-end at their current pace — the total
   (units or gross, to match the ranking) with new / used units under it. The
